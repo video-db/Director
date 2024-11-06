@@ -116,7 +116,7 @@ class SearchData(BaseModel):
     """Search data model class for search results content."""
 
     video_id: str
-    video_title: str
+    video_title: Optional[str] = None
     stream_url: str
     duration: Union[int, float]
     shots: List[ShotData]
