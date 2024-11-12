@@ -100,6 +100,8 @@ class SearchAgent(BaseAgent):
                 if scene_index_list:
                     scene_index_id = scene_index_list[0].get("scene_index_id")
                 else:
+                    self.output_message.actions.append("Scene index not found")
+                    self.output_message.push_update()
                     raise ValueError("Scene index not found. Please index scene first.")
 
             if search_type == "semantic":

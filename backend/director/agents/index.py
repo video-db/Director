@@ -18,6 +18,10 @@ INDEX_AGENT_PARAMETERS = {
             "type": "string",
             "enum": ["spoken_words", "scene"],
         },
+        "scene_index_prompt": {
+            "type": "string",
+            "description": "The prompt to use for scene indexing. Optional parameter only for scene indexing also it must be explicitly provided by the user.",
+        },
         "collection_id": {
             "type": "string",
             "description": "The ID of the collection to process.",
@@ -128,7 +132,13 @@ class IndexAgent(BaseAgent):
         super().__init__(session=session, **kwargs)
 
     def run(
-        self, video_id: str, index_type: str, collection_id=None, *args, **kwargs
+        self,
+        video_id: str,
+        index_type: str,
+        scene_index_prompt=SCENE_INDEX_PROMPT,
+        collection_id=None,
+        *args,
+        **kwargs,
     ) -> AgentResponse:
         """
         Process the sample based on the given sample ID.
@@ -156,7 +166,7 @@ class IndexAgent(BaseAgent):
                 scene_index_id = self.videodb_tool.index_scene(
                     video_id=video_id,
                     extraction_config={"threshold": 20, "frame_count": 4},
-                    prompt=SCENE_INDEX_PROMPT,
+                    prompt=scene_index_prompt,
                 )
                 self.videodb_tool.get_scene_index(
                     video_id=video_id, scene_id=scene_index_id
