@@ -91,7 +91,7 @@ class SearchAgent(BaseAgent):
                 agent_name=self.agent_name,
             )
             self.output_message.content.append(search_result_content)
-            self.output_message.actions.append("Running search.")
+            self.output_message.actions.append(f"Running {search_type} search on {index_type} index.")
             self.output_message.push_update()
             videodb_tool = VideoDBTool(collection_id=collection_id)
             scene_index_id = None
