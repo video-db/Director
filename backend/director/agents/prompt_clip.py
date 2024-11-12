@@ -228,16 +228,9 @@ class PromptClipAgent(BaseAgent):
                 video_id=video_id, scene_id=scene_index_id
             )
         else:
-            self.output_message.actions.append("Indexing video scenes..")
+            self.output_message.actions.append("Scene index not found")
             self.output_message.push_update()
-            scene_index_id = self.videodb_tool.index_scene(
-                video_id=video_id,
-                extraction_config={"threshold": 20, "frame_count": 3},
-                prompt="Summarize the essence of the scene in one or two concise sentences without focusing on individual images.",
-            )
-            return scene_index_id, self.videodb_tool.get_scene_index(
-                video_id=video_id, scene_id=scene_index_id
-            )
+            raise Exception("Scene index not found, please index the scene first.")
 
     def _get_transcript(self, video_id):
         self.output_message.actions.append("Retrieving video transcript..")
@@ -268,18 +261,23 @@ class PromptClipAgent(BaseAgent):
         try:
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
             result = []
-            if content_type == "spoken_content":
-                transcript_text, _ = self._get_transcript(video_id=video_id)
-                result = self._text_prompter(transcript_text, prompt)
+            try:
+                if content_type == "spoken_content":
+                    transcript_text, _ = self._get_transcript(video_id=video_id)
+                    result = self._text_prompter(transcript_text, prompt)
 
-            elif content_type == "visual_content":
-                scene_index_id, scenes = self._get_scenes(video_id=video_id)
-                result = self._scene_prompter(scenes, prompt)
+                elif content_type == "visual_content":
+                    scene_index_id, scenes = self._get_scenes(video_id=video_id)
+                    result = self._scene_prompter(scenes, prompt)
 
-            else:
-                _, transcript = self._get_transcript(video_id=video_id)
-                scene_index_id, scenes = self._get_scenes(video_id=video_id)
-                result = self._multimodal_prompter(transcript, scenes, prompt)
+                else:
+                    _, transcript = self._get_transcript(video_id=video_id)
+                    scene_index_id, scenes = self._get_scenes(video_id=video_id)
+                    result = self._multimodal_prompter(transcript, scenes, prompt)
+
+            except Exception as e:
+                logger.exception(f"Error in getting video content: {e}")
+                return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
             self.output_message.actions.append("Identifying key moments..")
             self.output_message.push_update()

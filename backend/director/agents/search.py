@@ -34,7 +34,7 @@ SEARCH_AGENT_PARAMETERS = {
         },
         "result_threshold": {
             "type": "number",
-            "description": " Initial filter for top N matching documents (default: 5).",
+            "description": " Initial filter for top N matching documents (default: 8).",
         },
         "score_threshold": {
             "type": "integer",
@@ -72,7 +72,7 @@ class SearchAgent(BaseAgent):
         index_type,
         collection_id: str,
         video_id: str = None,
-        result_threshold=5,
+        result_threshold=8,
         score_threshold=0.2,
         dynamic_score_percentage=20,
         *args,
@@ -91,18 +91,6 @@ class SearchAgent(BaseAgent):
                 agent_name=self.agent_name,
             )
             self.output_message.content.append(search_result_content)
-            compilation_content = VideoContent(
-                status=MsgStatus.progress,
-                status_message="Started video compilation.",
-                agent_name=self.agent_name,
-            )
-            self.output_message.content.append(compilation_content)
-            search_summary_content = TextContent(
-                status=MsgStatus.progress,
-                status_message="Started generating summary of search results.",
-                agent_name=self.agent_name,
-            )
-            self.output_message.content.append(search_summary_content)
             self.output_message.actions.append("Running search.")
             self.output_message.push_update()
             videodb_tool = VideoDBTool(collection_id=collection_id)
@@ -112,7 +100,7 @@ class SearchAgent(BaseAgent):
                 if scene_index_list:
                     scene_index_id = scene_index_list[0].get("scene_index_id")
                 else:
-                    raise ValueError("Scene index not found.")
+                    raise ValueError("Scene index not found. Please index scene first.")
 
             if search_type == "semantic":
                 search_results = videodb_tool.semantic_search(
@@ -136,6 +124,18 @@ class SearchAgent(BaseAgent):
             else:
                 raise ValueError(f"Invalid search type {search_type}")
 
+            compilation_content = VideoContent(
+                status=MsgStatus.progress,
+                status_message="Started video compilation.",
+                agent_name=self.agent_name,
+            )
+            self.output_message.content.append(compilation_content)
+            search_summary_content = TextContent(
+                status=MsgStatus.progress,
+                status_message="Started generating summary of search results.",
+                agent_name=self.agent_name,
+            )
+            self.output_message.content.append(search_summary_content)
             shots = search_results.get_shots()
             if not shots:
                 search_result_content.status = MsgStatus.error
