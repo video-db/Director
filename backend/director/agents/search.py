@@ -53,7 +53,7 @@ SEARCH_AGENT_PARAMETERS = {
             "description": "The ID of the collection to process.",
         },
     },
-    "required": ["query", "search_type", "index_type", "video_id", "collection_id"],
+    "required": ["query", "search_type", "index_type", "collection_id"],
 }
 
 
