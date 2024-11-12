@@ -150,12 +150,18 @@ class VideoDBTool:
         download_response = self.conn.download(stream_link, name)
         return download_response
 
-    def semantic_search(self, query, video_id=None):
+    def semantic_search(
+        self, query, index_type=IndexType.spoken_word, video_id=None, **kwargs
+    ):
         if video_id:
             video = self.collection.get_video(video_id)
-            search_resuls = video.search(query=query)
+            search_resuls = video.search(query=query, index_type=index_type, **kwargs)
         else:
-            search_resuls = self.collection.search(query=query)
+            if index_type == IndexType.scene:
+                kwargs.pop("scene_index_id", None)
+            search_resuls = self.collection.search(
+                query=query, index_type=index_type, **kwargs
+            )
         return search_resuls
 
     def keyword_search(

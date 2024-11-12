@@ -18,26 +18,69 @@ from director.tools.videodb_tool import VideoDBTool
 
 logger = logging.getLogger(__name__)
 
+SEARCH_AGENT_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "query": {"type": "string", "description": "Search query"},
+        "search_type": {
+            "type": "string",
+            "enum": ["semantic", "keyword"],
+            "description": "Type of search, default is semantic. semantic: search based on semantic similarity, keyword: search based on keyword only avilable on video not collection",
+        },
+        "index_type": {
+            "type": "string",
+            "enum": ["spoken_word", "scene"],
+            "description": "Type of indexing to perform, spoken_word: based on transcript of the video, scene: based on visual description of the video",
+        },
+        "result_threshold": {
+            "type": "number",
+            "description": " Initial filter for top N matching documents (default: 8).",
+        },
+        "score_threshold": {
+            "type": "integer",
+            "description": "Absolute threshold filter for relevance scores (default: 0.2).",
+        },
+        "dynamic_score_percentage": {
+            "type": "integer",
+            "description": "Adaptive filtering mechanism: Useful when there is a significant gap between top results and tail results after score_threshold filter. Retains top x% of the score range. Calculation: dynamic_threshold = max_score - (range * dynamic_score_percentage) (default: 20 percent)",
+        },
+        "video_id": {
+            "type": "string",
+            "description": "The ID of the video to process.",
+        },
+        "collection_id": {
+            "type": "string",
+            "description": "The ID of the collection to process.",
+        },
+    },
+    "required": ["query", "search_type", "index_type", "collection_id"],
+}
+
 
 class SearchAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "search"
         self.description = "Agent to retreive data from VideoDB collections and videos."
         self.llm = OpenAI()
-        self.parameters = self.get_parameters()
+        self.parameters = SEARCH_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
     def run(
-        self, query: str, collection_id: str, video_id: str = None, *args, **kwargs
+        self,
+        query: str,
+        search_type,
+        index_type,
+        collection_id: str,
+        video_id: str = None,
+        result_threshold=8,
+        score_threshold=0.2,
+        dynamic_score_percentage=20,
+        *args,
+        **kwargs,
     ) -> AgentResponse:
         """
         Retreive data from VideoDB collections and videos.
 
-        :param str query: search query
-        :param str video_id: VideoDB videod id.
-        :param str collection_id: VideoDB collection id.
-        :param args: Additional positional arguments.
-        :param kwargs: Additional keyword arguments.
         :return: The response containing search results, text summary and compilation video.
         :rtype: AgentResponse
         """
@@ -48,6 +91,41 @@ class SearchAgent(BaseAgent):
                 agent_name=self.agent_name,
             )
             self.output_message.content.append(search_result_content)
+            self.output_message.actions.append(f"Running {search_type} search on {index_type} index.")
+            self.output_message.push_update()
+            videodb_tool = VideoDBTool(collection_id=collection_id)
+            scene_index_id = None
+            if index_type == "scene" and video_id:
+                scene_index_list = videodb_tool.list_scene_index(video_id)
+                if scene_index_list:
+                    scene_index_id = scene_index_list[0].get("scene_index_id")
+                else:
+                    self.output_message.actions.append("Scene index not found")
+                    self.output_message.push_update()
+                    raise ValueError("Scene index not found. Please index scene first.")
+
+            if search_type == "semantic":
+                search_results = videodb_tool.semantic_search(
+                    query,
+                    index_type=index_type,
+                    video_id=video_id,
+                    result_threshold=result_threshold,
+                    score_threshold=score_threshold,
+                    dynamic_score_percentage=dynamic_score_percentage,
+                    scene_index_id=scene_index_id,
+                )
+
+            elif search_type == "keyword" and video_id:
+                search_results = videodb_tool.keyword_search(
+                    query,
+                    index_type=index_type,
+                    video_id=video_id,
+                    result_threshold=result_threshold,
+                    scene_index_id=scene_index_id,
+                )
+            else:
+                raise ValueError(f"Invalid search type {search_type}")
+
             compilation_content = VideoContent(
                 status=MsgStatus.progress,
                 status_message="Started video compilation.",
@@ -60,10 +138,6 @@ class SearchAgent(BaseAgent):
                 agent_name=self.agent_name,
             )
             self.output_message.content.append(search_summary_content)
-            self.output_message.actions.append("Running search.")
-            self.output_message.push_update()
-            videodb_tool = VideoDBTool(collection_id=collection_id)
-            search_results = videodb_tool.semantic_search(query, video_id)
             shots = search_results.get_shots()
             if not shots:
                 search_result_content.status = MsgStatus.error
@@ -157,7 +231,7 @@ class SearchAgent(BaseAgent):
                     "Here is the summary of search results."
                 )
             self.output_message.publish()
-        except Exception:
+        except Exception as e:
             logger.exception(f"Error in {self.agent_name}.")
             if search_result_content.status != MsgStatus.success:
                 search_result_content.status = MsgStatus.error
@@ -173,7 +247,8 @@ class SearchAgent(BaseAgent):
                     "Failed to generate summary of results."
                 )
             return AgentResponse(
-                status=AgentStatus.ERROR, message="Failed the search with exception."
+                status=AgentStatus.ERROR,
+                message=f"Failed the search with exception. {e}",
             )
         return AgentResponse(
             status=AgentStatus.SUCCESS,
