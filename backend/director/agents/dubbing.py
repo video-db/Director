@@ -155,7 +155,7 @@ class DubbingAgent(BaseAgent):
 
             return AgentResponse(
                 status=AgentStatus.SUCCESS,
-                message=f"Successfully dubbed video '{video['name']}' to {target_language}",
+                message=f"Successfully dubbed video '{video['name']}' to {target_language} which has video_id {dubbed_video['id']} ",
                 data={
                     "stream_url": dubbed_video["stream_url"],
                     "video_id": dubbed_video["id"],
