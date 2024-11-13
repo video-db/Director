@@ -118,12 +118,12 @@ class DubbingAgent(BaseAgent):
                     target_language=target_language_code,
                 )
                 self.output_message.actions.append(
-                    f"Dubbing job initiated successfully - Job ID: {job_id}"
+                    f"Dubbing job initiated with Job ID: {job_id}"
                 )
                 self.output_message.push_update()
 
                 self.output_message.actions.append(
-                    "Waiting for dubbing process to complete..."
+                    "Waiting for dubbing process to complete.."
                 )
                 self.output_message.push_update()
                 elevenlabs_tool.wait_for_dub_job(job_id)
@@ -145,7 +145,7 @@ class DubbingAgent(BaseAgent):
                 dubbed_file_path,
                 source_type="file_path",
                 media_type="video",
-                name=f"Dubbed_{target_language} {video['name']}",
+                name=f"[Dubbed {target_language}] {video['name']}",
             )
 
             video_content.video = VideoData(stream_url=dubbed_video["stream_url"])
