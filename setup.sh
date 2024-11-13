@@ -234,11 +234,11 @@ export PATH="$HOME/.local/bin:$PATH"
 cd backend
 python3 -m venv venv
 source venv/bin/activate
+python3 -m pip install --upgrade pip setuptools wheel
 
 echo "
 🐍 Using Python: $(which python3)"
 echo "🐍 Using pip: $(which pip3)"
-
 
 echo "
 🔧 Let's set up your environment. You can skip this step and add it to .env later."
@@ -257,9 +257,6 @@ make install-be
 make init-sqlite-db
 
 # Frontend setup
-
-
-# Build UI libraries
 cd frontend
 
 echo "
@@ -275,7 +272,6 @@ cd ../
 
 make install-fe
 make update-fe
-
 
 echo "
 *******************************************

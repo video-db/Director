@@ -1,3 +1,6 @@
+NODE_VERSION := 22.8.0
+MIN_NODE_VERSION := 16.20.2
+
 # Detect the shell (sh, bash, etc.)
 SHELL := $(shell echo $$SHELL)
 
@@ -21,11 +24,32 @@ update:
 	@npm update
 
 run:
-	@if [ -f "$$NVM_DIR/nvm.sh" ]; then \
-		. "$$NVM_DIR/nvm.sh" && nvm use 22.8.0 || echo "⚠️ Warning: Unable to switch to Node.js 22.8.0. Continuing with current version."; \
-	elif [ -f "$$HOME/.nvm/nvm.sh" ]; then \
-		. "$$HOME/.nvm/nvm.sh" && nvm use 22.8.0 || echo "⚠️ Warning: Unable to switch to Node.js 22.8.0. Continuing with current version."; \
+	@echo "🚀 Starting frontend development server..."
+	@export NVM_DIR="$$HOME/.nvm"; \
+	if [ -s "$$NVM_DIR/nvm.sh" ]; then \
+		. "$$NVM_DIR/nvm.sh"; \
+		INSTALLED_VERSIONS=$$(nvm ls --no-colors --no-alias | grep -o 'v[0-9.]\+' | sed 's/v//g'); \
+		if echo "$$INSTALLED_VERSIONS" | grep -q "^$(NODE_VERSION)"; then \
+			TARGET_VERSION="$(NODE_VERSION)"; \
+			echo "✅ Using Node.js version $(NODE_VERSION)"; \
+		else \
+			VERSIONS_ABOVE_MIN=$$(echo "$$INSTALLED_VERSIONS" | awk -v min="$(MIN_NODE_VERSION)" '{split($$1,a,"."); if(a[1]>=min) print $$1}' | sort -n); \
+			if [ -n "$$VERSIONS_ABOVE_MIN" ]; then \
+				TARGET_VERSION=$$(echo "$$VERSIONS_ABOVE_MIN" | tail -n1); \
+				echo "⚠️ Node.js $(NODE_VERSION) not found, using version $$TARGET_VERSION instead"; \
+			else \
+				echo "⚠️ No compatible Node.js version found (min: $(MIN_NODE_VERSION)). Installing..."; \
+				nvm install $(NODE_VERSION); \
+				TARGET_VERSION="$(NODE_VERSION)"; \
+				echo "✅ Installed Node.js version $(NODE_VERSION)"; \
+			fi; \
+		fi; \
+		if [ -n "$$TARGET_VERSION" ]; then \
+			nvm use "$$TARGET_VERSION" && npm run dev; \
+		else \
+			npm run dev; \
+		fi; \
 	else \
-		echo "ℹ️ Note: nvm is not installed or not properly configured. Using system's default Node.js version."; \
+		echo "⚠️ nvm not found, using system Node.js"; \
+		npm run dev; \
 	fi
-	@npm run dev
