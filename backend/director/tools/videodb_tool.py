@@ -6,6 +6,7 @@ from videodb.timeline import Timeline
 from videodb.asset import VideoAsset, ImageAsset
 
 
+
 class VideoDBTool:
     def __init__(self, collection_id="default"):
         self.conn = videodb.connect(
@@ -202,3 +203,5 @@ class VideoDBTool:
         video = self.collection.get_video(video_id)
         stream_url = video.add_subtitle(style)
         return stream_url
+    
+

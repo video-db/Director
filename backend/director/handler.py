@@ -17,6 +17,7 @@ from director.agents.image_generation import ImageGenerationAgent
 from director.agents.stream_video import StreamVideoAgent
 from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
+from director.agents.editing import EditingAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -48,6 +49,7 @@ class ChatHandler:
             StreamVideoAgent,
             SubtitleAgent,
             SlackAgent,
+            EditingAgent
         ]
 
     def add_videodb_state(self, session):
