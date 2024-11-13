@@ -10,28 +10,11 @@ from elevenlabs import VoiceSettings
 
 class ElevenLabsTool:
     def __init__(self, api_key: str):
-        # TODO: handler error if api_key is not set
         if api_key:
             self.client = ElevenLabs(api_key=api_key)
         self.voice_settings = VoiceSettings(
             stability=0.0, similarity_boost=1.0, style=0.0, use_speaker_boost=True
         )
-
-    def text_to_speech(
-        self, text, voice_id="pNInz6obpgDQGcFmaJgB", model="eleven_turbo_v2_5"
-    ):
-        """Convert text to speech using ElevenLabs API."""
-        try:
-            response = self.client.text_to_speech.convert(
-                voice_id=voice_id,
-                output_format="mp3_22050_32",
-                text=text,
-                model_id=model,
-                voice_settings=self.voice_settings,
-            )
-            return response
-        except Exception as e:
-            return {"error": str(e)}
 
     def create_dub_job(
         self,

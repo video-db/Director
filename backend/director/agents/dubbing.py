@@ -10,6 +10,7 @@ from director.tools.elevenlabs import ElevenLabsTool
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_ENGINES = ["elevenlabs"]
 DUBBING_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -23,11 +24,20 @@ DUBBING_AGENT_PARAMETERS = {
         },
         "target_language_code": {
             "type": "string",
-            "description": "The target language code for dubbing (e.g. 'es' for Spanish, 'fr' for French, 'de' for German).",
+            "description": "The target language code for dubbing (e.g. 'es' for Spanish, 'fr' for French, 'de' for German').",
         },
         "collection_id": {
             "type": "string",
             "description": "The unique identifier of the VideoDB collection containing the video. Required to locate and access the correct video library.",
+        },
+        "engine": {
+            "type": "string",
+            "description": "The dubbing engine to use. Default is 'elevenlabs'. Possible values include 'elevenlabs'.",
+            "default": "elevenlabs",
+        },
+        "engine_params": {
+            "type": "object",
+            "description": "Optional parameters for the dubbing engine.",
         },
     },
     "required": [
@@ -35,6 +45,7 @@ DUBBING_AGENT_PARAMETERS = {
         "target_language",
         "target_language_code",
         "collection_id",
+        "engine",
     ],
 }
 
@@ -42,11 +53,11 @@ DUBBING_AGENT_PARAMETERS = {
 class DubbingAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "dubbing"
-        self.description = "This is an agent to dub the given video into a target language using ElevenLabs."
+        self.description = (
+            "This is an agent to dub the given video into a target language"
+        )
         self.parameters = DUBBING_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
-        ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-        self.elevenlabs_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
 
     def run(
         self,
@@ -54,6 +65,8 @@ class DubbingAgent(BaseAgent):
         target_language: str,
         target_language_code: str,
         collection_id: str,
+        engine: str,
+        engine_params: dict = {},
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -63,6 +76,8 @@ class DubbingAgent(BaseAgent):
         :param str target_language: The target language name for dubbing (e.g. Spanish).
         :param str target_language_code: The target language code for dubbing (e.g. es).
         :param str collection_id: The ID of the collection to process.
+        :param str engine: The dubbing engine to use. Default is 'elevenlabs'.
+        :param dict engine_params: Optional parameters for the dubbing engine.
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the dubbing operation.
@@ -75,6 +90,9 @@ class DubbingAgent(BaseAgent):
             video = self.videodb_tool.get_video(video_id)
             if not video:
                 raise Exception(f"Video {video_id} not found")
+
+            if engine not in SUPPORTED_ENGINES:
+                raise Exception(f"{engine} not supported")
 
             video_content = VideoContent(
                 agent_name=self.agent_name,
@@ -90,33 +108,39 @@ class DubbingAgent(BaseAgent):
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
             dubbed_file_path = f"{DOWNLOADS_PATH}/{video_id}_dubbed.mp4"
 
-            job_id = self.elevenlabs_tool.create_dub_job(
-                source_url=download_response["download_url"],
-                target_language=target_language_code,
-            )
-            self.output_message.actions.append(
-                f"Dubbing job initiated successfully - Job ID: {job_id}"
-            )
-            self.output_message.push_update()
+            if engine == "elevenlabs":
+                ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+                if not ELEVENLABS_API_KEY:
+                    raise Exception("Elevenlabs API key not present in .env")
+                elevenlabs_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
+                job_id = elevenlabs_tool.create_dub_job(
+                    source_url=download_response["download_url"],
+                    target_language=target_language_code,
+                )
+                self.output_message.actions.append(
+                    f"Dubbing job initiated successfully - Job ID: {job_id}"
+                )
+                self.output_message.push_update()
 
-            self.output_message.actions.append(
-                "Waiting for dubbing process to complete..."
-            )
-            self.output_message.push_update()
-            self.elevenlabs_tool.wait_for_dub_job(job_id)
+                self.output_message.actions.append(
+                    "Waiting for dubbing process to complete..."
+                )
+                self.output_message.push_update()
+                elevenlabs_tool.wait_for_dub_job(job_id)
 
-            self.output_message.actions.append("Downloading dubbed video")
-            self.output_message.push_update()
-            self.elevenlabs_tool.download_dub_file(
-                job_id,
-                target_language_code,
-                dubbed_file_path,
-            )
+                self.output_message.actions.append("Downloading dubbed video")
+                self.output_message.push_update()
+                elevenlabs_tool.download_dub_file(
+                    job_id,
+                    target_language_code,
+                    dubbed_file_path,
+                )
 
-            self.output_message.actions.append(
-                f"Uploading dubbed video to VideoDB as 'Dubbed_{target_language} {video['name']}'"
-            )
-            self.output_message.push_update()
+                self.output_message.actions.append(
+                    f"Uploading dubbed video to VideoDB as 'Dubbed_{target_language} {video['name']}'"
+                )
+                self.output_message.push_update()
+
             dubbed_video = self.videodb_tool.upload(
                 dubbed_file_path,
                 source_type="file_path",
@@ -132,7 +156,10 @@ class DubbingAgent(BaseAgent):
             return AgentResponse(
                 status=AgentStatus.SUCCESS,
                 message=f"Successfully dubbed video '{video['name']}' to {target_language}",
-                data={"stream_url": dubbed_video["stream_url"]},
+                data={
+                    "stream_url": dubbed_video["stream_url"],
+                    "video_id": dubbed_video["id"],
+                },
             )
 
         except Exception as e:
