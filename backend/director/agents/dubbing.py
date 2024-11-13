@@ -145,7 +145,7 @@ class DubbingAgent(BaseAgent):
                 dubbed_file_path,
                 source_type="file_path",
                 media_type="video",
-                name=f"[Dubbed {target_language}] {video['name']}",
+                name=f"[Dubbed in {target_language}] {video['name']}",
             )
 
             video_content.video = VideoData(stream_url=dubbed_video["stream_url"])
