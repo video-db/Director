@@ -15,3 +15,4 @@ venv
 package-lock.json
 *.mjs
 site/*
+backend/director/downloads

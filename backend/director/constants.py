@@ -26,3 +26,5 @@ class EnvPrefix(str, Enum):
 
     OPENAI_ = "OPENAI_"
     ANTHROPIC_ = "ANTHROPIC_"
+
+DOWNLOADS_PATH="director/downloads"
