@@ -137,7 +137,7 @@ class DubbingAgent(BaseAgent):
                 )
 
                 self.output_message.actions.append(
-                    f"Uploading dubbed video to VideoDB as 'Dubbed_{target_language} {video['name']}'"
+                    f"Uploading dubbed video to VideoDB as '[Dubbed in {target_language}] {video['name']}'"
                 )
                 self.output_message.push_update()
 
