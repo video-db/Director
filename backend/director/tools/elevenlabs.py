@@ -16,6 +16,36 @@ class ElevenLabsTool:
             stability=0.0, similarity_boost=1.0, style=0.0, use_speaker_boost=True
         )
 
+    def generate_sound_effect(
+        self, prompt: str, save_at: str, duration: float, config: dict
+    ):
+        result = self.client.text_to_sound_effects.convert(
+            text=prompt,
+            duration_seconds=duration,
+            prompt_influence=config.get("prompt_influence"),
+        )
+        with open(save_at, "wb") as f:
+            for chunk in result:
+                f.write(chunk)
+
+    def text_to_speech(self, text: str, save_at: str, config: dict):
+        response = self.client.text_to_speech.convert(
+            voice_id=config.get("voice_id", "pNInz6obpgDQGcFmaJgB"),
+            output_format=config.get("", "mp3_22050_32"),
+            text=text,
+            model_id=config.get("model_id", "eleven_turbo_v2_5"),
+            voice_settings=VoiceSettings(
+                stability=config.get("stability", 0.0),
+                similarity_boost=config.get("similarity_boost", 1.0),
+                style=config.get("style", 0.0),
+                use_speaker_boost=config.get("use_speaker_boost", True),
+            ),
+        )
+        with open(save_at, "wb") as f:
+            for chunk in response:
+                if chunk:
+                    f.write(chunk)
+
     def create_dub_job(
         self,
         source_url: str,

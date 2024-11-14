@@ -28,10 +28,6 @@ EDITING_AGENT_PARAMETERS = {
             "type": "string",
             "description": "A detailed description of the editing operations to perform on the videos. When mentioning media from VideoDB Collection either Videos, Image or Audio also mention their Id and other details",
         },
-        "notes": {
-            "type": "string",
-            "description": "Additional requirements or notes for the editing process.",
-        },
     },
     "required": ["collection_id", "instructions"],
 }
@@ -63,7 +59,6 @@ You are provided with a set of instructions to create a custom video timeline. T
   - Unlike audio and images Multiple images can be overlapped over any duration of time. 
   - You can specify duration for which the image should be there
   - Specify the starting position of an image on the timeline using the `overlay_start` parameter.
-
 ---
 
 **Your Task:**
@@ -130,20 +125,20 @@ You are provided with a set of instructions to create a custom video timeline. T
       "asset_id": "audio_1",
       "start": 0,
       "end": 10.0,
-      "overlay_start": 5.0
+      "overlay_at": 5.0
     },
     {
       "action": "add_audio",
       "asset_id": "audio_2",
       "start": 0,
       "end": 5.0,
-      "overlay_start": 15.0
+      "overlay_at": 15.0
     },
     {
       "action": "overlay_text",
       "text": "Sample Text",
       "duration": 10,
-      "overlay_start": 10,
+      "overlay_at": 10,
       "style" : "Bold font and italic"
     }
   ]
@@ -176,14 +171,16 @@ class EditingAgent(BaseAgent):
                 start = action.get("start")
                 end = action.get("end")
                 video_asset = VideoAsset(asset_id=video_id, start=start, end=end)
-                print("adding video_asset", video_asset)
+                print("#### adding video_asset", video_asset)
                 timeline.add_inline(video_asset)
             elif action_type == "add_audio":
                 audio_id = action.get("asset_id")
                 start = action.get("start")
                 end = action.get("end")
+                overlay_at = action.get("overlay_at")
                 audio_asset = AudioAsset(asset_id=audio_id, start=start, end=end)
-                timeline.add_overlay(audio_asset)
+                print("#### adding video_asset", video_asset)
+                timeline.add_overlay(overlay_at, audio_asset)
             else:
                 logger.warning(f"Unknown action type: {action_type}")
                 continue

@@ -14,6 +14,7 @@ from director.agents.index import IndexAgent
 from director.agents.brandkit import BrandkitAgent
 from director.agents.profanity_remover import ProfanityRemoverAgent
 from director.agents.image_generation import ImageGenerationAgent
+from director.agents.audio_generation import AudioGenerationAgent
 from director.agents.stream_video import StreamVideoAgent
 from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
@@ -47,6 +48,7 @@ class ChatHandler:
             BrandkitAgent,
             ProfanityRemoverAgent,
             ImageGenerationAgent,
+            AudioGenerationAgent,
             StreamVideoAgent,
             SubtitleAgent,
             SlackAgent,
