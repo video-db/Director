@@ -228,7 +228,7 @@ class MemeMakerAgent(BaseAgent):
             self.output_message.actions.append("Key moments identified..")
             self.output_message.actions.append("Creating video clips..")
             self.output_message.push_update()
-            success_data = {"clip_timestamps": [], "image_timestamps": []}
+            data = {"clip_timestamps": [], "image_timestamps": []}
             all_clips_generated: bool = True
             for clip in result["clip_timestamps"]:
                 video_content = VideoContent(
@@ -247,7 +247,7 @@ class MemeMakerAgent(BaseAgent):
                     video_content.status = MsgStatus.error
                     self.output_message.push_update()
                     clip["stream_url"] = f"Error generating stream: {str(e)}"
-                    success_data["clip_timestamps"].append(clip)
+                    data["clip_timestamps"].append(clip)
                     all_clips_generated = False
                     continue
 
@@ -255,7 +255,7 @@ class MemeMakerAgent(BaseAgent):
                 video_content.status_message = f'Clip "{clip["text"]}" generated.'
                 video_content.status = MsgStatus.success
                 clip["stream_url"] = stream_url
-                success_data["clip_timestamps"].append(clip)
+                data["clip_timestamps"].append(clip)
                 self.output_message.publish()
 
         except Exception as e:
@@ -265,5 +265,5 @@ class MemeMakerAgent(BaseAgent):
         return AgentResponse(
             status=AgentStatus.SUCCESS if all_clips_generated else AgentStatus.ERROR,
             message=f"Agent {self.name} completed successfully.",
-            data=success_data,
+            data=data,
         )
