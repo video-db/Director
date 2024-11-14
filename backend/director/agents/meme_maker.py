@@ -243,10 +243,11 @@ class MemeMakerAgent(BaseAgent):
                         timeline=[(clip["start"], clip["end"])],
                     )
                 except Exception as e:
-                    video_content.status_message = f"Error generating clip: {str(e)}"
+                    video_content.status_message = f"Error generating stream: {str(e)}"
                     video_content.status = MsgStatus.error
                     self.output_message.push_update()
-                    clip["stream_url"] = f"Error generating stream: {str(e)}"
+                    clip["stream_url"] = None
+                    clip["error"] = f"Error generating stream: {str(e)}"
                     data["clip_timestamps"].append(clip)
                     all_clips_generated = False
                     continue
