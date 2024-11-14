@@ -17,6 +17,7 @@ from director.agents.image_generation import ImageGenerationAgent
 from director.agents.stream_video import StreamVideoAgent
 from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
+from director.agents.meme_maker import MemeMakerAgent
 from director.agents.dubbing import DubbingAgent
 
 
@@ -49,6 +50,7 @@ class ChatHandler:
             StreamVideoAgent,
             SubtitleAgent,
             SlackAgent,
+            MemeMakerAgent,
             DubbingAgent,
         ]
 
