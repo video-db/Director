@@ -21,7 +21,7 @@ MEMEMAKER_PARAMETERS = {
     "properties": {
         "prompt": {
             "type": "string",
-            "description": "Prompt to generate Meme",
+            "description": "Prompt to generate Meme, if user doesn't provide prompt don't ask user for prompt, use default prompt Create all the funniest Memes.",
         },
         "video_id": {
             "type": "string",
@@ -229,14 +229,28 @@ class MemeMakerAgent(BaseAgent):
             self.output_message.actions.append("Creating video clips..")
             self.output_message.push_update()
             success_data = {"clip_timestamps": [], "image_timestamps": []}
+            all_clips_generated: bool = True
             for clip in result["clip_timestamps"]:
                 video_content = VideoContent(
-                    agent_name=self.agent_name, status=MsgStatus.progress
+                    agent_name=self.agent_name,
+                    status=MsgStatus.progress,
+                    status_message="Generating clip..",
                 )
                 self.output_message.content.append(video_content)
-                stream_url = stream_url = self.videodb_tool.generate_video_stream(
-                    video_id=video_id, timeline=[(clip["start"], clip["end"])]
-                )
+                try:
+                    stream_url = stream_url = self.videodb_tool.generate_video_stream(
+                        video_id=video_id,
+                        timeline=[(clip["start"], clip["end"])],
+                    )
+                except Exception as e:
+                    video_content.status_message = f"Error generating clip: {str(e)}"
+                    video_content.status = MsgStatus.error
+                    self.output_message.push_update()
+                    clip["stream_url"] = f"Error generating stream: {str(e)}"
+                    success_data["clip_timestamps"].append(clip)
+                    all_clips_generated = False
+                    continue
+
                 video_content.video = VideoData(stream_url=stream_url)
                 video_content.status_message = f'Clip "{clip["text"]}" generated.'
                 video_content.status = MsgStatus.success
@@ -249,7 +263,7 @@ class MemeMakerAgent(BaseAgent):
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
         return AgentResponse(
-            status=AgentStatus.SUCCESS,
+            status=AgentStatus.SUCCESS if all_clips_generated else AgentStatus.ERROR,
             message=f"Agent {self.name} completed successfully.",
             data=success_data,
         )
