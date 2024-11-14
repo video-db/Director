@@ -20,6 +20,7 @@ from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
 from director.agents.editing import EditingAgent
 from director.agents.dubbing import DubbingAgent
+from director.agents.storyboarding import StoryboardingAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -53,7 +54,8 @@ class ChatHandler:
             SubtitleAgent,
             SlackAgent,
             EditingAgent,
-            DubbingAgent
+            DubbingAgent,
+            StoryboardingAgent,
         ]
 
     def add_videodb_state(self, session):
