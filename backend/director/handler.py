@@ -15,12 +15,12 @@ from director.agents.brandkit import BrandkitAgent
 from director.agents.profanity_remover import ProfanityRemoverAgent
 from director.agents.image_generation import ImageGenerationAgent
 from director.agents.audio_generation import AudioGenerationAgent
+from director.agents.video_generation import VideoGenerationAgent
 from director.agents.stream_video import StreamVideoAgent
 from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
 from director.agents.editing import EditingAgent
 from director.agents.dubbing import DubbingAgent
-
 
 from director.core.session import Session, InputMessage, MsgStatus
 from director.core.reasoning import ReasoningEngine
@@ -49,6 +49,7 @@ class ChatHandler:
             ProfanityRemoverAgent,
             ImageGenerationAgent,
             AudioGenerationAgent,
+            VideoGenerationAgent,
             StreamVideoAgent,
             SubtitleAgent,
             SlackAgent,
