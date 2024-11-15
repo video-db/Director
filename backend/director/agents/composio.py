@@ -1,7 +1,8 @@
+import os
 import logging
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
-from director.core.session import Session, MsgStatus, TextContent
+from director.core.session import Session
 
 from director.tools.composio_tool import composio_tool
 
@@ -22,9 +23,8 @@ COMPOSIO_PARAMETERS = {
 class ComposioAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "composio"
-        self.description = (
-            "The Composio agent is used to generate responses using the Composio tool."
-        )
+        self.description = f'The Composio agent is used to run tasks related to apps like {os.getenv("COMPOSIO_APPS", ["GMAIL"])} '
+
         self.parameters = COMPOSIO_PARAMETERS
         super().__init__(session=session, **kwargs)
 
@@ -38,7 +38,6 @@ class ComposioAgent(BaseAgent):
         try:
             self.output_message.actions.append("Running task..")
             self.output_message.push_update()
-
             composio_response = composio_tool(task=task)
 
         except Exception as e:
