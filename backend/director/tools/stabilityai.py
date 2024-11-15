@@ -27,8 +27,9 @@ class StabilityAITool:
 
         image_payload = {
             "prompt": prompt,
-            "output_format": "png",
-            "aspect_ratio": "16:9",
+            "output_format": config.get("format", "png"),
+            "aspect_ratio": config.get("aspect_ratio", "16:9"),
+            "negative_prompt": config.get("negative_prompt", ""),
         }
 
         image_response = requests.post(

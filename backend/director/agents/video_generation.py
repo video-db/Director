@@ -18,8 +18,8 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "collection_id": {
-            "type": "string",
-            "description": "The unique identifier of the collection to store the video",
+            "type": "string", 
+            "description": "Collection ID to store the video",
         },
         "engine": {
             "type": "string",
@@ -45,7 +45,37 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                 },
                 "config": {
                     "type": "object",
-                    "description": "Additional configuration options for video generation",
+                    "description": "Additional configuration options",
+                    "properties": {
+                        "aspect_ratio": {
+                            "type": "string",
+                            "enum": ["16:9", "9:16", "1:1"],
+                            "description": "Aspect ratio of the output video"
+                        },
+                        "image": {
+                            "type": "string",
+                            "description": "Starting image for generation"
+                        },
+                        "strength": {
+                            "type": "number",
+                            "description": "Image influence on output",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "negative_prompt": {
+                            "type": "string",
+                            "description": "Keywords to exclude from output"
+                        },
+                        "seed": {
+                            "type": "integer",
+                            "description": "Randomness seed for generation"
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "description": "Format of the output video",
+                            "enum": ["mp4", "webm"]
+                        }
+                    },
                     "default": {},
                 },
             },
@@ -59,7 +89,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
 class VideoGenerationAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "video_generation"
-        self.description = "An agent designed to generate videos from text prompts"
+        self.description = "Agent designed to generate videos from text prompts"
         self.parameters = VIDEO_GENERATION_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
@@ -73,13 +103,12 @@ class VideoGenerationAgent(BaseAgent):
     ) -> AgentResponse:
         """
         Generates video using Stability AI's API based on input text prompt.
-        :param str collection_id: The collection ID to store the generated video
-        :param str job_type: The type of video generation job to perform
-        :param str engine: The engine to use for video generation
+        :param collection_id: The collection ID to store the generated video
+        :param job_type: The type of video generation job to perform
+        :param engine: The engine to use for video generation
         :param args: Additional positional arguments
         :param kwargs: Additional keyword arguments
         :return: Response containing the generated video ID
-        :rtype: AgentResponse
         """
         try:
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
@@ -91,16 +120,12 @@ class VideoGenerationAgent(BaseAgent):
             if engine == "stabilityai":
                 STABILITYAI_API_KEY = os.getenv("STABILITYAI_API_KEY")
                 if not STABILITYAI_API_KEY:
-                    raise Exception(
-                        "Stability AI API key not present in environment variables"
-                    )
+                    raise Exception("Stability AI API key not found")
                 video_gen_tool = StabilityAITool(api_key=STABILITYAI_API_KEY)
             elif engine == "kling":
                 KING_AI_API_KEY = os.getenv("KING_AI_API_KEY")
                 if not KING_AI_API_KEY:
-                    raise Exception(
-                        "Kling AI API key not present in environment variables"
-                    )
+                    raise Exception("Kling AI API key not found")
                 video_gen_tool = KlingAITool(api_key=KING_AI_API_KEY)
 
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
@@ -114,7 +139,7 @@ class VideoGenerationAgent(BaseAgent):
             self.output_message.content.append(video_content)
 
             if job_type == "text_to_video":
-                self.output_message.actions.append("Generating video from text prompt")
+                self.output_message.actions.append("Generating video from text")
                 self.output_message.push_update()
                 args = kwargs.get("text_to_video", {})
                 video_gen_tool.text_to_video(
@@ -132,15 +157,13 @@ class VideoGenerationAgent(BaseAgent):
                 output_path, source_type="file_path", media_type="video"
             )
             self.output_message.actions.append(
-                f"Uploaded generated video with Video ID: {media['id']}"
+                f"Uploaded video with ID: {media['id']}"
             )
 
             stream_url = media["stream_url"]
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
-            video_content.status_message = (
-                "Video editing completed successfully. Here is your stream."
-            )
+            video_content.status_message = "Video generated successfully"
             self.output_message.push_update()
             self.output_message.publish()
 
@@ -151,6 +174,6 @@ class VideoGenerationAgent(BaseAgent):
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message=f"Video generated successfully. Generated Media video ID: {media['id']} and Stream Url: {stream_url}",
+            message=f"Generated video ID: {media['id']}",
             data={"video_id": media["id"], "video_stream_url": stream_url},
         )
