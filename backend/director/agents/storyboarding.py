@@ -3,6 +3,9 @@ import json
 import os
 from typing import List
 import uuid
+import requests
+from PIL import Image
+import io
 
 from videodb.asset import VideoAsset, ImageAsset, AudioAsset, TextAsset, TextStyle
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
@@ -18,6 +21,7 @@ from director.core.session import (
 from director.tools.elevenlabs import ElevenLabsTool
 from director.tools.videodb_tool import VideoDBTool
 from director.llm.openai import OpenAI, OpenaiConfig
+from director.tools.replicate import flux_dev
 
 from director.constants import DOWNLOADS_PATH
 
@@ -97,7 +101,9 @@ class StoryboardingAgent(BaseAgent):
             self.output_message.push_update()
 
             for index, step in enumerate(steps):
-                image_url = self.generate_image_dalle(step, app_description)
+                # image_url = self.generate_image_dalle(step, app_description)
+                image_url = self.generate_image_flux(step, app_description)
+                print("####this is image url ", image_url)
                 if not image_url:
                     video_content.status = MsgStatus.error
                     video_content.status_message = (
@@ -108,10 +114,21 @@ class StoryboardingAgent(BaseAgent):
                     return AgentResponse(
                         status=AgentStatus.ERROR, message=error_message
                     )
-                media = self.videodb_tool.upload(
-                    image_url, source_type="url", media_type="image"
-                )
-                steps[index]["image_id"] = media["id"]
+                    
+                # Download webp image and convert to PNG
+                response = requests.get(image_url)
+                if response.status_code == 200:
+                    image = Image.open(io.BytesIO(response.content))
+                    os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+                    png_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.png"
+                    image.save(png_path, "PNG")
+                    media = self.videodb_tool.upload(
+                        png_path, source_type="file_path", media_type="image"
+                    )
+                    steps[index]["image_id"] = media["id"]
+                else:
+                    logger.error("Failed to download image")
+                    return None
 
             print(steps)
 
@@ -248,6 +265,25 @@ Keep it narrative-driven, within two sentences."""
             logger.exception("Error in generating image.")
             return None
 
+    def generate_image_flux(self, step, app_description):
+        """
+        Generates an image using Flux.
+        :param step: Dict containing step information.
+        :param app_description: Description of the app.
+        :return: URL of the generated image.
+        """
+        try:
+            prompt = self.prompt_image_generation(step, app_description)
+            flux_output = flux_dev(prompt)
+            if not flux_output:
+                logger.error("Error in generating image with Flux")
+                return None
+            image_url = flux_output[0].url
+            return image_url
+        except Exception as e:
+            logger.exception("Error in generating image with Flux.")
+            return None
+
     def prompt_image_generation(self, step, app_description):
         """
         Generates the prompt for image generation.
@@ -298,10 +334,10 @@ Keep it narrative-driven, within two sentences."""
                             x="(w-text_w)/2",
                             y="(h-text_h*2)",
                             font="League Spartan",
-                            fontsize = "(h/20)",
+                            fontsize="(h/20)",
                             fontcolor="Snow",
                             boxcolor="OrangeRed",
-                            boxborderw=40,
+                            boxborderw=10,
                         ),
                     )
 
