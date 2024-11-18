@@ -70,7 +70,6 @@ class ChatHandler:
             session.state["video"] = session.state["collection"].get_video(
                 session.video_id
             )
-        logger.info("videodb state added to session")
 
     def agents_list(self):
         return [

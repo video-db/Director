@@ -18,7 +18,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "collection_id": {
-            "type": "string", 
+            "type": "string",
             "description": "Collection ID to store the video",
         },
         "engine": {
@@ -50,31 +50,31 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                         "aspect_ratio": {
                             "type": "string",
                             "enum": ["16:9", "9:16", "1:1"],
-                            "description": "Aspect ratio of the output video"
+                            "description": "Aspect ratio of the output video",
                         },
                         "image": {
                             "type": "string",
-                            "description": "Starting image for generation"
+                            "description": "Starting image for generation",
                         },
                         "strength": {
                             "type": "number",
                             "description": "Image influence on output",
                             "minimum": 0,
-                            "maximum": 1
+                            "maximum": 1,
                         },
                         "negative_prompt": {
                             "type": "string",
-                            "description": "Keywords to exclude from output"
+                            "description": "Keywords to exclude from output",
                         },
                         "seed": {
                             "type": "integer",
-                            "description": "Randomness seed for generation"
+                            "description": "Randomness seed for generation",
                         },
                         "output_format": {
                             "type": "string",
                             "description": "Format of the output video",
-                            "enum": ["mp4", "webm"]
-                        }
+                            "enum": ["mp4", "webm"],
+                        },
                     },
                     "default": {},
                 },
@@ -123,10 +123,14 @@ class VideoGenerationAgent(BaseAgent):
                     raise Exception("Stability AI API key not found")
                 video_gen_tool = StabilityAITool(api_key=STABILITYAI_API_KEY)
             elif engine == "kling":
-                KING_AI_API_KEY = os.getenv("KING_AI_API_KEY")
-                if not KING_AI_API_KEY:
+                KLING_AI_ACCESS_API_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
+                KLING_AI_SECRET_API_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
+                if not KLING_AI_ACCESS_API_KEY or not KLING_AI_SECRET_API_KEY:
                     raise Exception("Kling AI API key not found")
-                video_gen_tool = KlingAITool(api_key=KING_AI_API_KEY)
+                video_gen_tool = KlingAITool(
+                    access_key=KLING_AI_ACCESS_API_KEY,
+                    secret_key=KLING_AI_SECRET_API_KEY,
+                )
 
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
             output_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
@@ -156,9 +160,7 @@ class VideoGenerationAgent(BaseAgent):
             media = self.videodb_tool.upload(
                 output_path, source_type="file_path", media_type="video"
             )
-            self.output_message.actions.append(
-                f"Uploaded video with ID: {media['id']}"
-            )
+            self.output_message.actions.append(f"Uploaded video with ID: {media['id']}")
 
             stream_url = media["stream_url"]
             video_content.video = VideoData(stream_url=stream_url)

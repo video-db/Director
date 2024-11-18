@@ -13,7 +13,7 @@ from director.core.session import (
 from director.tools.videodb_tool import VideoDBTool
 from director.llm.openai import OpenAI, OpenaiConfig
 
-from videodb.asset import VideoAsset, AudioAsset, TextAsset, TextStyle
+from videodb.asset import VideoAsset, AudioAsset
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,12 @@ EDITING_AGENT_PARAMETERS = {
         },
         "instructions": {
             "type": "string",
-            "description": "A detailed description of the editing operations to perform on the videos. When mentioning media from VideoDB Collection either Videos, Image or Audio also mention their Id and other details",
+            "description": """
+            A detailed description of the editing operations to perform on the videos.
+            When mentioning media from VideoDB Collection either Videos, Image or Audio also mention their Id and other details
+            When mentioning previous edited video, don't mention the stream url, but mention the instructions and actions which were applied to i,
+            pick this up from the context history
+            """,
         },
     },
     "required": ["collection_id", "instructions"],
@@ -171,7 +176,6 @@ class EditingAgent(BaseAgent):
                 start = action.get("start")
                 end = action.get("end")
                 video_asset = VideoAsset(asset_id=video_id, start=start, end=end)
-                print("#### adding video_asset", video_asset)
                 timeline.add_inline(video_asset)
             elif action_type == "add_audio":
                 audio_id = action.get("asset_id")
@@ -179,7 +183,6 @@ class EditingAgent(BaseAgent):
                 end = action.get("end")
                 overlay_at = action.get("overlay_at")
                 audio_asset = AudioAsset(asset_id=audio_id, start=start, end=end)
-                print("#### adding video_asset", video_asset)
                 timeline.add_overlay(overlay_at, audio_asset)
             else:
                 logger.warning(f"Unknown action type: {action_type}")
@@ -250,6 +253,11 @@ class EditingAgent(BaseAgent):
             )
             self.output_message.publish()
 
+            response_message = f"""
+            Videos Edited Sucessfully where instructions were {instructions} and applied actions are {editing_actions['actions']}
+            resulting in a final stream of {stream_url}
+            {stream_url}"""
+
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
             video_content.status = MsgStatus.error
@@ -261,6 +269,10 @@ class EditingAgent(BaseAgent):
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message="Video(s) edited successfully",
-            data={"stream_url": stream_url},
+            message=response_message,
+            data={
+                "instructions": instructions,
+                "actions": editing_actions["actions"],
+                "stream_url": stream_url,
+            },
         )
