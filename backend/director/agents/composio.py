@@ -23,7 +23,7 @@ COMPOSIO_PARAMETERS = {
 class ComposioAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "composio"
-        self.description = f'The Composio agent is used to run tasks related to apps like {os.getenv("COMPOSIO_APPS", ["GMAIL"])} '
+        self.description = f'The Composio agent is used to run tasks related to apps like {os.getenv("COMPOSIO_APPS")} '
 
         self.parameters = COMPOSIO_PARAMETERS
         super().__init__(session=session, **kwargs)
