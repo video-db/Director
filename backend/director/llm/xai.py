@@ -12,28 +12,24 @@ from director.constants import (
 )
 
 
-class OpenAIChatModel(str, Enum):
-    """Enum for OpenAI Chat models"""
+class XAIModel(str, Enum):
+    """Enum for XAI Chat models"""
 
-    GPT4 = "gpt-4"
-    GPT4_32K = "gpt-4-32k"
-    GPT4_TURBO = "gpt-4-turbo"
-    GPT4o = "gpt-4o-2024-08-06"
-    GPT4o_MINI = "gpt-4o-mini"
+    GROK_BETA = "grok-beta"
 
 
-class OpenaiConfig(BaseLLMConfig):
-    """OpenAI Config"""
+class XAIConfig(BaseLLMConfig):
+    """XAI Config"""
 
     model_config = SettingsConfigDict(
-        env_prefix=EnvPrefix.OPENAI_,
+        env_prefix=EnvPrefix.XAI_,
         extra="ignore",
     )
 
-    llm_type: str = LLMType.OPENAI
+    llm_type: str = LLMType.XAI
     api_key: str = ""
-    api_base: str = "https://api.openai.com/v1"
-    chat_model: str = Field(default=OpenAIChatModel.GPT4o)
+    api_base: str = "https://api.x.ai/v1"
+    chat_model: str = Field(default=XAIModel.GROK_BETA)
     max_tokens: int = 4096
 
     @field_validator("api_key")
@@ -41,18 +37,18 @@ class OpenaiConfig(BaseLLMConfig):
     def validate_non_empty(cls, v, info: FieldValidationInfo):
         if not v:
             raise ValueError(
-                f"{info.field_name} must not be empty. please set {EnvPrefix.OPENAI_.value}{info.field_name.upper()} environment variable."
+                f"{info.field_name} must not be empty. please set {EnvPrefix.XAI_.value}{info.field_name.upper()} environment variable."
             )
         return v
 
 
-class OpenAI(BaseLLM):
-    def __init__(self, config: OpenaiConfig = None):
+class XAI(BaseLLM):
+    def __init__(self, config: XAIConfig = None):
         """
-        :param config: OpenAI Config
+        :param config: XAI Config
         """
         if config is None:
-            config = OpenaiConfig()
+            config = XAIConfig()
         super().__init__(config=config)
         try:
             import openai
@@ -155,9 +151,6 @@ class OpenAI(BaseLLM):
         if tools:
             params["tools"] = self._format_tools(tools)
             params["tool_choice"] = "auto"
-
-        if response_format and self.config.api_base == "https://api.openai.com/v1":
-            params["response_format"] = response_format
 
         try:
             response = self.client.chat.completions.create(**params)

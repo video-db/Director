@@ -19,6 +19,7 @@ class LLMType(str, Enum):
 
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    XAI = "xai"
 
 
 class EnvPrefix(str, Enum):
@@ -26,5 +27,7 @@ class EnvPrefix(str, Enum):
 
     OPENAI_ = "OPENAI_"
     ANTHROPIC_ = "ANTHROPIC_"
+    XAI_ = "XAI_"
 
-DOWNLOADS_PATH="director/downloads"
+
+DOWNLOADS_PATH = "director/downloads"
