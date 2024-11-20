@@ -20,6 +20,7 @@ class LLMType(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     XAI = "xai"
+    DEFAULT = XAI
 
 
 class EnvPrefix(str, Enum):

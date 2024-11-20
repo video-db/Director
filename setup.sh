@@ -284,7 +284,7 @@ echo "
 *    - Check the newly created .env file  *
 *    - Add API keys for required services *
 *    - Example:                           *
-*    - OPENAI_API_KEY=sk-***              *
+*    - XAI_API_KEY=xai-***                *
 *    - VIDEO_DB_API_KEY=sk-***            *
 *    - Note: (Only ONE LLM key is needed) *
 *                                         *
