@@ -51,12 +51,14 @@ class ComposioAgent(BaseAgent):
             text_content = TextContent(
                 agent_name=self.agent_name,
                 status=MsgStatus.progress,
+                status_message="Running task..",
             )
             self.output_message.content.append(text_content)
             self.output_message.push_update()
 
             composio_response = composio_tool(task=task)
             llm_prompt = (
+                f"User has asked to run a task: {task} in Composio. \n"
                 "Format the following reponse into text.\n"
                 "Give the output which can be directly send to use \n"
                 "Don't add any extra text \n"
