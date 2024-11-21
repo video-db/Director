@@ -40,29 +40,46 @@
 
 <!-- ABOUT THE PROJECT -->
 
-##  🧐 What is it?
-Director provides a advance AI first framework for developing intelligent agents that can interact with your audio/video collection in natural language. Whether you're dealing with  social content, lectures, movies, youtube videos, TV shows, talks, music, or other digital content, Director offers variety of tools to build powerful AI-powered assistants.
+##  🧐 What is The Director?
 
-It uses the VideoDB’s scalable "video as data" infrastructure to create agentic workflows. For example, in natural language you can give commands like `“upload this video and send the bullet point summary on my slack”` and the agent will handle the rest.
-📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
+The Director is an AI-powered framework that lets you interact with your video and audio collections using natural language. Forget complex tools—just tell The Director what you want, and it gets it done.
+
+Whether you’re working with social media clips, lectures, movies, YouTube videos, or any other content, The Director enables you to:
+
+- Summarize videos in seconds.
+- Search for specific moments.
+- Create clips instantly.
+- Add overlays, generate thumbnails, and much more.
+All powered by VideoDB’s scalable ["video-as-data"](https://videodb.io/video-as-data)ke infrastructure.
+
+For example, a simple command like:
+`Upload this video and send the highlights to my Slack,`
+sets everything in motion.
+
+Built with flexibility in mind, The Director is perfect for developers, creators, and teams looking to harness AI to simplify media workflows and unlock new possibilities. 📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
 
 
 
-
-
-https://github.com/user-attachments/assets/8b97a9bf-5c81-4a0d-8863-9415552eba57
-
-
-
+<!-- Intro Video -->
 
 
 
 
 ## ⭐️ Key Features
-- **🤖 AI Agent Framework:** Build custom agents to perform tasks like summarization, search, indexing, clipping and library organization. 
-- **🎨 Innovative User Experience:** Complete framework for interacting with your media library with chat based UI, Video player and next-gen interactions that can help you create the experience you need. 
-- **🔍 Media Analysis:** Your video infra is taken care by [VideoDB](https://videodb.io). Connect with popular LLMs, Databases, and GenAI APIs seamlessly.
-- **🧩 Extensible Architecture:** Easily add new capabilities through tools and modules. Run locally or deploy on your own cloud.
+### 🤖Build Smart Video Agents
+Create custom AI agents that handle tedious tasks for you:
+
+- Summarize videos in seconds.
+- Search and index your media library.
+- Organize and clip your content effortlessly.
+### 🎨 A New Way to Interact
+Experience a sleek, chat-based interface with built-in video playback and intuitive controls. It’s like having a personal assistant for your media.
+
+### 🔍 Smarter Media Analysis
+Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable.
+
+### 🧩 Customizable and Flexible
+Easily add new features and tools to your workflow. Whether you want to run it locally or on your cloud, The Director adapts to your needs.
 
   ![Director architecture](https://github.com/user-attachments/assets/9afb2783-66db-4899-9308-03cbd12e74d7)
   
