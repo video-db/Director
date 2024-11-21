@@ -27,7 +27,7 @@
   <p align="center">
     Framework for creating AI agents to manage and interact with your media library.
     <br />
-    <a href="https://codesandbox.io/p/sandbox/nifty-mendeleev-tnxpnt"><strong>View Demo »</strong></a>
+    <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw"><strong>View Demo »</strong></a>
     <br />
     <br />
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=bug&projects=&template=bug_report.yml">Report Bug</a>
@@ -50,7 +50,7 @@ Whether you’re working with social media clips, lectures, movies, YouTube vide
 - Search for specific moments.
 - Create clips instantly.
 - Add overlays, generate thumbnails, and much more.
-All powered by VideoDB’s scalable ["video-as-data"](https://videodb.io/video-as-data)ke infrastructure.
+All powered by VideoDB’s scalable ["video-as-data"](https://videodb.io/video-as-data) infrastructure.
 
 For example, a simple command like:
 `Upload this video and send the highlights to my Slack,`
