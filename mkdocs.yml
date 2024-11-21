@@ -3,6 +3,7 @@ site_name: ""
 
 repo_url: https://github.com/video-db/Director
 repo_name: videodb-db/Director
+edit_uri: edit/main/docs/
 extra:
   generator: True
 
