@@ -11,6 +11,7 @@ class TranscriptionAgent(BaseAgent):
         self.description = (
             "This is an agent to get transcripts of videos"
         )
+        self.parameters = self.get_parameters()
         super().__init__(session=session, **kwargs)
 
     def run(self, collection_id: str, video_id: str, timestamp_mode: bool = False, time_range: int = 2) -> AgentResponse:

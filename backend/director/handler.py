@@ -20,7 +20,7 @@ from director.agents.slack_agent import SlackAgent
 from director.agents.meme_maker import MemeMakerAgent
 from director.agents.dubbing import DubbingAgent
 from director.agents.composio import ComposioAgent
-from director.agents.transcript_agent import VideoTranscriptionAgent
+from director.agents.transcription import TranscriptionAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -54,8 +54,8 @@ class ChatHandler:
             SlackAgent,
             MemeMakerAgent,
             DubbingAgent,
+            TranscriptionAgent,
             ComposioAgent,
-            VideoTranscriptionAgent,
         ]
 
     def add_videodb_state(self, session):
