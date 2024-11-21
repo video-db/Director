@@ -5,7 +5,7 @@ from director.tools.videodb_tool import VideoDBTool
 
 logger = logging.getLogger(__name__)
 
-class VideoTranscriptionAgent(BaseAgent):
+class TranscriptionAgent(BaseAgent):
     def __init__(self, session=None, **kwargs):
         self.agent_name = "video_transcription"
         self.description = (
@@ -24,7 +24,7 @@ class VideoTranscriptionAgent(BaseAgent):
         :return: AgentResponse with the transcription result.
         :rtype: AgentResponse
         """
-        self.output_message.actions.append("Starting video transcription...")
+        self.output_message.actions.append("Trying to get the video transcription...")
         output_text_content = TextContent(
             agent_name=self.agent_name,
             status_message="Processing the transcription...",
