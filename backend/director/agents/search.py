@@ -1,7 +1,7 @@
 import logging
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 from director.core.session import (
     Session,
     MsgStatus,
@@ -61,7 +61,7 @@ class SearchAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "search"
         self.description = "Agent to retreive data from VideoDB collections and videos."
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         self.parameters = SEARCH_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 

@@ -13,7 +13,7 @@ from director.core.session import (
     MsgStatus,
 )
 from director.llm.base import LLMResponse
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class ReasoningEngine:
         self.session = session
         self.system_prompt = REASONING_SYSTEM_PROMPT
         self.max_iterations = 10
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         self.agents: List[BaseAgent] = []
         self.stop_flag = False
         self.output_message: OutputMessage = self.session.output_message

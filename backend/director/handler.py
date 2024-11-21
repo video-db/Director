@@ -156,6 +156,8 @@ class ConfigHandler:
         if openai_key_configured:
             llm_configured = True
 
+        llm_configured = True
+
         db = load_db(os.getenv("SERVER_DB_TYPE", "sqlite"))
         db_configured = db.health_check()
         return {
