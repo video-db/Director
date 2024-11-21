@@ -6,6 +6,7 @@ Flask==3.0.3
 Flask-SocketIO==5.3.6
 Flask-Cors==4.0.1
 openai==1.42.0
+openai-function-calling==2.3.0
 pydantic==2.8.2
 pydantic-settings==2.4.0
 python-dotenv==1.0.1
@@ -13,5 +14,3 @@ replicate==1.0.1
 yt-dlp==2024.10.7
 videodb==0.2.5
 slack_sdk==3.33.2
-
-git+https://github.com/0xrohitgarg/openai-function-calling.git#egg=openai-function-calling
