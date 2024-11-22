@@ -25,7 +25,7 @@
 
 
   <p align="center">
-    Framework for creating AI agents to manage and interact with your media library.
+    Intelligent agents for your video library
     <br />
     <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw"><strong>View Demo »</strong></a>
     <br />
@@ -37,6 +37,7 @@
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=agent_request.yml">New Agent Request</a>
   </p>
 </p>
+<br/>
 
 <!-- ABOUT THE PROJECT -->
 
@@ -63,7 +64,7 @@ Built with flexibility in mind, The Director is perfect for developers, creators
 <!-- Intro Video -->
 
 
-
+<br/>
 
 ## ⭐️ Key Features
 ### 🤖Build Smart Video Agents
@@ -80,6 +81,16 @@ Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, 
 
 ### 🧩 Customizable and Flexible
 Easily add new features and tools to your workflow. Whether you want to run it locally or on your cloud, The Director adapts to your needs.
+
+<br/>
+
+## ⚙️ Architecture Overview
+Director's architecture brings together:
+
+Backend Reasoning Engine: Handles workflows and decision-making.
+Chat-Based UI: Engage with your media library conversationally.
+Video Player: Advanced playback and interaction tools.
+Collection View: Organize and browse your media effortlessly.
 
   ![Director architecture](https://github.com/user-attachments/assets/9afb2783-66db-4899-9308-03cbd12e74d7)
   
@@ -111,20 +122,20 @@ cd Director
 ```
 
 > This script will:
-> - Install nvm (Node Version Manager) if not already installed
 > - Install Node.js 22.8.0 using nvm
 > - Install Python and pip
-> - Set up virtual environments and install dependencies for frontend and backend
+> - Set up virtual environments for both frontend and backend.
 
-Supported platforms: 
+
+
+**3. Configure the environment variables:**
+
+Edit the `.env` files to add your API keys and other configuration options.
+
+### Supported platforms: 
 - Mac
 - Linux
 - Windows (WSL)
-
-**3. Configure the environment variables:**
-Edit the `.env` files to add your API keys and other configuration options.
-
-
 
 ## 💬 Running the Application
 
@@ -134,31 +145,17 @@ To start both the backend and frontend servers:
 make run
 ```
 
-This will start the backend server on `http://127.0.0.1:8000` and the frontend server on `http://127.0.0.1:8080`.
+- Backend: `http://127.0.0.1:8000`
 
-To run only the backend server: `make run-be`
-To just run the frontend development server: `make run-fe`
+- Frontend: `http://127.0.0.1:8080`
 
-## 📖 Documentation
+For specific tasks:
 
-The project documentation is built using MkDocs. To serve the documentation locally on port 9000:
+- Backend only: `make run-be`
 
-Activate the environment and install dependencies for development:
+- Frontend only: `make run-fe`
 
-```bash
-source backend/venv/bin/activate  
-make install-be
-```
 
-```bash
-mkdocs serve -a localhost:9000
-```
-
-To build the documentation:
-
-```bash
-mkdocs build
-```
 
 <!-- CONTRIBUTING -->
 
@@ -195,6 +192,26 @@ To create a new agent in Director, follow these steps:
 
 ![director_reasoning_engine](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
 Remember to consider creating reusable tools if your agent's functionality could be shared across multiple agents.
+
+
+## 📖 Documentation
+
+### Serve Locally
+To serve the documentation on port 9000:
+
+```bash
+source backend/venv/bin/activate  
+make install-be
+mkdocs serve -a localhost:9000
+```
+
+To build the documentation:
+
+```bash
+mkdocs build
+```
+
+
 
 ## 🤝 Contributing
 
