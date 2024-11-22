@@ -8,7 +8,7 @@ class StabilityAITool:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.image_endpoint = (
-            "https://api.stability.ai/v2beta/stable-image/generate/sd3"
+            "https://api.stability.ai/v2beta/stable-image/generate/ultra"
         )
         self.video_endpoint = "https://api.stability.ai/v2beta/image-to-video"
         self.result_endpoint = "https://api.stability.ai/v2beta/image-to-video/result"
@@ -31,6 +31,8 @@ class StabilityAITool:
             "aspect_ratio": config.get("aspect_ratio", "16:9"),
             "negative_prompt": config.get("negative_prompt", ""),
         }
+
+        print("this is image payload", image_payload)
 
         image_response = requests.post(
             self.image_endpoint, headers=headers, files={"none": ""}, data=image_payload
@@ -61,6 +63,8 @@ class StabilityAITool:
             "cfg_scale": config.get("cfg_scale", 1.8),
             "motion_bucket_id": config.get("motion_bucket_id", 127),
         }
+
+        print("this is video payload", video_payload)
 
         with open(temp_image_path, "rb") as img_file:
             video_response = requests.post(

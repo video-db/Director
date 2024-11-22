@@ -75,6 +75,20 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                             "description": "Format of the output video",
                             "enum": ["mp4", "webm"],
                         },
+                        "cfg_scale": {
+                            "type": "number",
+                            "description": "How strongly video sticks to original image",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "default": 1.8
+                        },
+                        "motion_bucket_id": {
+                            "type": "integer",
+                            "description": "Controls motion amount in output video",
+                            "minimum": 1,
+                            "maximum": 255,
+                            "default": 127
+                        }
                     },
                     "default": {},
                 },
