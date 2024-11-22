@@ -94,6 +94,29 @@ Collection View: Organize and browse your media effortlessly.
 
   ![Director architecture](https://github.com/user-attachments/assets/9afb2783-66db-4899-9308-03cbd12e74d7)
   
+## 🧠 **Reasoning Engine**
+
+At the heart of The Director is its **Reasoning Engine**, a powerful core that drives intelligent decision-making and dynamic workflows. It acts as the brain behind the agents, enabling them to process commands, interact with data, and deliver meaningful outputs.
+
+### **How It Works**
+- **Contextual Understanding**: The engine analyzes user inputs and maintains context, ensuring smooth and coherent interactions with agents.  
+- **Dynamic Agent Orchestration**: Based on the user’s needs, it identifies and activates the right agents to complete tasks efficiently.  
+- **Modular Processing**: Tasks are broken into smaller steps, allowing agents to collaborate and deliver accurate results in real time.
+
+### **Key Capabilities**
+- **Multi-Agent Coordination**: Seamlessly integrates multiple agents to handle complex workflows, such as summarizing, editing, and searching videos.  
+- **Real-Time Updates**: Provides live progress and feedback as tasks are being completed.  
+- **Extensible Design**: Easily adaptable to include custom logic or connect to external APIs for more advanced capabilities.
+
+### **See It in Action**
+The Reasoning Engine works in tandem with the chat-based UI, making video interaction intuitive and efficient. For example:  
+- **Input**: "Create a clip of the funniest scene in this video and share it on Slack."  
+- **Output**: The engine orchestrates upload, scene detection, clipping, and sharing agents to deliver results seamlessly.
+
+For a closer look, check out the detailed architecture diagram below:  
+![Reasoning Engine Architecture](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
+
+Explore how the Reasoning Engine powers The Director to simplify and supercharge your media workflows.
 
 
 
@@ -162,15 +185,17 @@ For specific tasks:
 ## 📘 Creating a New Agent
 To create a new agent in Director, follow these steps:
 
-1. **Copy the template**: Duplicate `sample_agent.py` in `Director/backend/director/agents/` and rename it to your agent's name.
+1. **Copy the template**: 
+Duplicate `sample_agent.py` in `Director/backend/director/agents/` and rename it.
 
 2. **Update class details**:
-   - Rename the class (e.g., from `SampleAgent` to `YourAgentName`)
+   - Rename the class.
    - Update `agent_name` and `description`
 
-3. **Modify the `run` method**:
-   - Update parameters and docstring
+3. **Implement logic**:
+   - Update parameters and `docstring`
    - Implement your agent's logic
+   - Update the run() method.
 
 4. **Handle output and status updates**:
    - Use appropriate content types (TextContent, VideoContent, ImageContent, SearchResultContent)
@@ -189,8 +214,6 @@ To create a new agent in Director, follow these steps:
    - Import your new agent class in `Director/backend/director/handler.py`
    - Add it to the `self.agents` list in `ChatHandler`
 
-
-![director_reasoning_engine](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
 Remember to consider creating reusable tools if your agent's functionality could be shared across multiple agents.
 
 
