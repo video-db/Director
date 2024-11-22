@@ -12,7 +12,7 @@ from director.core.session import (
 )
 
 from director.tools.composio_tool import composio_tool
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 from director.llm.base import LLMResponseStatus
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class ComposioAgent(BaseAgent):
         self.agent_name = "composio"
         self.description = f'The Composio agent is used to run tasks related to apps like {os.getenv("COMPOSIO_APPS")} '
         self.parameters = COMPOSIO_PARAMETERS
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
     def run(self, task: str, *args, **kwargs) -> AgentResponse:
