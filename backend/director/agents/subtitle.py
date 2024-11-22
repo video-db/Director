@@ -12,7 +12,7 @@ from director.core.session import (
     MsgStatus,
 )
 from director.tools.videodb_tool import VideoDBTool
-from director.llm.openai import OpenAI, OpenaiConfig
+from director.llm import get_default_llm
 
 
 from videodb.asset import VideoAsset, TextAsset, TextStyle
@@ -109,7 +109,7 @@ class SubtitleAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "subtitle"
         self.description = "An agent designed to add different languages subtitles to a specified video within VideoDB."
-        self.llm = OpenAI(config=OpenaiConfig(timeout=120))
+        self.llm = get_default_llm()
         self.parameters = SUBTITLE_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 

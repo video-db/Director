@@ -152,16 +152,11 @@ class ConfigHandler:
     def check(self):
         """Check the configuration of the server."""
         videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False
-        openai_key_configured = True if os.getenv("OPENAI_API_KEY") else False
-
-        llm_configured = False
-        if openai_key_configured:
-            llm_configured = True
 
         db = load_db(os.getenv("SERVER_DB_TYPE", "sqlite"))
         db_configured = db.health_check()
         return {
             "videodb_configured": videodb_configured,
-            "llm_configured": llm_configured,
+            "llm_configured": True,
             "db_configured": db_configured,
         }
