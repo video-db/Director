@@ -10,7 +10,7 @@ from director.core.session import (
     RoleTypes,
 )
 from director.tools.slack import send_message_to_channel
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 from director.llm.base import LLMResponseStatus
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class SlackAgent(BaseAgent):
         self.agent_name = "slack"
         self.description = "Messages to a slack channel"
         self.parameters = self.get_parameters()
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
     def run(self, message: str, *args, **kwargs) -> AgentResponse:

@@ -12,7 +12,7 @@ from director.core.session import (
     VideoData,
 )
 from director.tools.videodb_tool import VideoDBTool
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class MemeMakerAgent(BaseAgent):
         self.agent_name = "meme_maker"
         self.description = "Generates meme clips and images based on user prompts. This agent usages LLM to analyze the transcript and visual content of the video to generate memes."
         self.parameters = MEMEMAKER_PARAMETERS
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
     def _chunk_docs(self, docs, chunk_size):

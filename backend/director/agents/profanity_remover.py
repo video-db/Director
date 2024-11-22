@@ -13,7 +13,7 @@ from director.core.session import (
     ContextMessage,
     RoleTypes,
 )
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 from director.tools.videodb_tool import VideoDBTool
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ProfanityRemoverAgent(BaseAgent):
             "if user has not given those optional param of beep_audio_id always try with sending it as None so that defaults are picked from env"
         )
         self.parameters = self.get_parameters()
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
     def add_beep(self, videodb_tool, video_id, beep_audio_id, timestamps):

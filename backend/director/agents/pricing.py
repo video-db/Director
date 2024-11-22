@@ -8,7 +8,7 @@ from director.core.session import (
     RoleTypes,
     TextContent,
 )
-from director.llm.openai import OpenAI
+from director.llm import get_default_llm
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class PricingAgent(BaseAgent):
         self.agent_name = "pricing"
         self.description = "Agent to get information about the pricing and usage of VideoDB, it is also helpful for running scenarios to get the estimates."
         self.parameters = self.get_parameters()
-        self.llm = OpenAI()
+        self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
     def run(self, query: str, *args, **kwargs) -> AgentResponse:
