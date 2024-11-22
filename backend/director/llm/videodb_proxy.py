@@ -14,11 +14,7 @@ from director.constants import (
 class OpenAIChatModel(str, Enum):
     """Enum for OpenAI Chat models"""
 
-    GPT4 = "gpt-4"
-    GPT4_32K = "gpt-4-32k"
-    GPT4_TURBO = "gpt-4-turbo"
-    GPT4o = "gpt-4o-2024-08-06"
-    GPT4o_MINI = "gpt-4o-mini"
+    GPT4o = "gpt-4o-2024-11-20"
 
 
 class VideoDBProxyConfig(BaseLLMConfig):
@@ -51,9 +47,7 @@ class VideoDBProxy(BaseLLM):
         except ImportError:
             raise ImportError("Please install OpenAI python library.")
 
-        self.client = openai.OpenAI(
-            api_key=self.api_key, base_url=f"{self.api_base}"
-        )
+        self.client = openai.OpenAI(api_key=self.api_key, base_url=f"{self.api_base}")
 
     def _format_messages(self, messages: list):
         """Format the messages to the format that OpenAI expects."""
