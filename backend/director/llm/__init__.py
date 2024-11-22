@@ -10,7 +10,7 @@ from director.llm.videodb_proxy import VideoDBProxy
 def get_default_llm():
     """Get default LLM"""
 
-    openai = True if os.getenv("ANTHROPIC_API_KEY") else False
+    openai = True if os.getenv("OPENAI_API_KEY") else False
     anthropic = True if os.getenv("ANTHROPIC_API_KEY") else False
 
     default_llm = os.getenv("DEFAULT_LLM")
