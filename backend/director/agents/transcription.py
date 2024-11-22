@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class TranscriptionAgent(BaseAgent):
     def __init__(self, session=None, **kwargs):
-        self.agent_name = "video_transcription"
+        self.agent_name = "transcription"
         self.description = (
             "This is an agent to get transcripts of videos"
         )
@@ -55,7 +55,7 @@ class TranscriptionAgent(BaseAgent):
 
         output_text_content.text = output_text
         output_text_content.status = MsgStatus.success
-        output_text_content.status_message = "Transcription completed successfully."
+        output_text_content.status_message = "Here is your transcription."
         self.output_message.publish()
 
         return AgentResponse(
