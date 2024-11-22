@@ -64,6 +64,10 @@ Built with flexibility in mind, The Director is perfect for developers, creators
 <!-- Intro Video -->
 
 
+https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
+
+
+
 <br/>
 
 ## ⭐️ Key Features
