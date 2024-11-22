@@ -15,13 +15,18 @@ class ElevenLabsTool:
         self.voice_settings = VoiceSettings(
             stability=0.0, similarity_boost=1.0, style=0.0, use_speaker_boost=True
         )
+        self.constrains = {
+            "sound_effect": {"max_duration": 20},
+        }
 
     def generate_sound_effect(
         self, prompt: str, save_at: str, duration: float, config: dict
     ):
         result = self.client.text_to_sound_effects.convert(
             text=prompt,
-            duration_seconds=duration,
+            duration_seconds=min(
+                duration, self.constrains["sound_effect"]["max_duration"]
+            ),
             prompt_influence=config.get("prompt_influence"),
         )
         with open(save_at, "wb") as f:

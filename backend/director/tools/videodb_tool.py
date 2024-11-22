@@ -64,6 +64,16 @@ class VideoDBTool:
             }
             for video in videos
         ]
+    
+    def get_audio(self, audio_id):
+        """Get an audio by ID."""
+        audio = self.collection.get_audio(audio_id)
+        return {
+            "id": audio.id,
+            "name": audio.name,
+            "collection_id": audio.collection_id,
+            "length": audio.length,
+        }
 
     def upload(self, source, source_type="url", media_type="video", name=None):
         upload_args = {"media_type": media_type}

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_ENGINES = ["stabilityai", "kling"]
 
-SCREENPLAY_AGENT_PARAMETERS = {
+TEXT_TO_MOVIE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "collection_id": {
@@ -102,11 +102,11 @@ class VideoGenResult:
 class TextToMovieAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         """Initialize agent with basic parameters"""
-        self.agent_name = "text-to-movie"
+        self.agent_name = "text_to_movie"
         self.description = (
             "Agent for generating movies from storylines using Gen AI models"
         )
-        self.parameters = SCREENPLAY_AGENT_PARAMETERS
+        self.parameters = TEXT_TO_MOVIE_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
     def run(
@@ -365,8 +365,6 @@ Return a JSON response in this format:
                 timeline.add_inline(video_asset)
                 seeker += float(video["length"])
 
-            print("audio is ", background_music)
-            print("seeker is ", seeker)
             # Add single background music track
             if background_music:
                 audio_asset = AudioAsset(

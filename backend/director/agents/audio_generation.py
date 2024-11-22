@@ -1,5 +1,4 @@
 import logging
-import json
 import os
 import uuid
 
@@ -121,7 +120,7 @@ class AudioGenerationAgent(BaseAgent):
                 audio_gen_tool.generate_sound_effect(
                     prompt=args.get("prompt"),
                     save_at=output_path,
-                    duration=args.get("duration"),
+                    duration=args.get("duration", 5),
                     config={
                         "prompt_influence": 0.8,
                     },
@@ -156,6 +155,6 @@ class AudioGenerationAgent(BaseAgent):
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message=f"Audio generated successfully, Generated Media audio id : {media['id']}",
+            message=f"Audio generated successfully, Generated Media audio id : {media['id']}. Audio is saved at{os.path.abspath(output_path)}",
             data={"audio_id": media["id"]},
         )
