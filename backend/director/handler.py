@@ -25,6 +25,7 @@ from director.agents.text_to_movie import TextToMovieAgent
 from director.agents.meme_maker import MemeMakerAgent
 from director.agents.dubbing import DubbingAgent
 from director.agents.composio import ComposioAgent
+from director.agents.storyboarding import StoryboardingAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -64,6 +65,7 @@ class ChatHandler:
             MemeMakerAgent,
             DubbingAgent,
             ComposioAgent,
+            StoryboardingAgent,
         ]
 
     def add_videodb_state(self, session):

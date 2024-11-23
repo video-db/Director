@@ -6,7 +6,6 @@ from videodb.timeline import Timeline
 from videodb.asset import VideoAsset, ImageAsset
 
 
-
 class VideoDBTool:
     def __init__(self, collection_id="default"):
         self.conn = videodb.connect(
@@ -64,7 +63,7 @@ class VideoDBTool:
             }
             for video in videos
         ]
-    
+
     def get_audio(self, audio_id):
         """Get an audio by ID."""
         audio = self.collection.get_audio(audio_id)
@@ -73,6 +72,14 @@ class VideoDBTool:
             "name": audio.name,
             "collection_id": audio.collection_id,
             "length": audio.length,
+        }
+
+    def get_image(self, image_id):
+        """Get a image by ID."""
+        image = self.collection.get_image(image_id)
+        return {
+            "id": image.id,
+            "name": image.name,
         }
 
     def upload(self, source, source_type="url", media_type="video", name=None):
@@ -213,5 +220,3 @@ class VideoDBTool:
         video = self.collection.get_video(video_id)
         stream_url = video.add_subtitle(style)
         return stream_url
-    
-
