@@ -1,12 +1,13 @@
 import logging
 import os
 import uuid
-
+import base64
+from typing import Optional
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
-from director.core.session import Session
+from director.core.session import Session, TextContent, MsgStatus
 from director.tools.videodb_tool import VideoDBTool
-from director.tools.elevenlabs import ElevenLabsTool
+from director.tools.elevenlabs import ElevenLabsTool, PARAMS_CONFIG
 
 
 from director.constants import DOWNLOADS_PATH
@@ -49,6 +50,11 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                     "description": "The duration of the sound effect in seconds",
                     "default": 2,
                 },
+                "elevenlabs_config": {
+                    "type": "object",
+                    "properties": PARAMS_CONFIG["sound_effect"],
+                    "description": "Config to use when elevenlabs engine is used",
+                },
             },
             "required": ["prompt"],
         },
@@ -59,10 +65,10 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                     "type": "string",
                     "description": "The text to convert to speech",
                 },
-                "config": {
+                "elevenlabs_config": {
                     "type": "object",
-                    "description": "Elevenlabs Config for the text to convert to speech, Pass default value as empty object if not provided",
-                    "default": {},
+                    "properties": PARAMS_CONFIG["text_to_speech"],
+                    "description": "Config to use when elevenlabs engine is used",
                 },
             },
             "required": ["text"],
@@ -84,13 +90,17 @@ class AudioGenerationAgent(BaseAgent):
         collection_id: str,
         job_type: str,
         engine: str,
+        sound_effect: Optional[dict] = None,
+        text_to_speech: Optional[dict] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
         """
         Generates audio using ElevenLabs API based on input text.
         :param str collection_id: The collection ID to store the generated audio
-        :param job_type:
+        :param job_type: The audio generation engine to use
+        :param sound_effect: The sound effect to generate
+        :param text_to_speech: The text to convert to speech
         :param args: Additional positional arguments
         :param kwargs: Additional keyword arguments
         :return: Response containing the generated audio URL
@@ -107,44 +117,63 @@ class AudioGenerationAgent(BaseAgent):
                 if not ELEVENLABS_API_KEY:
                     raise Exception("Elevenlabs API key not present in .env")
                 audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
+                config_key = "elevenlabs_config"
 
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-            output_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
+            output_file_name = f"audio_{job_type}_{str(uuid.uuid4())}.mp3"
+            output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
 
             if job_type == "sound_effect":
+                prompt = sound_effect.get("prompt")
+                duration = sound_effect.get("duration", 5)
+                config = sound_effect.get(config_key, {})
+                if prompt is None:
+                    raise Exception("Prompt is required for sound effect generation")
                 self.output_message.actions.append(
-                    "Generating sound effect from text description"
+                    f"Generating sound effect for prompt: <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                args = kwargs.get("sound_effect", {})
                 audio_gen_tool.generate_sound_effect(
-                    prompt=args.get("prompt"),
+                    prompt=prompt,
                     save_at=output_path,
-                    duration=args.get("duration", 5),
-                    config={
-                        "prompt_influence": 0.8,
-                    },
+                    duration=duration,
+                    config=config,
                 )
             elif job_type == "text_to_speech":
-                self.output_message.actions.append("Converting text to speech")
+                text = text_to_speech.get("text")
+                config = text_to_speech.get(config_key, {})
+                self.output_message.actions.append(
+                    f"Converting text: <i>{text}</i> to speech"
+                )
                 self.output_message.push_update()
-                args = kwargs.get("text_to_speech", {})
                 audio_gen_tool.text_to_speech(
-                    text=args.get("text"),
+                    text=text,
                     save_at=output_path,
-                    config=args.get("config", {}),
+                    config=config,
                 )
 
             self.output_message.actions.append(
-                f"Uploading generated audio {output_path}"
+                f"Generated audio saved at : <i>{output_path}</i>"
             )
             self.output_message.push_update()
+
+            # Upload to VideoDB
             media = self.videodb_tool.upload(
                 output_path, source_type="file_path", media_type="audio"
             )
             self.output_message.actions.append(
-                f"Uploaded generated audio with Audio ID : {media['id']}"
+                f"Uploaded generated audio to VideoDB with Audio ID : {media['id']}"
             )
+            with open(os.path.abspath(output_path), "rb") as file:
+                data_url = f"data:audio/mpeg;base64,{base64.b64encode(file.read()).decode('utf-8')}"
+                text_content = TextContent(
+                    agent_name=self.agent_name,
+                    status=MsgStatus.success,
+                    status_message="Here is your generated audio",
+                    text=f"""Click <a href='{data_url}' download='{output_file_name}' target='_blank'>here</a> to download the audio
+                    """,
+                )
+            self.output_message.content.append(text_content)
             self.output_message.push_update()
             self.output_message.publish()
 
@@ -155,6 +184,6 @@ class AudioGenerationAgent(BaseAgent):
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message=f"Audio generated successfully, Generated Media audio id : {media['id']}. Audio is saved at{os.path.abspath(output_path)}",
+            message=f"Audio generated successfully, Generated Media audio id : {media['id']}",
             data={"audio_id": media["id"]},
         )

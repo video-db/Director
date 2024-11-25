@@ -1,11 +1,72 @@
-import os
-import base64
-import json
-import time
-from typing import Optional
-from elevenlabs.client import ElevenLabs
 import traceback
+import time
+
+from typing import Optional
+
+from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
+
+PARAMS_CONFIG = {
+    "sound_effect": {
+        "prompt_influence": {
+            "type": "number",
+            "description": (
+                "A value between 0 and 1 that determines how closely the generation "
+                "follows the prompt. Higher values make generations follow the prompt "
+                "more closely while also making them less variable. Defaults to 0.3"
+            ),
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.3,
+        }
+    },
+    "text_to_speech": {
+        "model_id": {
+            "type": "string",
+            "description": ("Identifier of the model that will be used"),
+            "default": "eleven_multilingual_v2",
+        },
+        "voice_id": {
+            "type": "string",
+            "description": "The ID of the voice to use for text-to-speech",
+            "default": "pNInz6obpgDQGcFmaJgB"
+        },
+        "language_code": {
+            "type": "string",
+            "description": (
+                "Language code (ISO 639-1) used to enforce a language for the model. "
+                "Currently only Turbo v2.5 supports language enforcement. For other "
+                "models, an error will be returned if language code is provided."
+            ),
+        },
+        "stability": {
+            "type": "number",
+            "description": "Stability value between 0 and 1 for voice settings",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.0
+        },
+        "similarity_boost": {
+            "type": "number", 
+            "description": "Similarity boost value between 0 and 1 for voice settings",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 1.0
+        },
+        "style": {
+            "type": "number",
+            "description": "Style value between 0 and 1 for voice settings",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.0
+        },
+        "use_speaker_boost": {
+            "type": "boolean",
+            "description": "Whether to use speaker boost in voice settings",
+            "default": True
+        }
+    },
+}
 
 
 class ElevenLabsTool:
@@ -27,7 +88,7 @@ class ElevenLabsTool:
             duration_seconds=min(
                 duration, self.constrains["sound_effect"]["max_duration"]
             ),
-            prompt_influence=config.get("prompt_influence"),
+            prompt_influence=config.get("prompt_influence", 0.3),
         )
         with open(save_at, "wb") as f:
             for chunk in result:
@@ -38,7 +99,7 @@ class ElevenLabsTool:
             voice_id=config.get("voice_id", "pNInz6obpgDQGcFmaJgB"),
             output_format=config.get("", "mp3_22050_32"),
             text=text,
-            model_id=config.get("model_id", "eleven_turbo_v2_5"),
+            model_id=config.get("model_id", "eleven_multilingual_v2"),
             voice_settings=VoiceSettings(
                 stability=config.get("stability", 0.0),
                 similarity_boost=config.get("similarity_boost", 1.0),

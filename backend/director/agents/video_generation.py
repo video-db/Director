@@ -100,6 +100,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
 }
 
 
+
 class VideoGenerationAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "video_generation"

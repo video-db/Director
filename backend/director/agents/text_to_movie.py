@@ -2,7 +2,7 @@ import logging
 import os
 import json
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict
 from dataclasses import dataclass
 
 from videodb.asset import VideoAsset, AudioAsset
@@ -52,7 +52,7 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
                     "type": "string",
                     "description": "The storyline to generate the video",
                 },
-                "user_music_description": {
+                "sound_effects_description": {
                     "type": "string",
                     "description": "Optional description for background music generation",
                     "default": None,
@@ -81,7 +81,7 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
                     "default": {},
                 },
             },
-            "required": ["prompt"],
+            "required": ["storyline"],
         },
     },
     "required": ["job_type", "collection_id", "engine"],
@@ -99,6 +99,26 @@ class VideoGenResult:
     video: Optional[dict] = None
 
 
+@dataclass
+class EngineConfig:
+    name: str
+    max_duration: int
+    preferred_style: str
+    prompt_format: str
+
+
+@dataclass
+class VisualStyle:
+    camera_setup: str
+    color_grading: str
+    lighting_style: str
+    movement_style: str
+    film_mood: str
+    director_reference: str
+    character_constants: Dict
+    setting_constants: Dict
+
+
 class TextToMovieAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         """Initialize agent with basic parameters"""
@@ -107,6 +127,38 @@ class TextToMovieAgent(BaseAgent):
             "Agent for generating movies from storylines using Gen AI models"
         )
         self.parameters = TEXT_TO_MOVIE_AGENT_PARAMETERS
+        self.llm = OpenAI(OpenaiConfig(timeout=120))
+
+        self.engine_configs = {
+            "kling": EngineConfig(
+                name="kling",
+                max_duration=10,
+                preferred_style="cinematic",
+                prompt_format="detailed",
+            ),
+            "stabilityai": EngineConfig(
+                name="stabilityai",
+                max_duration=4,
+                preferred_style="photorealistic",
+                prompt_format="concise",
+            ),
+        }
+
+        # Initialize video generation tools
+        self.stability_tool = None
+        self.kling_tool = None
+
+        STABILITY_API_KEY = os.getenv("STABILITYAI_API_KEY")
+        if STABILITY_API_KEY:
+            self.stability_tool = StabilityAITool(api_key=STABILITY_API_KEY)
+
+        KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
+        KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
+        if KLING_API_ACCESS_KEY and KLING_API_SECRET_KEY:
+            self.kling_tool = KlingAITool(
+                access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
+            )
+
         super().__init__(session=session, **kwargs)
 
     def run(
@@ -133,156 +185,90 @@ class TextToMovieAgent(BaseAgent):
             )
             self.output_message.content.append(video_content)
             self.output_message.push_update()
-            self.llm = OpenAI(OpenaiConfig(timeout=120))
 
-            # Tools initialization
-            if engine not in SUPPORTED_ENGINES:
-                raise Exception(f"{engine} not supported")
+            if engine not in self.engine_configs:
+                raise ValueError(f"Unsupported engine: {engine}")
 
-            if engine == "kling":
-                KLING_AI_ACCESS_API_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
-                KLING_AI_SECRET_API_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
-                if not KLING_AI_ACCESS_API_KEY or not KLING_AI_SECRET_API_KEY:
-                    raise Exception("Kling AI API keys not found")
-                self.video_tool = KlingAITool(
-                    access_key=KLING_AI_ACCESS_API_KEY,
-                    secret_key=KLING_AI_SECRET_API_KEY,
-                )
-            elif engine == "stabilityai":
-                STABILITYAI_API_KEY = os.getenv("STABILITYAI_API_KEY")
-                if not STABILITYAI_API_KEY:
-                    raise Exception("StabilityAI API key not found")
-                self.video_tool = StabilityAITool(api_key=STABILITYAI_API_KEY)
+            if engine == "kling" and not self.kling_tool:
+                raise ValueError("Kling engine selected but not initialized")
+            elif engine == "stabilityai" and not self.stability_tool:
+                raise ValueError("Stability engine selected but not initialized")
 
-            ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-            if not ELEVENLABS_API_KEY:
-                raise Exception("Elevenlabs API key not found")
-            self.audio_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
+            # Initialize tools
+            self.audio_tool = ElevenLabsTool(api_key=os.getenv("ELEVENLABS_API_KEY"))
 
             # Initialize steps
             config = kwargs.get("text_to_video", {})
             raw_storyline = config.get("storyline", [])
 
-            translation_llm_prompt = f"""
-You are a professional movie director. Break down this storyline into individual shots that can be generated by an AI video generation model.
+            # Generate visual style
+            visual_style = self.generate_visual_style(raw_storyline)
+            print("these are the visual styles", visual_style)
 
-Storyline: {raw_storyline}
+            # Generate scenes
+            scenes = self.generate_scene_sequence(raw_storyline, visual_style, engine)
+            print("these are the scenes", scenes)
 
-Guidelines:
-1. Break the storyline into 4-6 distinct shots/scenes
-2. Each shot should be a clear, detailed visual description
-3. Each shot should make sense on its own
-4. Avoid abstract concepts - focus on concrete visuals
-5. Keep each shot description under 75 words
-6. Ensure chronological flow between shots
-
-Return a JSON response in this format:
-{{
-    "shots": [
-        "Shot 1 description here",
-        "Shot 2 description here",
-        etc.
-    ]
-}}
-"""
-            translation_llm_message = ContextMessage(
-                content=translation_llm_prompt,
-                role=RoleTypes.user,
+            # Generate videos sequentially
+            video_results = self.generate_videos_sequentially(
+                scenes, visual_style, engine
             )
-            llm_response = self.llm.chat_completions(
-                [translation_llm_message.to_llm_msg()],
-                response_format={"type": "json_object"},
-            )
-            translated_shots = json.loads(llm_response.content)
-            print("These are translted shots", translated_shots)
+            print("these are the video results", video_results)
 
-            steps = [{"step": step} for step in translated_shots["shots"]]
-
-            # Step 1: Generate videos sequentially
-            self.output_message.actions.append("Generating videos...")
-            self.output_message.push_update()
-
-            total_videos = len(steps)
-            video_results = self.generate_videos_sequentially(steps, engine)
-
-            self.output_message.actions.append(
-                "Uploading generated videos to VideoDB..."
-            )
-            self.output_message.push_update()
-
-            # Step 2: Upload videos to VideoDB
-            for index, result in enumerate(video_results):
+            # Process videos and track duration
+            total_duration = 0
+            for result in video_results:
                 if result.success:
-                    self.output_message.actions.append(
-                        f"Uploading {index + 1}/{total_videos} video to VideoDB"
-                    )
-                    self.output_message.push_update()
-
-                    # Upload to VideoDB and get duration
                     media = self.videodb_tool.upload(
                         result.video_path, source_type="file_path", media_type="video"
                     )
-                    steps[index]["video"] = media
+                    total_duration += float(media.get("length", 0))
+                    scenes[result.step_index]["video"] = media
 
-                    # Cleanup
+                    # Cleanup temporary files
                     if os.path.exists(result.video_path):
                         os.remove(result.video_path)
                 else:
-                    error_msg = f"Failed to generate video {index + 1}: {result.error}"
-                    logger.error(error_msg)
-                    raise Exception(error_msg)
+                    raise Exception(
+                        f"Failed to generate video {result.step_index}: {result.error}"
+                    )
 
-            # Step 3: Generate background music [Optional]
-            if config.get("user_music_description"):
-                total_videos_duration = sum(
-                    float(step["video"]["length"]) for step in steps
-                )
+            # Generate audio prompt
+            sound_effects_description = self.generate_audio_prompt(raw_storyline)
 
-                self.output_message.actions.append("Generating background music...")
-                self.output_message.push_update()
+            # Generate and add sound effects
+            os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+            sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
 
-                music_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
-                os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-                self.audio_tool.generate_sound_effect(
-                    prompt=config.get("user_music_description"),
-                    save_at=music_path,
-                    duration=total_videos_duration,
-                    config={},
-                )
+            # Configure sound effects generation
+            sound_effects_config = {}
 
-                self.output_message.actions.append(
-                    "Uploading background music to VideoDB..."
-                )
-                self.output_message.push_update()
-
-                media = self.videodb_tool.upload(
-                    music_path, source_type="file_path", media_type="audio"
-                )
-                background_music = media
-
-                if os.path.exists(music_path):
-                    os.remove(music_path)
-
-            # Step 3: Combine assets
-            self.output_message.actions.append("Creating final movie...")
-            self.output_message.push_update()
-
-            video_url = self.combine_assets(
-                steps,
-                background_music if config.get("user_music_description") else None,
+            self.audio_tool.generate_sound_effect(
+                prompt=sound_effects_description,
+                save_at=sound_effects_path,
+                duration=total_duration,
+                config=sound_effects_config,
             )
-            if not video_url:
-                raise Exception("Failed to combine assets into final video")
 
-            video_content.video = VideoData(stream_url=video_url)
+            sound_effects_media = self.videodb_tool.upload(
+                sound_effects_path, source_type="file_path", media_type="audio"
+            )
+
+            if os.path.exists(sound_effects_path):
+                os.remove(sound_effects_path)
+
+            # Combine everything into final video
+            final_video = self.combine_assets(scenes, sound_effects_media)
+
+            video_content.video = VideoData(stream_url=final_video)
             video_content.status = MsgStatus.success
-            video_content.status_message = "Here is your generated movie"
+            video_content.status_message = "Movie generation complete"
             self.output_message.publish()
 
             return AgentResponse(
                 status=AgentStatus.SUCCESS,
-                message=f"Agent {self.agent_name} completed successfully",
-                data={"video_url": video_url},
+                message="Movie generated successfully",
+                data={"video_url": final_video},
             )
 
         except Exception as e:
@@ -294,55 +280,230 @@ Return a JSON response in this format:
                 status=AgentStatus.ERROR, message=f"Agent failed with error: {str(e)}"
             )
 
-    def generate_videos_sequentially(
-        self, steps: List[dict], engine: str
-    ) -> List[VideoGenResult]:
-        """Generate videos sequentially with progress tracking"""
-        logger.info(
-            f"Starting sequential video generation for {len(steps)} steps using {engine}"
+    def generate_visual_style(self, storyline: str) -> VisualStyle:
+        """Generate consistent visual style for entire film."""
+        style_prompt = f"""
+        As a cinematographer, define a consistent visual style for this short film:
+        Storyline: {storyline}
+        
+        Return a JSON response with visual style parameters:
+        {{
+            "camera_setup": "Camera and lens combination",
+            "color_grading": "Color grading style and palette",
+            "lighting_style": "Core lighting approach",
+            "movement_style": "Camera movement philosophy",
+            "film_mood": "Overall atmospheric mood",
+            "director_reference": "Key director's style to reference",
+            "character_constants": {{
+                "physical_description": "Consistent character details",
+                "costume_details": "Consistent costume elements"
+            }},
+            "setting_constants": {{
+                "time_period": "When this takes place",
+                "environment": "Core setting elements that stay consistent"
+            }}
+        }}
+        """
+
+        style_message = ContextMessage(content=style_prompt, role=RoleTypes.user)
+        llm_response = self.llm.chat_completions(
+            [style_message.to_llm_msg()], response_format={"type": "json_object"}
         )
-        video_results = []
-        for index, step in enumerate(steps):
-            self.output_message.actions.append(
-                f"Generating video {index + 1}/{len(steps)}"
+        return VisualStyle(**json.loads(llm_response.content))
+
+    def generate_scene_sequence(
+        self, storyline: str, style: VisualStyle, engine: str
+    ) -> List[dict]:
+        """Generate 3-5 scenes with visual and narrative consistency."""
+        engine_config = self.engine_configs[engine]
+
+        sequence_prompt = f"""
+        Break this storyline into 3 distinct scenes maintaining visual consistency.
+        Generate scene descriptions optimized for {engine} {engine_config.preferred_style} style.
+        
+        Visual Style:
+        - Camera/Lens: {style.camera_setup}
+        - Color Grade: {style.color_grading}
+        - Lighting: {style.lighting_style}
+        - Movement: {style.movement_style}
+        - Mood: {style.film_mood}
+        - Director Style: {style.director_reference}
+        
+        Character Constants:
+        {json.dumps(style.character_constants, indent=2)}
+        
+        Setting Constants:
+        {json.dumps(style.setting_constants, indent=2)}
+        
+        Maximum duration per scene: {engine_config.max_duration} seconds
+        
+        Storyline: {storyline}
+
+        Return a JSON array of scenes with:
+        {{
+            "story_beat": "What happens in this scene",
+            "scene_description": "Visual description optimized for {engine}",
+            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration})"
+        }}
+        Make sure suggested_duration is a number, not a string.
+        """
+
+        sequence_message = ContextMessage(content=sequence_prompt, role=RoleTypes.user)
+        llm_response = self.llm.chat_completions(
+            [sequence_message.to_llm_msg()], response_format={"type": "json_object"}
+        )
+        scenes_data = json.loads(llm_response.content)["scenes"]
+
+        # Ensure durations are integers
+        for scene in scenes_data:
+            try:
+                scene["suggested_duration"] = int(scene.get("suggested_duration", 5))
+            except (ValueError, TypeError):
+                scene["suggested_duration"] = 5
+
+        return scenes_data
+
+    def generate_engine_prompt(
+        self, scene: dict, style: VisualStyle, engine: str
+    ) -> str:
+        """Generate engine-specific prompt"""
+        engine_config = self.engine_configs[engine]
+
+        if engine == "stabilityai":
+            return f"""
+            {style.director_reference} style.
+            {scene['scene_description']}.
+            {style.character_constants['physical_description']}.
+            {style.lighting_style}, {style.color_grading}.
+            Photorealistic, detailed, high quality, masterful composition.
+            """
+        else:  # Kling
+            initial_prompt = f"""
+            {style.director_reference} style shot. 
+            Filmed on {style.camera_setup}.
+            
+            {scene['scene_description']}
+            
+            Character Details:
+            {json.dumps(style.character_constants, indent=2)}
+            
+            Setting Elements:
+            {json.dumps(style.setting_constants, indent=2)}
+            
+            {style.lighting_style} lighting.
+            {style.color_grading} color palette.
+            {style.movement_style} camera movement.
+            
+            Mood: {style.film_mood}
+            """
+
+            # Run through LLM to compress while maintaining structure
+            compression_prompt = f"""
+            Compress the following prompt to under 2450 characters while maintaining its structure and key information:
+
+            {initial_prompt}
+            """
+            
+            compression_message = ContextMessage(content=compression_prompt, role=RoleTypes.user)
+            llm_response = self.llm.chat_completions(
+                [compression_message.to_llm_msg()], response_format={"type": "text"}
             )
-            self.output_message.push_update()
-            result = self.generate_single_video(index, step, engine)
+            return llm_response.content
+
+    def generate_videos_sequentially(
+        self, scenes: List[dict], style: VisualStyle, engine: str
+    ) -> List[VideoGenResult]:
+        """Generate videos maintaining visual consistency."""
+        video_results = []
+        engine_config = self.engine_configs[engine]
+
+        for index, scene in enumerate(scenes):
+            # Duration is already guaranteed to be int from generate_scene_sequence
+            suggested_duration = min(
+                scene.get("suggested_duration", 5), engine_config.max_duration
+            )
+
+            # Generate engine-specific prompt
+            prompt = self.generate_engine_prompt(scene, style, engine)
+
+            # Add engine-specific parameters
+            engine_params = {"prompt": prompt, "duration": suggested_duration}
+
+            print("these are the engine params", engine_params)
+
+            if engine == "stabilityai":
+                engine_params.update(
+                    {
+                        "cfg_scale": 7.5,
+                        "motion_bucket_id": 127,
+                    }
+                )
+
+            result = self.generate_single_video(index, engine_params, engine)
             video_results.append(result)
-            if result.success:
-                logger.info(f"Successfully generated video {index + 1}/{len(steps)}")
-            else:
-                logger.error(f"Failed to generate video {index + 1}: {result.error}")
+
         return video_results
 
+    def generate_audio_prompt(self, storyline: str) -> str:
+        """Generate minimal, music-focused prompt for ElevenLabs."""
+        audio_prompt = f"""
+        As a composer, create a simple musical description focusing ONLY on:
+        - Main instrument/sound
+        - One key mood change
+        - Basic progression
+        
+        Keep it under 100 characters. No visual references or scene descriptions.
+        Focus on the music.
+        
+        Story context: {storyline}
+        """
+
+        prompt_message = ContextMessage(content=audio_prompt, role=RoleTypes.user)
+        llm_response = self.llm.chat_completions(
+            [prompt_message.to_llm_msg()], response_format={"type": "text"}
+        )
+        return llm_response.content[:100]
+
     def generate_single_video(
-        self, index: int, step: dict, engine: str
+        self, index: int, params: dict, engine: str
     ) -> VideoGenResult:
-        """Generate a single video with selected engine"""
+        """Generate a single video clip using the specified engine."""
         try:
             video_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
 
-            if engine == "kling":
-                logger.info(f"Using Kling engine for video {index}")
-                self.video_tool.text_to_video(
-                    prompt=step["step"],
+            if engine == "stabilityai":
+                if not self.stability_tool:
+                    raise Exception("StabilityAI tool not initialized")
+
+                # Configure Stability-specific parameters
+                stability_config = {
+                    "cfg_scale": params.get("cfg_scale", 7.5),
+                    "motion_bucket_id": params.get("motion_bucket_id", 127),
+                }
+
+                self.stability_tool.text_to_video(
+                    prompt=params["prompt"],
                     save_at=video_path,
-                    duration=5,
-                    config={},
+                    duration=params["duration"],
+                    config=stability_config,
                 )
-            elif engine == "stabilityai":
-                logger.info(f"Using StabilityAI engine for video {index}")
-                self.video_tool.text_to_video(
-                    prompt=step["step"],
+            else:  # kling
+                if not self.kling_tool:
+                    raise Exception("Kling tool not initialized")
+
+                # Configure Kling-specific parameters
+                kling_config = {"model": "kling-v1"}
+
+                self.kling_tool.text_to_video(
+                    prompt=params["prompt"],
                     save_at=video_path,
-                    duration=5,
-                    config={},
+                    duration=params["duration"],
+                    config=kling_config,
                 )
 
             if not os.path.exists(video_path):
-                logger.error(f"Video file not found at path: {video_path}")
-                raise Exception("Failed to generate video")
+                raise Exception("Failed to generate video file")
 
             return VideoGenResult(step_index=index, video_path=video_path, success=True)
 
@@ -352,30 +513,19 @@ Return a JSON response in this format:
                 step_index=index, video_path=None, success=False, error=str(e)
             )
 
-    def combine_assets(self, steps: List[dict], background_music: str = None) -> str:
-        """Combine videos and overlay background music"""
-        try:
-            timeline = self.videodb_tool.get_and_set_timeline()
+    def combine_assets(self, scenes: List[dict], audio_media: Optional[dict]) -> str:
+        timeline = self.videodb_tool.get_and_set_timeline()
 
-            # Add videos using actual durations from VideoDB
-            seeker = 0
-            for step in steps:
-                video = step["video"]
-                video_asset = VideoAsset(asset_id=video["id"])
-                timeline.add_inline(video_asset)
-                seeker += float(video["length"])
+        # Add videos sequentially
+        for scene in scenes:
+            video_asset = VideoAsset(asset_id=scene["video"]["id"])
+            timeline.add_inline(video_asset)
 
-            # Add single background music track
-            if background_music:
-                audio_asset = AudioAsset(
-                    asset_id=background_music["id"],
-                    start=0,
-                    end=min(seeker, float(background_music["length"])),
-                )
-                timeline.add_overlay(0, audio_asset)
+        # Add background score if available
+        if audio_media:
+            audio_asset = AudioAsset(
+                asset_id=audio_media["id"], start=0, disable_other_tracks=True
+            )
+            timeline.add_overlay(0, audio_asset)
 
-            return timeline.generate_stream()
-
-        except Exception as e:
-            logger.exception(f"Error combining assets: {e}")
-            raise Exception(f"Error combining assets: {e}")
+        return timeline.generate_stream()
