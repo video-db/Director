@@ -44,6 +44,8 @@ class DownloadAgent(BaseAgent):
                 text_content.status_message = "Here is the download link"
                 self.output_message.publish()
             else:
+                text_content.status = MsgStatus.error
+                text_content.status_message = "Download failed"
                 return AgentResponse(
                     status=AgentStatus.ERROR,
                     message=f"Downloda failed with {download_response}",
