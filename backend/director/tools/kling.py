@@ -2,6 +2,53 @@ import requests
 import time
 import jwt
 
+PARAMS_CONFIG = {
+    "text_to_video": {
+        "aspect_ratio": {
+            "type": "string",
+            "enum": ["16:9", "9:16", "1:1"],
+            "description": "Aspect ratio of the output video",
+        },
+        "image": {
+            "type": "string",
+            "description": "Starting image for generation",
+        },
+        "strength": {
+            "type": "number",
+            "description": "Image influence on output",
+            "minimum": 0,
+            "maximum": 1,
+        },
+        "negative_prompt": {
+            "type": "string",
+            "description": "Keywords to exclude from output",
+        },
+        "seed": {
+            "type": "integer",
+            "description": "Randomness seed for generation",
+        },
+        "output_format": {
+            "type": "string",
+            "description": "Format of the output video",
+            "enum": ["mp4", "webm"],
+        },
+        "cfg_scale": {
+            "type": "number",
+            "description": "How strongly video sticks to original image",
+            "minimum": 0,
+            "maximum": 10,
+            "default": 1.8,
+        },
+        "motion_bucket_id": {
+            "type": "integer",
+            "description": "Controls motion amount in output video",
+            "minimum": 1,
+            "maximum": 255,
+            "default": 127,
+        },
+    }
+}
+
 
 class KlingAITool:
     def __init__(self, access_key: str, secret_key: str):

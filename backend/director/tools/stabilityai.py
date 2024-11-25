@@ -3,6 +3,39 @@ import time
 from PIL import Image
 import io
 
+PARAMS_CONFIG = {
+    "text_to_video": {
+        "strength": {
+            "type": "number",
+            "description": "Image influence on output",
+            "minimum": 0,
+            "maximum": 1,
+        },
+        "negative_prompt": {
+            "type": "string",
+            "description": "Keywords to exclude from output",
+        },
+        "seed": {
+            "type": "integer",
+            "description": "Randomness seed for generation",
+        },
+        "cfg_scale": {
+            "type": "number",
+            "description": "How strongly video sticks to original image",
+            "minimum": 0,
+            "maximum": 10,
+            "default": 1.8,
+        },
+        "motion_bucket_id": {
+            "type": "integer",
+            "description": "Controls motion amount in output video",
+            "minimum": 1,
+            "maximum": 255,
+            "default": 127,
+        },
+    }
+}
+
 
 class StabilityAITool:
     def __init__(self, api_key: str):
@@ -31,8 +64,6 @@ class StabilityAITool:
             "aspect_ratio": config.get("aspect_ratio", "16:9"),
             "negative_prompt": config.get("negative_prompt", ""),
         }
-
-        print("this is image payload", image_payload)
 
         image_response = requests.post(
             self.image_endpoint, headers=headers, files={"none": ""}, data=image_payload
@@ -64,7 +95,6 @@ class StabilityAITool:
             "motion_bucket_id": config.get("motion_bucket_id", 127),
         }
 
-        print("this is video payload", video_payload)
 
         with open(temp_image_path, "rb") as img_file:
             video_response = requests.post(

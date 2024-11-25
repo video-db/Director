@@ -22,7 +22,6 @@ EDITING_AGENT_PARAMETERS = {
         "videos": {
             "type": "array",
             "description": "List of videos to edit",
-            "minItems": 1,
             "items": {
                 "type": "object",
                 "properties": {
@@ -151,7 +150,7 @@ class EditingAgent(BaseAgent):
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
             video_content.status_message = (
-                "Video editing completed successfully. Here is your stream."
+                "Here is your stream."
             )
             self.output_message.publish()
 

@@ -7,14 +7,17 @@ from typing import Optional
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, TextContent, MsgStatus
 from director.tools.videodb_tool import VideoDBTool
-from director.tools.elevenlabs import ElevenLabsTool, PARAMS_CONFIG
-
+from director.tools.elevenlabs import (
+    ElevenLabsTool,
+    PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
+)
 
 from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
 SUPPORTED_ENGINES = ["elevenlabs"]
+
 AUDIO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -52,7 +55,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                 },
                 "elevenlabs_config": {
                     "type": "object",
-                    "properties": PARAMS_CONFIG["sound_effect"],
+                    "properties": ELEVENLABS_PARAMS_CONFIG["sound_effect"],
                     "description": "Config to use when elevenlabs engine is used",
                 },
             },
@@ -67,7 +70,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                 },
                 "elevenlabs_config": {
                     "type": "object",
-                    "properties": PARAMS_CONFIG["text_to_speech"],
+                    "properties": ELEVENLABS_PARAMS_CONFIG["text_to_speech"],
                     "description": "Config to use when elevenlabs engine is used",
                 },
             },
@@ -130,7 +133,7 @@ class AudioGenerationAgent(BaseAgent):
                 if prompt is None:
                     raise Exception("Prompt is required for sound effect generation")
                 self.output_message.actions.append(
-                    f"Generating sound effect for prompt: <i>{prompt}</i>"
+                    f"Generating sound effect for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
                 audio_gen_tool.generate_sound_effect(
@@ -143,7 +146,7 @@ class AudioGenerationAgent(BaseAgent):
                 text = text_to_speech.get("text")
                 config = text_to_speech.get(config_key, {})
                 self.output_message.actions.append(
-                    f"Converting text: <i>{text}</i> to speech"
+                    f"Converting text <i>{text}</i> to speech"
                 )
                 self.output_message.push_update()
                 audio_gen_tool.text_to_speech(
@@ -153,7 +156,7 @@ class AudioGenerationAgent(BaseAgent):
                 )
 
             self.output_message.actions.append(
-                f"Generated audio saved at : <i>{output_path}</i>"
+                f"Generated audio saved at <i>{output_path}</i>"
             )
             self.output_message.push_update()
 
@@ -162,7 +165,7 @@ class AudioGenerationAgent(BaseAgent):
                 output_path, source_type="file_path", media_type="audio"
             )
             self.output_message.actions.append(
-                f"Uploaded generated audio to VideoDB with Audio ID : {media['id']}"
+                f"Uploaded generated audio to VideoDB with Audio ID {media['id']}"
             )
             with open(os.path.abspath(output_path), "rb") as file:
                 data_url = f"data:audio/mpeg;base64,{base64.b64encode(file.read()).decode('utf-8')}"
