@@ -1,10 +1,8 @@
 import os
 import logging
 
-from dotenv import dotenv_values
-
 from director.agents.thumbnail import ThumbnailAgent
-from director.agents.video_summary import VideoSummaryAgent
+from director.agents.summarize_video import SummarizeVideoAgent
 from director.agents.download import DownloadAgent
 from director.agents.pricing import PricingAgent
 from director.agents.upload import UploadAgent
@@ -39,7 +37,7 @@ class ChatHandler:
         # Register the agents here
         self.agents = [
             ThumbnailAgent,
-            VideoSummaryAgent,
+            SummarizeVideoAgent,
             DownloadAgent,
             PricingAgent,
             UploadAgent,
