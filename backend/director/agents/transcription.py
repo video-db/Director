@@ -46,10 +46,8 @@ class TranscriptionAgent(BaseAgent):
 
         if timestamp_mode:
             self.output_message.actions.append("Formatting transcript with timestamps...")
-            grouped_transcript = self._group_transcript_with_timestamps(
-                transcript_text, time_range
-            )
-            output_text = grouped_transcript
+            transcript_data = videodb_tool.get_transcript(video_id, text=False)
+            output_text = self._group_transcript_with_timestamps(transcript_data, time_range)
         else:
             output_text = transcript_text
 
@@ -64,23 +62,36 @@ class TranscriptionAgent(BaseAgent):
             data={"video_id": video_id, "transcript": output_text},
         )
     
-    def _group_transcript_with_timestamps(self, transcript_text: str, time_range: int) -> str:
+    def _group_transcript_with_timestamps(self, transcript_data: list, time_range: int = 2) -> str:
         """
-        Group transcript into specified time ranges with timestamps.
+        Group transcript data into specified time ranges with timestamps.
 
-        :param str transcript_text: The raw transcript text.
-        :param int time_range: Time range for grouping in minutes.
+        :param list transcript_data: List of dictionaries containing transcription details.
+        :param int time_range: Time range for grouping in minutes (default: 2 minutes).
         :return: Grouped transcript with timestamps.
         :rtype: str
         """
-        lines = transcript_text.split("\n")
         grouped_transcript = []
-        current_time = 0
+        current_start_time = 0
+        current_end_time = time_range * 60
+        current_text = []
 
-        for i, line in enumerate(lines):
-            if i % time_range == 0 and line.strip():
-                timestamp = f"[{current_time:02d}:00 - {current_time + time_range:02d}:00]"
-                grouped_transcript.append(f"{timestamp} {line.strip()}")
-                current_time += time_range
+        for entry in transcript_data:
+            start_time = entry.get("start", 0)
+            text = entry.get("text", "").strip()
 
-        return "\n".join(grouped_transcript)
+
+            if start_time < current_end_time:
+                current_text.append(text)
+            else:
+                timestamp = f"[{current_start_time // 60:02d}:{current_start_time % 60:02d} - {current_end_time // 60:02d}:{current_end_time % 60:02d}]"
+                grouped_transcript.append(f"{timestamp} {' '.join(current_text).strip()}\n")
+                current_start_time = current_end_time
+                current_end_time += time_range * 60
+                current_text = [text]
+                
+        if current_text:
+            timestamp = f"[{current_start_time // 60:02d}:{current_start_time % 60:02d} - {current_end_time // 60:02d}:{current_end_time % 60:02d}]"
+            grouped_transcript.append(f"{timestamp} {' '.join(current_text).strip()}\n")
+
+        return "\n".join(grouped_transcript).replace(" - ", " ")
