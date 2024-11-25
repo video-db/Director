@@ -88,12 +88,16 @@ class KlingAITool:
             "duration": duration,
             **config,  # Include any additional configuration parameters
         }
+        print("Kling endpoint", self.video_endpoint)
+        print("Kling headers", headers)
+        print("Making request to KlingAI", payload)
 
         response = requests.post(self.video_endpoint, headers=headers, json=payload)
 
         if response.status_code != 200:
             raise Exception(f"Error generating video: {response.text}")
 
+        print("This is Kling response", response.json())
         # Assuming the API returns a job ID for asynchronous processing
         job_id = response.json()["data"].get("task_id")
         if not job_id:
@@ -106,6 +110,7 @@ class KlingAITool:
             response = requests.get(
                 result_endpoint, headers={"Authorization": f"Bearer {api_key}"}
             )
+            print("Making request to KlingAI result endpoint", result_endpoint)
             response.raise_for_status()
 
             status = response.json()["data"]["task_status"]
