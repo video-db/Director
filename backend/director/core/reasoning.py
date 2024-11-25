@@ -14,7 +14,6 @@ from director.core.session import (
 )
 from director.llm.base import LLMResponse
 from director.llm import get_default_llm
-from director.llm.openai import OpenAI
 
 
 logger = logging.getLogger(__name__)

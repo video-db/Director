@@ -1,38 +1,28 @@
+import os
 import json
 from enum import Enum
 
 from pydantic import Field, field_validator, FieldValidationInfo
-from pydantic_settings import SettingsConfigDict
 
 
 from director.llm.base import BaseLLM, BaseLLMConfig, LLMResponse, LLMResponseStatus
 from director.constants import (
     LLMType,
-    EnvPrefix,
 )
 
 
 class OpenAIChatModel(str, Enum):
     """Enum for OpenAI Chat models"""
 
-    GPT4 = "gpt-4"
-    GPT4_32K = "gpt-4-32k"
-    GPT4_TURBO = "gpt-4-turbo"
     GPT4o = "gpt-4o-2024-11-20"
-    GPT4o_MINI = "gpt-4o-mini"
 
 
-class OpenaiConfig(BaseLLMConfig):
+class VideoDBProxyConfig(BaseLLMConfig):
     """OpenAI Config"""
 
-    model_config = SettingsConfigDict(
-        env_prefix=EnvPrefix.OPENAI_,
-        extra="ignore",
-    )
-
-    llm_type: str = LLMType.OPENAI
-    api_key: str = ""
-    api_base: str = "https://api.openai.com/v1"
+    llm_type: str = LLMType.VIDEODB_PROXY
+    api_key: str = os.getenv("VIDEO_DB_API_KEY")
+    api_base: str = os.getenv("VIDEO_DB_BASE_URL", "https://api.videodb.io")
     chat_model: str = Field(default=OpenAIChatModel.GPT4o)
     max_tokens: int = 4096
 
@@ -40,32 +30,24 @@ class OpenaiConfig(BaseLLMConfig):
     @classmethod
     def validate_non_empty(cls, v, info: FieldValidationInfo):
         if not v:
-            raise ValueError(
-                f"{info.field_name} must not be empty. please set {EnvPrefix.OPENAI_.value}{info.field_name.upper()} environment variable."
-            )
+            raise ValueError("Please set VIDEO_DB_API_KEY environment variable.")
         return v
 
 
-class OpenAI(BaseLLM):
-    def __init__(self, config: OpenaiConfig = None):
+class VideoDBProxy(BaseLLM):
+    def __init__(self, config: VideoDBProxyConfig = None):
         """
         :param config: OpenAI Config
         """
         if config is None:
-            config = OpenaiConfig()
+            config = VideoDBProxyConfig()
         super().__init__(config=config)
         try:
             import openai
         except ImportError:
             raise ImportError("Please install OpenAI python library.")
 
-        self.client = openai.OpenAI(api_key=self.api_key, base_url=self.api_base)
-
-    def init_langfuse(self):
-        from langfuse.decorators import observe
-
-        self.chat_completions = observe(name=type(self).__name__)(self.chat_completions)
-        self.text_completions = observe(name=type(self).__name__)(self.text_completions)
+        self.client = openai.OpenAI(api_key=self.api_key, base_url=f"{self.api_base}")
 
     def _format_messages(self, messages: list):
         """Format the messages to the format that OpenAI expects."""
@@ -156,7 +138,7 @@ class OpenAI(BaseLLM):
             params["tools"] = self._format_tools(tools)
             params["tool_choice"] = "auto"
 
-        if response_format and self.config.api_base == "https://api.openai.com/v1":
+        if response_format:
             params["response_format"] = response_format
 
         try:

@@ -20,7 +20,7 @@ class LLMType(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     XAI = "xai"
-    DEFAULT = XAI
+    VIDEODB_PROXY = "videodb_proxy"
 
 
 class EnvPrefix(str, Enum):

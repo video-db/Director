@@ -4,19 +4,20 @@ from director.constants import LLMType
 
 from director.llm.openai import OpenAI
 from director.llm.anthropic import AnthropicAI
-from director.llm.xai import XAI
+from director.llm.videodb_proxy import VideoDBProxy
 
 
 def get_default_llm():
     """Get default LLM"""
 
-    default_llm = os.getenv("DEFAULT_LLM", LLMType.DEFAULT)
+    openai = True if os.getenv("OPENAI_API_KEY") else False
+    anthropic = True if os.getenv("ANTHROPIC_API_KEY") else False
 
-    if default_llm == LLMType.OPENAI:
+    default_llm = os.getenv("DEFAULT_LLM")
+
+    if openai or default_llm == LLMType.OPENAI:
         return OpenAI()
-    elif default_llm == LLMType.ANTHROPIC:
+    elif anthropic or default_llm == LLMType.ANTHROPIC:
         return AnthropicAI()
-    elif default_llm == LLMType.XAI:
-        return XAI()
     else:
-        raise ValueError(f"Invalid LLM type: {default_llm}")
+        return VideoDBProxy()

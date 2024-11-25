@@ -1,9 +1,8 @@
 import os
 import logging
 
-
 from director.agents.thumbnail import ThumbnailAgent
-from director.agents.video_summary import VideoSummaryAgent
+from director.agents.summarize_video import SummarizeVideoAgent
 from director.agents.download import DownloadAgent
 from director.agents.pricing import PricingAgent
 from director.agents.upload import UploadAgent
@@ -18,6 +17,7 @@ from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
 from director.agents.meme_maker import MemeMakerAgent
 from director.agents.dubbing import DubbingAgent
+from director.agents.composio import ComposioAgent
 
 
 from director.constants import LLMType
@@ -37,7 +37,7 @@ class ChatHandler:
         # Register the agents here
         self.agents = [
             ThumbnailAgent,
-            VideoSummaryAgent,
+            SummarizeVideoAgent,
             DownloadAgent,
             PricingAgent,
             UploadAgent,
@@ -52,6 +52,7 @@ class ChatHandler:
             SlackAgent,
             MemeMakerAgent,
             DubbingAgent,
+            ComposioAgent,
         ]
 
     def add_videodb_state(self, session):
@@ -152,25 +153,10 @@ class ConfigHandler:
         """Check the configuration of the server."""
         videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False
 
-        llm_configured = False
-        # default_llm = os.getenv("DEFAULT_LLM", LLMType.DEFAULT)
-        # if default_llm == LLMType.OPENAI:
-        #     llm_configured = True if os.getenv("OPENAI_API_KEY") else False
-
-        # elif default_llm == LLMType.ANTHROPIC:
-        #     llm_configured = True if os.getenv("ANTHROPIC_API_KEY") else False
-
-        # elif default_llm == LLMType.XAI:
-        #     llm_configured = True if os.getenv("XAI_API_KEY") else False
-
-        # else:
-        #     llm_configured = False
-        llm_configured = True
-
         db = load_db(os.getenv("SERVER_DB_TYPE", "sqlite"))
         db_configured = db.health_check()
         return {
             "videodb_configured": videodb_configured,
-            "llm_configured": llm_configured,
+            "llm_configured": True,
             "db_configured": db_configured,
         }

@@ -276,23 +276,19 @@ make update-fe
 echo "
 *******************************************
 *                                         *
-* 🎉 Setup Completed Successfully! 🎉     *
+*   🎉 Setup Completed Successfully! 🎉   *
 *                                         *
 *      🚀 IMPORTANT: Next Steps 🚀        *
 *                                         *
 * 1. Review and Update .env File:         *
 *    - Check the newly created .env file  *
-*    - Add API keys for required services *
-*    - Example:                           *
-*    - XAI_API_KEY=xai-***                *
-*    - VIDEO_DB_API_KEY=sk-***            *
-*    - Note: (Only ONE LLM key is needed) *
+*    - Add VIDEO_DB_API_KEY               *
 *                                         *
 * 2. Start the Application:               *
 *    Run the following command:           *
 *    $ make run                           *
 *                                         *
-* 🎉 You're all set! Happy coding! 🎉     *
+*   🎉 You're all set! Happy coding! 🎉    *
 *                                         *
 *******************************************
 "
