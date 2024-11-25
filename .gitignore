@@ -1,5 +1,6 @@
 .idea
 .env
+.env.backup
 venv
 .venv
 .vscode
