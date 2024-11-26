@@ -25,9 +25,9 @@
 
 
   <p align="center">
-    Framework for creating AI agents to manage and interact with your media library.
+    Intelligent agents for your video library
     <br />
-    <a href="https://codesandbox.io/p/sandbox/nifty-mendeleev-tnxpnt"><strong>View Demo »</strong></a>
+    <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw"><strong>View Demo »</strong></a>
     <br />
     <br />
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=bug&projects=&template=bug_report.yml">Report Bug</a>
@@ -37,35 +37,90 @@
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=agent_request.yml">New Agent Request</a>
   </p>
 </p>
+<br/>
 
 <!-- ABOUT THE PROJECT -->
 
-##  🧐 What is it?
-Director provides a advance AI first framework for developing intelligent agents that can interact with your audio/video collection in natural language. Whether you're dealing with  social content, lectures, movies, youtube videos, TV shows, talks, music, or other digital content, Director offers variety of tools to build powerful AI-powered assistants.
+##  🧐 What is The Director?
 
-It uses the VideoDB’s scalable "video as data" infrastructure to create agentic workflows. For example, in natural language you can give commands like `“upload this video and send the bullet point summary on my slack”` and the agent will handle the rest.
-📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
+The Director is an AI-powered framework that lets you interact with your video and audio collections using natural language. Forget complex tools—just tell The Director what you want, and it gets it done.
+
+Whether you’re working with social media clips, lectures, movies, YouTube videos, or any other content, The Director enables you to:
+
+- Summarize videos in seconds.
+- Search for specific moments.
+- Create clips instantly.
+- Add overlays, generate thumbnails, and much more.
+All powered by VideoDB’s scalable ["video-as-data"](https://videodb.io/video-as-data) infrastructure.
+
+For example, a simple command like:
+`Upload this video and send the highlights to my Slack,`
+sets everything in motion.
+
+Built with flexibility in mind, The Director is perfect for developers, creators, and teams looking to harness AI to simplify media workflows and unlock new possibilities. 📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
 
 
 
+<!-- Intro Video -->
 
 
-https://github.com/user-attachments/assets/8b97a9bf-5c81-4a0d-8863-9415552eba57
-
-
-
+https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 
 
 
+<br/>
 
 ## ⭐️ Key Features
-- **🤖 AI Agent Framework:** Build custom agents to perform tasks like summarization, search, indexing, clipping and library organization. 
-- **🎨 Innovative User Experience:** Complete framework for interacting with your media library with chat based UI, Video player and next-gen interactions that can help you create the experience you need. 
-- **🔍 Media Analysis:** Your video infra is taken care by [VideoDB](https://videodb.io). Connect with popular LLMs, Databases, and GenAI APIs seamlessly.
-- **🧩 Extensible Architecture:** Easily add new capabilities through tools and modules. Run locally or deploy on your own cloud.
+### 🤖Build Smart Video Agents
+Create custom AI agents that handle tedious tasks for you:
+
+- Summarize videos in seconds.
+- Search and index your media library.
+- Organize and clip your content effortlessly.
+### 🎨 A New Way to Interact
+Experience a sleek, chat-based interface with built-in video playback and intuitive controls. It’s like having a personal assistant for your media.
+
+### 🔍 Smarter Media Analysis
+Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable.
+
+### 🧩 Customizable and Flexible
+Easily add new features and tools to your workflow. Whether you want to run it locally or on your cloud, The Director adapts to your needs.
+
+<br/>
+
+## ⚙️ Architecture Overview
+Director's architecture brings together:
+
+Backend Reasoning Engine: Handles workflows and decision-making.
+Chat-Based UI: Engage with your media library conversationally.
+Video Player: Advanced playback and interaction tools.
+Collection View: Organize and browse your media effortlessly.
 
   ![Director architecture](https://github.com/user-attachments/assets/9afb2783-66db-4899-9308-03cbd12e74d7)
   
+## 🧠 **Reasoning Engine**
+
+At the heart of The Director is its **Reasoning Engine**, a powerful core that drives intelligent decision-making and dynamic workflows. It acts as the brain behind the agents, enabling them to process commands, interact with data, and deliver meaningful outputs.
+
+### **How It Works**
+- **Contextual Understanding**: The engine analyzes user inputs and maintains context, ensuring smooth and coherent interactions with agents.  
+- **Dynamic Agent Orchestration**: Based on the user’s needs, it identifies and activates the right agents to complete tasks efficiently.  
+- **Modular Processing**: Tasks are broken into smaller steps, allowing agents to collaborate and deliver accurate results in real time.
+
+### **Key Capabilities**
+- **Multi-Agent Coordination**: Seamlessly integrates multiple agents to handle complex workflows, such as summarizing, editing, and searching videos.  
+- **Real-Time Updates**: Provides live progress and feedback as tasks are being completed.  
+- **Extensible Design**: Easily adaptable to include custom logic or connect to external APIs for more advanced capabilities.
+
+### **See It in Action**
+The Reasoning Engine works in tandem with the chat-based UI, making video interaction intuitive and efficient. For example:  
+- **Input**: "Create a clip of the funniest scene in this video and share it on Slack."  
+- **Output**: The engine orchestrates upload, scene detection, clipping, and sharing agents to deliver results seamlessly.
+
+For a closer look, check out the detailed architecture diagram below:  
+![Reasoning Engine Architecture](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
+
+Explore how the Reasoning Engine powers The Director to simplify and supercharge your media workflows.
 
 
 
@@ -94,20 +149,20 @@ cd Director
 ```
 
 > This script will:
-> - Install nvm (Node Version Manager) if not already installed
 > - Install Node.js 22.8.0 using nvm
 > - Install Python and pip
-> - Set up virtual environments and install dependencies for frontend and backend
+> - Set up virtual environments for both frontend and backend.
 
-Supported platforms: 
+
+
+**3. Configure the environment variables:**
+
+Edit the `.env` files to add your API keys and other configuration options.
+
+### Supported platforms: 
 - Mac
 - Linux
 - Windows (WSL)
-
-**3. Configure the environment variables:**
-Edit the `.env` files to add your API keys and other configuration options.
-
-
 
 ## 💬 Running the Application
 
@@ -117,46 +172,34 @@ To start both the backend and frontend servers:
 make run
 ```
 
-This will start the backend server on `http://127.0.0.1:8000` and the frontend server on `http://127.0.0.1:8080`.
+- Backend: `http://127.0.0.1:8000`
 
-To run only the backend server: `make run-be`
-To just run the frontend development server: `make run-fe`
+- Frontend: `http://127.0.0.1:8080`
 
-## 📖 Documentation
+For specific tasks:
 
-The project documentation is built using MkDocs. To serve the documentation locally on port 9000:
+- Backend only: `make run-be`
 
-Activate the environment and install dependencies for development:
+- Frontend only: `make run-fe`
 
-```bash
-source backend/venv/bin/activate  
-make install-be
-```
 
-```bash
-mkdocs serve -a localhost:9000
-```
-
-To build the documentation:
-
-```bash
-mkdocs build
-```
 
 <!-- CONTRIBUTING -->
 
 ## 📘 Creating a New Agent
 To create a new agent in Director, follow these steps:
 
-1. **Copy the template**: Duplicate `sample_agent.py` in `Director/backend/director/agents/` and rename it to your agent's name.
+1. **Copy the template**: 
+Duplicate `sample_agent.py` in `Director/backend/director/agents/` and rename it.
 
 2. **Update class details**:
-   - Rename the class (e.g., from `SampleAgent` to `YourAgentName`)
+   - Rename the class.
    - Update `agent_name` and `description`
 
-3. **Modify the `run` method**:
-   - Update parameters and docstring
+3. **Implement logic**:
+   - Update parameters and `docstring`
    - Implement your agent's logic
+   - Update the run() method.
 
 4. **Handle output and status updates**:
    - Use appropriate content types (TextContent, VideoContent, ImageContent, SearchResultContent)
@@ -175,9 +218,27 @@ To create a new agent in Director, follow these steps:
    - Import your new agent class in `Director/backend/director/handler.py`
    - Add it to the `self.agents` list in `ChatHandler`
 
-
-![director_reasoning_engine](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
 Remember to consider creating reusable tools if your agent's functionality could be shared across multiple agents.
+
+
+## 📖 Documentation
+
+### Serve Locally
+To serve the documentation on port 9000:
+
+```bash
+source backend/venv/bin/activate  
+make install-be
+mkdocs serve -a localhost:9000
+```
+
+To build the documentation:
+
+```bash
+mkdocs build
+```
+
+
 
 ## 🤝 Contributing
 
