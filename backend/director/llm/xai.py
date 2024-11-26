@@ -137,7 +137,7 @@ class XAI(BaseLLM):
     ):
         """Get completions for chat.
 
-        docs: https://platform.openai.com/docs/guides/function-calling
+        docs: https://docs.x.ai/docs/guides/function-calling
         """
         params = {
             "model": self.chat_model,

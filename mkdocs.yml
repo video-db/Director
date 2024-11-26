@@ -74,6 +74,7 @@ nav:
     - Integrations:
       - 'OpenAI': 'llm/openai.md'
       - 'AnthropicAI': 'llm/anthropic.md'
+      - 'XAI': 'llm/xai.md'
   - 'Database':
     - 'Interface': 'database/interface.md'
     - Integrations:
