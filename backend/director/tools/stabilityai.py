@@ -45,6 +45,7 @@ class StabilityAITool:
         )
         self.video_endpoint = "https://api.stability.ai/v2beta/image-to-video"
         self.result_endpoint = "https://api.stability.ai/v2beta/image-to-video/result"
+        self.polling_interval = 30  # seconds
 
     def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
         """
@@ -95,7 +96,6 @@ class StabilityAITool:
             "motion_bucket_id": config.get("motion_bucket_id", 127),
         }
 
-
         with open(temp_image_path, "rb") as img_file:
             video_response = requests.post(
                 self.video_endpoint,
@@ -123,9 +123,13 @@ class StabilityAITool:
                 "GET", f"{self.result_endpoint}/{generation_id}", headers=result_headers
             )
 
+            result_response.raise_for_status()
+
+            print("StabilityAI Response", result_response)
+
             if result_response.status_code == 202:
                 # Still processing
-                time.sleep(10)
+                time.sleep(self.polling_interval)
                 continue
             elif result_response.status_code == 200:
                 # Generation complete, save video

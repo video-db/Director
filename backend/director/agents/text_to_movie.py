@@ -16,9 +16,15 @@ from director.core.session import (
     VideoData,
 )
 from director.llm.openai import OpenAI, OpenaiConfig
-from director.tools.kling import KlingAITool
-from director.tools.stabilityai import StabilityAITool
-from director.tools.elevenlabs import ElevenLabsTool
+from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
+from director.tools.stabilityai import (
+    StabilityAITool,
+    PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
+)
+from director.tools.elevenlabs import (
+    ElevenLabsTool,
+    PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
+)
 from director.tools.videodb_tool import VideoDBTool
 from director.constants import DOWNLOADS_PATH
 
@@ -37,15 +43,15 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
         "engine": {
             "type": "string",
             "description": "The video generation engine to use",
-            "enum": ["stabilityai", "kling"],
+            "enum": SUPPORTED_ENGINES,
             "default": "stabilityai",
         },
         "job_type": {
             "type": "string",
-            "enum": ["text_to_video"],
+            "enum": ["text_to_movie"],
             "description": "The type of video generation to perform",
         },
-        "text_to_video": {
+        "text_to_movie": {
             "type": "object",
             "properties": {
                 "storyline": {
@@ -57,28 +63,20 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
                     "description": "Optional description for background music generation",
                     "default": None,
                 },
-                "config": {
+                "video_stabilityai_config": {
                     "type": "object",
-                    "description": "Additional configuration options",
-                    "properties": {
-                        "aspect_ratio": {
-                            "type": "string",
-                            "enum": ["16:9", "9:16", "1:1"],
-                            "description": "Aspect ratio of the output video",
-                        },
-                        "strength": {
-                            "type": "number",
-                            "description": "Image influence on output",
-                            "minimum": 0,
-                            "maximum": 1,
-                        },
-                        "output_format": {
-                            "type": "string",
-                            "description": "Format of the output video",
-                            "enum": ["mp4", "webm"],
-                        },
-                    },
-                    "default": {},
+                    "description": "Optional configuration for StabilityAI engine",
+                    "properties": STABILITYAI_PARAMS_CONFIG["text_to_video"],
+                },
+                "video_kling_config": {
+                    "type": "object",
+                    "description": "Optional configuration for Kling engine",
+                    "properties": KLING_PARAMS_CONFIG["text_to_video"],
+                },
+                "audio_elevenlabs_config": {
+                    "type": "object",
+                    "description": "Optional configuration for ElevenLabs engine",
+                    "properties": ELEVENLABS_PARAMS_CONFIG["sound_effect"],
                 },
             },
             "required": ["storyline"],
@@ -143,28 +141,14 @@ class TextToMovieAgent(BaseAgent):
                 prompt_format="concise",
             ),
         }
-
-        # Initialize video generation tools
-        self.stability_tool = None
-        self.kling_tool = None
-
-        STABILITY_API_KEY = os.getenv("STABILITYAI_API_KEY")
-        if STABILITY_API_KEY:
-            self.stability_tool = StabilityAITool(api_key=STABILITY_API_KEY)
-
-        KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
-        KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
-        if KLING_API_ACCESS_KEY and KLING_API_SECRET_KEY:
-            self.kling_tool = KlingAITool(
-                access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
-            )
-
         super().__init__(session=session, **kwargs)
 
     def run(
         self,
         collection_id: str,
         engine: str = "stabilityai",
+        job_type: str = "text_to_movie",
+        text_to_movie: Optional[dict] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -189,87 +173,159 @@ class TextToMovieAgent(BaseAgent):
             if engine not in self.engine_configs:
                 raise ValueError(f"Unsupported engine: {engine}")
 
-            if engine == "kling" and not self.kling_tool:
-                raise ValueError("Kling engine selected but not initialized")
-            elif engine == "stabilityai" and not self.stability_tool:
-                raise ValueError("Stability engine selected but not initialized")
+            if engine == "stabilityai":
+                STABILITY_API_KEY = os.getenv("STABILITYAI_API_KEY")
+                if not STABILITY_API_KEY:
+                    raise Exception("Stability AI API key not found")
+                self.video_gen_tool = StabilityAITool(api_key=STABILITY_API_KEY)
+                self.video_gen_config_key = "video_stabilityai_config"
+            elif engine == "kling":
+                KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
+                KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
+                if not KLING_API_ACCESS_KEY or not KLING_API_SECRET_KEY:
+                    raise Exception("Kling AI API key not found")
+                self.video_gen_tool = KlingAITool(
+                    access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
+                )
+                self.video_gen_config_key = "video_kling_config"
+            else:
+                raise Exception(f"{engine} not supported")
 
             # Initialize tools
-            self.audio_tool = ElevenLabsTool(api_key=os.getenv("ELEVENLABS_API_KEY"))
+            self.audio_gen_tool = ElevenLabsTool(
+                api_key=os.getenv("ELEVENLABS_API_KEY")
+            )
+            self.audio_gen_config_key = "audio_elevenlabs_config"
 
             # Initialize steps
-            config = kwargs.get("text_to_video", {})
-            raw_storyline = config.get("storyline", [])
+            if job_type == "text_to_movie":
+                raw_storyline = text_to_movie.get("storyline", [])
+                video_gen_config = text_to_movie.get(self.video_gen_config_key, {})
+                audio_gen_config = text_to_movie.get(self.audio_gen_config_key, {})
 
-            # Generate visual style
-            visual_style = self.generate_visual_style(raw_storyline)
-            print("these are the visual styles", visual_style)
+                # Generate visual style
+                visual_style = self.generate_visual_style(raw_storyline)
 
-            # Generate scenes
-            scenes = self.generate_scene_sequence(raw_storyline, visual_style, engine)
-            print("these are the scenes", scenes)
+                # Generate scenes
+                scenes = self.generate_scene_sequence(
+                    raw_storyline, visual_style, engine
+                )
 
-            # Generate videos sequentially
-            video_results = self.generate_videos_sequentially(
-                scenes, visual_style, engine
-            )
-            print("these are the video results", video_results)
+                self.output_message.actions.append(
+                    f"Generating {len(scenes)} videos..."
+                )
+                self.output_message.push_update()
 
-            # Process videos and track duration
-            total_duration = 0
-            for result in video_results:
-                if result.success:
-                    media = self.videodb_tool.upload(
-                        result.video_path, source_type="file_path", media_type="video"
+                engine_config = self.engine_configs[engine]
+                generated_videos_results = []
+
+                # Generate videos sequentially
+                for index, scene in enumerate(scenes):
+                    self.output_message.actions.append(
+                        f"Generating video for scene {index + 1}..."
                     )
-                    total_duration += float(media.get("length", 0))
-                    scenes[result.step_index]["video"] = media
+                    self.output_message.push_update()
 
-                    # Cleanup temporary files
-                    if os.path.exists(result.video_path):
-                        os.remove(result.video_path)
-                else:
-                    raise Exception(
-                        f"Failed to generate video {result.step_index}: {result.error}"
+                    suggested_duration = min(
+                        scene.get("suggested_duration", 5), engine_config.max_duration
+                    )
+                    # Generate engine-specific prompt
+                    prompt = self.generate_engine_prompt(scene, visual_style, engine)
+
+                    video_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
+                    os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+
+                    self.video_gen_tool.text_to_video(
+                        prompt=prompt,
+                        save_at=video_path,
+                        duration=suggested_duration,
+                        config=video_gen_config,
+                    )
+                    generated_videos_results.append(
+                        VideoGenResult(
+                            step_index=index, video_path=video_path, success=True
+                        )
                     )
 
-            # Generate audio prompt
-            sound_effects_description = self.generate_audio_prompt(raw_storyline)
+                self.output_message.actions.append(
+                    f"Uploading {len(generated_videos_results)} videos to VideoDB..."
+                )
+                self.output_message.push_update()
 
-            # Generate and add sound effects
-            os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-            sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
+                # Process videos and track duration
+                total_duration = 0
+                for result in generated_videos_results:
+                    if result.success:
+                        self.output_message.actions.append(
+                            f"Uploading video {result.step_index + 1}..."
+                        )
+                        self.output_message.push_update()
+                        media = self.videodb_tool.upload(
+                            result.video_path,
+                            source_type="file_path",
+                            media_type="video",
+                        )
+                        total_duration += float(media.get("length", 0))
+                        scenes[result.step_index]["video"] = media
 
-            # Configure sound effects generation
-            sound_effects_config = {}
+                        # Cleanup temporary files
+                        if os.path.exists(result.video_path):
+                            os.remove(result.video_path)
+                    else:
+                        raise Exception(
+                            f"Failed to generate video {result.step_index}: {result.error}"
+                        )
 
-            self.audio_tool.generate_sound_effect(
-                prompt=sound_effects_description,
-                save_at=sound_effects_path,
-                duration=total_duration,
-                config=sound_effects_config,
-            )
+                # Generate audio prompt
+                sound_effects_description = self.generate_audio_prompt(raw_storyline)
 
-            sound_effects_media = self.videodb_tool.upload(
-                sound_effects_path, source_type="file_path", media_type="audio"
-            )
+                self.output_message.actions.append("Generating background music...")
+                self.output_message.push_update()
 
-            if os.path.exists(sound_effects_path):
-                os.remove(sound_effects_path)
+                # Generate and add sound effects
+                os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+                sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
 
-            # Combine everything into final video
-            final_video = self.combine_assets(scenes, sound_effects_media)
+                self.audio_gen_tool.generate_sound_effect(
+                    prompt=sound_effects_description,
+                    save_at=sound_effects_path,
+                    duration=total_duration,
+                    config=audio_gen_config,
+                )
 
-            video_content.video = VideoData(stream_url=final_video)
-            video_content.status = MsgStatus.success
-            video_content.status_message = "Movie generation complete"
-            self.output_message.publish()
+                self.output_message.actions.append(
+                    "Uploading background music to VideoDB..."
+                )
+                self.output_message.push_update()
 
-            return AgentResponse(
-                status=AgentStatus.SUCCESS,
-                message="Movie generated successfully",
-                data={"video_url": final_video},
-            )
+                sound_effects_media = self.videodb_tool.upload(
+                    sound_effects_path, source_type="file_path", media_type="audio"
+                )
+
+                if os.path.exists(sound_effects_path):
+                    os.remove(sound_effects_path)
+
+                self.output_message.actions.append(
+                    "Combining assets into final video..."
+                )
+                self.output_message.push_update()
+
+                # Combine everything into final video
+                final_video = self.combine_assets(scenes, sound_effects_media)
+
+                video_content.video = VideoData(stream_url=final_video)
+                video_content.status = MsgStatus.success
+                video_content.status_message = "Movie generation complete"
+                self.output_message.publish()
+
+                return AgentResponse(
+                    status=AgentStatus.SUCCESS,
+                    message="Movie generated successfully",
+                    data={"video_url": final_video},
+                )
+
+            else:
+                raise ValueError(f"Unsupported job type: {job_type}")
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
@@ -367,8 +423,6 @@ class TextToMovieAgent(BaseAgent):
         self, scene: dict, style: VisualStyle, engine: str
     ) -> str:
         """Generate engine-specific prompt"""
-        engine_config = self.engine_configs[engine]
-
         if engine == "stabilityai":
             return f"""
             {style.director_reference} style.
@@ -403,46 +457,14 @@ class TextToMovieAgent(BaseAgent):
 
             {initial_prompt}
             """
-            
-            compression_message = ContextMessage(content=compression_prompt, role=RoleTypes.user)
+
+            compression_message = ContextMessage(
+                content=compression_prompt, role=RoleTypes.user
+            )
             llm_response = self.llm.chat_completions(
                 [compression_message.to_llm_msg()], response_format={"type": "text"}
             )
             return llm_response.content
-
-    def generate_videos_sequentially(
-        self, scenes: List[dict], style: VisualStyle, engine: str
-    ) -> List[VideoGenResult]:
-        """Generate videos maintaining visual consistency."""
-        video_results = []
-        engine_config = self.engine_configs[engine]
-
-        for index, scene in enumerate(scenes):
-            # Duration is already guaranteed to be int from generate_scene_sequence
-            suggested_duration = min(
-                scene.get("suggested_duration", 5), engine_config.max_duration
-            )
-
-            # Generate engine-specific prompt
-            prompt = self.generate_engine_prompt(scene, style, engine)
-
-            # Add engine-specific parameters
-            engine_params = {"prompt": prompt, "duration": suggested_duration}
-
-            print("these are the engine params", engine_params)
-
-            if engine == "stabilityai":
-                engine_params.update(
-                    {
-                        "cfg_scale": 7.5,
-                        "motion_bucket_id": 127,
-                    }
-                )
-
-            result = self.generate_single_video(index, engine_params, engine)
-            video_results.append(result)
-
-        return video_results
 
     def generate_audio_prompt(self, storyline: str) -> str:
         """Generate minimal, music-focused prompt for ElevenLabs."""
@@ -463,55 +485,6 @@ class TextToMovieAgent(BaseAgent):
             [prompt_message.to_llm_msg()], response_format={"type": "text"}
         )
         return llm_response.content[:100]
-
-    def generate_single_video(
-        self, index: int, params: dict, engine: str
-    ) -> VideoGenResult:
-        """Generate a single video clip using the specified engine."""
-        try:
-            video_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
-            os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-
-            if engine == "stabilityai":
-                if not self.stability_tool:
-                    raise Exception("StabilityAI tool not initialized")
-
-                # Configure Stability-specific parameters
-                stability_config = {
-                    "cfg_scale": params.get("cfg_scale", 7.5),
-                    "motion_bucket_id": params.get("motion_bucket_id", 127),
-                }
-
-                self.stability_tool.text_to_video(
-                    prompt=params["prompt"],
-                    save_at=video_path,
-                    duration=params["duration"],
-                    config=stability_config,
-                )
-            else:  # kling
-                if not self.kling_tool:
-                    raise Exception("Kling tool not initialized")
-
-                # Configure Kling-specific parameters
-                kling_config = {"model": "kling-v1"}
-
-                self.kling_tool.text_to_video(
-                    prompt=params["prompt"],
-                    save_at=video_path,
-                    duration=params["duration"],
-                    config=kling_config,
-                )
-
-            if not os.path.exists(video_path):
-                raise Exception("Failed to generate video file")
-
-            return VideoGenResult(step_index=index, video_path=video_path, success=True)
-
-        except Exception as e:
-            logger.error(f"Error generating video for step {index}: {str(e)}")
-            return VideoGenResult(
-                step_index=index, video_path=None, success=False, error=str(e)
-            )
 
     def combine_assets(self, scenes: List[dict], audio_media: Optional[dict]) -> str:
         timeline = self.videodb_tool.get_and_set_timeline()

@@ -4,47 +4,105 @@ import jwt
 
 PARAMS_CONFIG = {
     "text_to_video": {
-        "aspect_ratio": {
+        "model": {
             "type": "string",
-            "enum": ["16:9", "9:16", "1:1"],
-            "description": "Aspect ratio of the output video",
-        },
-        "image": {
-            "type": "string",
-            "description": "Starting image for generation",
-        },
-        "strength": {
-            "type": "number",
-            "description": "Image influence on output",
-            "minimum": 0,
-            "maximum": 1,
+            "description": "Model to use for video generation",
+            "enum": ["kling-v1"],
+            "default": "kling-v1",
         },
         "negative_prompt": {
             "type": "string",
-            "description": "Keywords to exclude from output",
-        },
-        "seed": {
-            "type": "integer",
-            "description": "Randomness seed for generation",
-        },
-        "output_format": {
-            "type": "string",
-            "description": "Format of the output video",
-            "enum": ["mp4", "webm"],
+            "description": "Negative text prompt",
+            "maxLength": 5200,
         },
         "cfg_scale": {
             "type": "number",
-            "description": "How strongly video sticks to original image",
+            "description": "Flexibility in video generation. The higher the value, "
+            "the lower the model's degree of flexibility and the "
+            "stronger the relevance to the user's prompt",
             "minimum": 0,
-            "maximum": 10,
-            "default": 1.8,
+            "maximum": 1,
+            "default": 0.5,
         },
-        "motion_bucket_id": {
-            "type": "integer",
-            "description": "Controls motion amount in output video",
-            "minimum": 1,
-            "maximum": 255,
-            "default": 127,
+        "mode": {
+            "type": "string",
+            "description": "Video generation mode",
+            "enum": ["std", "pro"],
+            "default": "std",
+        },
+        "camera_control": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "Type of camera movement. Options are:\n"
+                    "- simple: Basic camera movement, configurable via config\n"
+                    "- none: No camera movement\n"
+                    "- down_back: Camera descends and moves backward with pan down and\n"
+                    "  zoom out effect\n"
+                    "- forward_up: Camera moves forward and tilts up with zoom in\n"
+                    "  and pan up effect\n"
+                    "- right_turn_forward: Camera rotates right while moving forward\n"
+                    "- left_turn_forward: Camera rotates left while moving forward",
+                    "enum": [
+                        "simple",
+                        "none",
+                        "down_back",
+                        "forward_up",
+                        "right_turn_forward",
+                        "left_turn_forward",
+                    ],
+                    "default": "none",
+                },
+                "config": {
+                    "type": "object",
+                    "description": "Contains 8 fields to specify the camera's movement or change in different directions, This should only be passed if type is simple",
+                    "properties": {
+                        "horizontal": {
+                            "type": "number",
+                            "description": "Controls the camera's movement along the horizontal axis (translation along the x-axis). Value range: [-10, 10], negative value indicates translation to the left, positive value indicates translation to the right",
+                            "minimum": -10,
+                            "maximum": 10,
+                            "default": 0,
+                        },
+                        "vertical": {
+                            "type": "number",
+                            "description": "Controls the camera's movement along the vertical axis (translation along the y-axis). Value range: [-10, 10], negative value indicates a downward translation, positive value indicates an upward translation",
+                            "minimum": -10,
+                            "maximum": 10,
+                            "default": 0,
+                        },
+                        "pan": {
+                            "type": "number",
+                            "description": "Controls the camera's rotation in the horizontal plane (rotation around the y-axis). Value range: [-10, 10], negative value indicates rotation to the left, positive value indicates rotation to the right",
+                            "minimum": -10,
+                            "maximum": 10,
+                            "default": 0,
+                        },
+                        "tilt": {
+                            "type": "number",
+                            "description": "Controls the camera's rotation in the vertical plane (rotation around the x-axis). Value range: [-10, 10], negative value indicates downward rotation, positive value indicates upward rotation",
+                            "minimum": -10,
+                            "maximum": 10,
+                            "default": 0,
+                        },
+                        "roll": {
+                            "type": "number",
+                            "description": "Controls the camera's rolling amount (rotation around the z-axis). Value range: [-10, 10], negative value indicates counterclockwise rotation, positive value indicates clockwise rotation",
+                            "minimum": -10,
+                            "maximum": 10,
+                            "default": 0,
+                        },
+                        "zoom": {
+                            "type": "number",
+                            "description": "Controls the change in the camera's focal length, affecting the proximity of the field of view. Value range: [-10, 10], negative value indicates increase in focal length (narrower field of view), positive value indicates decrease in focal length (wider field of view)",
+                            "minimum": -10,
+                            "maximum": 10,
+                            "default": 0,
+                        },
+                    },
+                },
+            },
         },
     }
 }
@@ -56,7 +114,7 @@ class KlingAITool:
         self.video_endpoint = f"{self.api_route}/v1/videos/text2video"
         self.access_key = access_key
         self.secret_key = secret_key
-        self.polling_interval = 5
+        self.polling_interval = 30  # seconds
 
     def get_authorization_token(self):
         headers = {"alg": "HS256", "typ": "JWT"}
@@ -88,16 +146,12 @@ class KlingAITool:
             "duration": duration,
             **config,  # Include any additional configuration parameters
         }
-        print("Kling endpoint", self.video_endpoint)
-        print("Kling headers", headers)
-        print("Making request to KlingAI", payload)
 
         response = requests.post(self.video_endpoint, headers=headers, json=payload)
 
         if response.status_code != 200:
             raise Exception(f"Error generating video: {response.text}")
 
-        print("This is Kling response", response.json())
         # Assuming the API returns a job ID for asynchronous processing
         job_id = response.json()["data"].get("task_id")
         if not job_id:
@@ -110,8 +164,9 @@ class KlingAITool:
             response = requests.get(
                 result_endpoint, headers={"Authorization": f"Bearer {api_key}"}
             )
-            print("Making request to KlingAI result endpoint", result_endpoint)
             response.raise_for_status()
+
+            print("Kling Response", response)
 
             status = response.json()["data"]["task_status"]
 

@@ -119,6 +119,8 @@ class VideoGenerationAgent(BaseAgent):
                     secret_key=KLING_AI_SECRET_API_KEY,
                 )
                 config_key = "kling_config"
+            else:
+                raise Exception(f"{engine} not supported")
 
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
             output_file_name = f"video_{job_type}_{str(uuid.uuid4())}.mp4"
@@ -138,7 +140,7 @@ class VideoGenerationAgent(BaseAgent):
                 if prompt is None:
                     raise Exception("Prompt is required for video generation")
                 self.output_message.actions.append(
-                    f"Generating video for prompt: <i>{prompt}</i>"
+                    f"Generating video for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
                 video_gen_tool.text_to_video(
@@ -147,9 +149,11 @@ class VideoGenerationAgent(BaseAgent):
                     duration=duration,
                     config=config,
                 )
+            else:
+                raise Exception(f"{job_type} not supported")
 
             self.output_message.actions.append(
-                f"Generated video saved at: <i>{output_path}</i>"
+                f"Generated video saved at <i>{output_path}</i>"
             )
             self.output_message.push_update()
 
@@ -158,22 +162,24 @@ class VideoGenerationAgent(BaseAgent):
                 output_path, source_type="file_path", media_type="video"
             )
             self.output_message.actions.append(
-                f"Uploaded generated video to VideoDB with Video ID: {media['id']}"
+                f"Uploaded generated video to VideoDB with Video ID {media['id']}"
             )
             stream_url = media["stream_url"]
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
-            video_content.status_message = "Video generated successfully"
+            video_content.status_message = "Here is your generated video"
             self.output_message.push_update()
             self.output_message.publish()
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
+            video_content.status = MsgStatus.error
+            self.output_message.push_update()
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message=f"Generated video ID: {media['id']}",
+            message=f"Generated video ID {media['id']}",
             data={"video_id": media["id"], "video_stream_url": stream_url},
         )

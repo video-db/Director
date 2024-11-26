@@ -78,8 +78,9 @@ class EditingAgent(BaseAgent):
         self.description = "An agent designed to edit and combine videos and audio files within VideoDB."
         self.parameters = EDITING_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
+        self.timeline = None
 
-    def add_media_to_timeline(self, timeline, media_list, media_type):
+    def add_media_to_timeline(self, media_list, media_type):
         """Helper method to add media assets to timeline"""
         seeker = 0
         for media in media_list:
@@ -88,7 +89,7 @@ class EditingAgent(BaseAgent):
 
             if media_type == "video":
                 asset = VideoAsset(asset_id=media["id"], start=start, end=end)
-                timeline.add_inline(asset)
+                self.timeline.add_inline(asset)
 
             elif media_type == "audio":
                 audio = self.videodb_tool.get_audio(media["id"])
@@ -97,7 +98,7 @@ class EditingAgent(BaseAgent):
                     start=start,
                     end=end,
                 )
-                timeline.add_overlay(seeker, asset)
+                self.timeline.add_overlay(seeker, asset)
                 seeker += float(audio["length"])
             else:
                 raise ValueError(f"Invalid media type: {media_type}")
@@ -133,19 +134,19 @@ class EditingAgent(BaseAgent):
             self.output_message.content.append(video_content)
             self.output_message.push_update()
 
-            timeline = self.videodb_tool.get_and_set_timeline()
+            self.timeline = self.videodb_tool.get_and_set_timeline()
 
             # Add videos to timeline
-            self.add_media_to_timeline(timeline, videos, "video")
+            self.add_media_to_timeline(videos, "video")
 
             # Add audio files if provided
             if audios:
-                self.add_media_to_timeline(timeline, audios, "audio")
+                self.add_media_to_timeline(audios, "audio")
 
             self.output_message.actions.append("Generating final video stream")
             self.output_message.push_update()
 
-            stream_url = timeline.generate_stream()
+            stream_url = self.timeline.generate_stream()
 
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success

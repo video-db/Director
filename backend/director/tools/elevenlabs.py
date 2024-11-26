@@ -1,6 +1,4 @@
-import traceback
 import time
-
 from typing import Optional
 
 from elevenlabs.client import ElevenLabs
@@ -31,12 +29,34 @@ PARAMS_CONFIG = {
             "description": "The ID of the voice to use for text-to-speech",
             "default": "pNInz6obpgDQGcFmaJgB"
         },
+        "output_format": {
+            "type": "string",
+            "description": (
+                "Output format of the generated audio. Format options:\n"
+                "mp3_22050_32 - MP3 at 22.05kHz sample rate, 32kbps\n"
+                "mp3_44100_32 - MP3 at 44.1kHz sample rate, 32kbps\n"
+                "mp3_44100_64 - MP3 at 44.1kHz sample rate, 64kbps\n"
+                "mp3_44100_96 - MP3 at 44.1kHz sample rate, 96kbps\n"
+                "mp3_44100_128 - MP3 at 44.1kHz sample rate, 128kbps\n"
+                "mp3_44100_192 - MP3 at 44.1kHz sample rate, 192kbps"
+            ),
+            "enum": [
+                "mp3_22050_32",
+                "mp3_44100_32", 
+                "mp3_44100_64",
+                "mp3_44100_96",
+                "mp3_44100_128",
+                "mp3_44100_192"
+            ],
+            "default": "mp3_44100_128"
+        },
         "language_code": {
             "type": "string",
             "description": (
-                "Language code (ISO 639-1) used to enforce a language for the model. "
-                "Currently only Turbo v2.5 supports language enforcement. For other "
-                "models, an error will be returned if language code is provided."
+                "Language code (ISO 639-1) used to enforce a language for the "
+                "model. Currently only Turbo v2.5 supports language enforcement. "
+                "For other models, an error will be returned if language code is "
+                "provided."
             ),
         },
         "stability": {
@@ -73,8 +93,13 @@ class ElevenLabsTool:
     def __init__(self, api_key: str):
         if api_key:
             self.client = ElevenLabs(api_key=api_key)
+        else:
+            raise Exception("ElevenLabs API key not found")
         self.voice_settings = VoiceSettings(
-            stability=0.0, similarity_boost=1.0, style=0.0, use_speaker_boost=True
+            stability=0.0,
+            similarity_boost=1.0,
+            style=0.0,
+            use_speaker_boost=True
         )
         self.constrains = {
             "sound_effect": {"max_duration": 20},
@@ -83,34 +108,40 @@ class ElevenLabsTool:
     def generate_sound_effect(
         self, prompt: str, save_at: str, duration: float, config: dict
     ):
-        result = self.client.text_to_sound_effects.convert(
-            text=prompt,
-            duration_seconds=min(
-                duration, self.constrains["sound_effect"]["max_duration"]
-            ),
-            prompt_influence=config.get("prompt_influence", 0.3),
-        )
-        with open(save_at, "wb") as f:
-            for chunk in result:
-                f.write(chunk)
+        try:
+            result = self.client.text_to_sound_effects.convert(
+                text=prompt,
+                duration_seconds=min(
+                    duration, self.constrains["sound_effect"]["max_duration"]
+                ),
+                prompt_influence=config.get("prompt_influence", 0.3),
+            )
+            with open(save_at, "wb") as f:
+                for chunk in result:
+                    f.write(chunk)
+        except Exception as e:
+            raise Exception(f"Error generating sound effect: {str(e)}")
 
     def text_to_speech(self, text: str, save_at: str, config: dict):
-        response = self.client.text_to_speech.convert(
-            voice_id=config.get("voice_id", "pNInz6obpgDQGcFmaJgB"),
-            output_format=config.get("", "mp3_22050_32"),
-            text=text,
-            model_id=config.get("model_id", "eleven_multilingual_v2"),
-            voice_settings=VoiceSettings(
-                stability=config.get("stability", 0.0),
-                similarity_boost=config.get("similarity_boost", 1.0),
-                style=config.get("style", 0.0),
-                use_speaker_boost=config.get("use_speaker_boost", True),
-            ),
-        )
-        with open(save_at, "wb") as f:
-            for chunk in response:
-                if chunk:
-                    f.write(chunk)
+        try:
+            response = self.client.text_to_speech.convert(
+                voice_id=config.get("voice_id", "pNInz6obpgDQGcFmaJgB"),
+                output_format=config.get("output_format", "mp3_44100_128"),
+                text=text,
+                model_id=config.get("model_id", "eleven_multilingual_v2"),
+                voice_settings=VoiceSettings(
+                    stability=config.get("stability", 0.0),
+                    similarity_boost=config.get("similarity_boost", 1.0),
+                    style=config.get("style", 0.0),
+                    use_speaker_boost=config.get("use_speaker_boost", True),
+                ),
+            )
+            with open(save_at, "wb") as f:
+                for chunk in response:
+                    if chunk:
+                        f.write(chunk)
+        except Exception as e:
+            raise Exception(f"Error converting text to speech: {str(e)}")
 
     def create_dub_job(
         self,
@@ -148,7 +179,9 @@ class ElevenLabsTool:
 
         for _ in range(MAX_ATTEMPTS):
             try:
-                metadata = self.client.dubbing.get_dubbing_project_metadata(dubbing_id)
+                metadata = self.client.dubbing.get_dubbing_project_metadata(
+                    dubbing_id
+                )
                 print("this is metadata", metadata)
                 if metadata.status == "dubbed":
                     return True
@@ -157,7 +190,6 @@ class ElevenLabsTool:
                 else:
                     return False
             except Exception as e:
-                print(traceback.format_exc())
                 print(f"Error checking dubbing status: {str(e)}")
                 return False
         return False
@@ -174,6 +206,5 @@ class ElevenLabsTool:
                     file.write(chunk)
             return output_path
         except Exception as e:
-            print(traceback.format_exc())
             print(f"Error downloading dubbed file: {str(e)}")
             return None

@@ -23,7 +23,6 @@ from director.agents.editing import EditingAgent
 from director.agents.dubbing import DubbingAgent
 from director.agents.text_to_movie import TextToMovieAgent
 from director.agents.meme_maker import MemeMakerAgent
-from director.agents.dubbing import DubbingAgent
 from director.agents.composio import ComposioAgent
 
 
@@ -62,7 +61,6 @@ class ChatHandler:
             DubbingAgent,
             TextToMovieAgent,
             MemeMakerAgent,
-            DubbingAgent,
             ComposioAgent,
         ]
 
