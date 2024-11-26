@@ -205,11 +205,13 @@ class TextToMovieAgent(BaseAgent):
 
                 # Generate visual style
                 visual_style = self.generate_visual_style(raw_storyline)
+                print("These are visual styles", visual_style)
 
                 # Generate scenes
                 scenes = self.generate_scene_sequence(
                     raw_storyline, visual_style, engine
                 )
+                print("These are scenes", scenes)
 
                 self.output_message.actions.append(
                     f"Generating {len(scenes)} videos..."
@@ -231,6 +233,9 @@ class TextToMovieAgent(BaseAgent):
                     )
                     # Generate engine-specific prompt
                     prompt = self.generate_engine_prompt(scene, visual_style, engine)
+
+                    print(f"Generating video for scene {index + 1}...")
+                    print("This is the prompt", prompt)
 
                     video_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
                     os.makedirs(DOWNLOADS_PATH, exist_ok=True)
