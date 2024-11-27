@@ -185,7 +185,7 @@ class AudioGenerationAgent(BaseAgent):
             text_content = TextContent(
                 agent_name=self.agent_name,
                 status=MsgStatus.error,
-                status_message=f"Failed to generate audio. {str(e)}",
+                status_message="Failed to generate audio",
             )
             self.output_message.content.append(text_content)
             self.output_message.push_update()

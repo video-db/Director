@@ -174,7 +174,7 @@ class VideoGenerationAgent(BaseAgent):
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
             video_content.status = MsgStatus.error
-            video_content.status_message = f"Failed to generate video. {str(e)}"
+            video_content.status_message = "Failed to generate video"
             self.output_message.push_update()
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
