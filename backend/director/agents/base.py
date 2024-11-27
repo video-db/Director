@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from openai_function_calling import FunctionInferrer
 
-from director.core.session import Session, OutputMessage
+from director.core.session import Session, OutputMessage, StopManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class BaseAgent(ABC):
     def __init__(self, session: Session, **kwargs):
         self.session: Session = session
         self.output_message: OutputMessage = self.session.output_message
+        StopManager.initialize_flag(self.name)
 
     def get_parameters(self):
         """Return the automatically inferred parameters for the function using the dcstring of the function."""
@@ -57,8 +58,16 @@ class BaseAgent(ABC):
     def agent_description(self):
         return self.description
 
+    def should_stop(self) -> bool:
+        return StopManager.should_stop(self.name)
+
     def safe_call(self, *args, **kwargs):
         try:
+            if self.should_stop():
+                return AgentResponse(
+                    status=AgentStatus.ERROR,
+                    message="Generation canceled by user."
+                )
             return self.run(*args, **kwargs)
 
         except Exception as e:
@@ -66,5 +75,5 @@ class BaseAgent(ABC):
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
     @abstractmethod
-    def run(*args, **kwargs) -> AgentResponse:
+    def run(self,*args, **kwargs) -> AgentResponse:
         pass

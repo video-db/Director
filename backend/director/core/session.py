@@ -175,6 +175,9 @@ class OutputMessage(BaseMessage):
 
     def push_update(self):
         """Publish the message to the socket."""
+        if StopManager.should_stop(self.session_id):
+            print(f"Update halted for session {self.session_id}")
+            return
         try:
             emit("chat", self.model_dump(), namespace="/chat")
         except Exception as e:
@@ -231,6 +234,26 @@ class ContextMessage(BaseModel):
     def from_json(cls, json_data):
         """Create the context message from the json data."""
         return cls(**json_data)
+
+class StopManager:
+    """Central manager to track stop signals for agents."""
+    stop_flags = {}
+
+    @classmethod
+    def initialize_flag(cls, agent_name: str):
+        """Initialize a stop flag for the given agent."""
+        cls.stop_flags[agent_name] = False
+
+    @classmethod
+    def stop_agent(cls, agent_name: str):
+        """Set the stop flag for the given agent."""
+        if agent_name in cls.stop_flags:
+            cls.stop_flags[agent_name] = True
+
+    @classmethod
+    def should_stop(cls, agent_name: str) -> bool:
+        """Check if the agent should stop."""
+        return cls.stop_flags.get(agent_name, False)
 
 
 class Session:

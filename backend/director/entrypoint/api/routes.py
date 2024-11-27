@@ -3,6 +3,7 @@ import os
 from flask import Blueprint, request, current_app as app
 
 from director.db import load_db
+from director.core.session import StopManager
 from director.handler import ChatHandler, SessionHandler, VideoDBHandler, ConfigHandler
 
 
@@ -22,6 +23,13 @@ def agent():
     )
     return chat_handler.agents_list()
 
+@agent_bp.route("/stop", methods=["POST"])
+def stop_agent():
+    agent_name = request.json.get("agent_name")  
+    if not agent_name:
+        return {"message": "Agent name is required."}, 400
+    StopManager.stop_agent(agent_name)  
+    return {"message": f"Agent {agent_name} generation canceled."}, 200
 
 @session_bp.route("/", methods=["GET"], strict_slashes=False)
 def get_sessions():
