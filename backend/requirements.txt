@@ -6,6 +6,8 @@ Flask==3.0.3
 Flask-SocketIO==5.3.6
 Flask-Cors==4.0.1
 openai==1.42.0
+PyJWT==2.10.0
+Pillow==11.0.0
 openai-function-calling==2.3.0
 pydantic==2.8.2
 pydantic-settings==2.4.0
