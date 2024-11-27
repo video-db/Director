@@ -192,9 +192,10 @@ class TextToMovieAgent(BaseAgent):
                 raise Exception(f"{engine} not supported")
 
             # Initialize tools
-            self.audio_gen_tool = ElevenLabsTool(
-                api_key=os.getenv("ELEVENLABS_API_KEY")
-            )
+            ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+            if not ELEVENLABS_API_KEY:
+                raise Exception("ElevenLabs API key not found")
+            self.audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.audio_gen_config_key = "audio_elevenlabs_config"
 
             # Initialize steps

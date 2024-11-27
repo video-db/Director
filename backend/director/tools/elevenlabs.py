@@ -170,7 +170,7 @@ class ElevenLabsTool:
             return dubbing_id
 
         except Exception as e:
-            return {"error": str(e)}
+            raise Exception(f"Error creating dub job: {str(e)}")
 
     def wait_for_dub_job(self, dubbing_id: str) -> bool:
         """Wait for dubbing to complete."""

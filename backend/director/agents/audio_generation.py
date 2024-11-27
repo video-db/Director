@@ -133,7 +133,7 @@ class AudioGenerationAgent(BaseAgent):
                 if prompt is None:
                     raise Exception("Prompt is required for sound effect generation")
                 self.output_message.actions.append(
-                    f"Generating sound effect for prompt <i>{prompt}</i>"
+                    f"Generating sound effect using <b>{engine}</b> for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
                 audio_gen_tool.generate_sound_effect(
@@ -146,7 +146,7 @@ class AudioGenerationAgent(BaseAgent):
                 text = text_to_speech.get("text")
                 config = text_to_speech.get(config_key, {})
                 self.output_message.actions.append(
-                    f"Converting text <i>{text}</i> to speech"
+                    f"Converting text <i>{text}</i> to speech using <b>{engine}</b>"
                 )
                 self.output_message.push_update()
                 audio_gen_tool.text_to_speech(

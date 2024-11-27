@@ -140,7 +140,7 @@ class VideoGenerationAgent(BaseAgent):
                 if prompt is None:
                     raise Exception("Prompt is required for video generation")
                 self.output_message.actions.append(
-                    f"Generating video for prompt <i>{prompt}</i>"
+                    f"Generating video using <b>{engine}</b> for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
                 video_gen_tool.text_to_video(
@@ -174,6 +174,7 @@ class VideoGenerationAgent(BaseAgent):
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
             video_content.status = MsgStatus.error
+            video_content.status_message = f"Failed to generate video. {str(e)}"
             self.output_message.push_update()
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
