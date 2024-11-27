@@ -182,6 +182,13 @@ class AudioGenerationAgent(BaseAgent):
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
+            text_content = TextContent(
+                agent_name=self.agent_name,
+                status=MsgStatus.error,
+                status_message=f"Failed to generate audio. {str(e)}",
+            )
+            self.output_message.content.append(text_content)
+            self.output_message.push_update()
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
