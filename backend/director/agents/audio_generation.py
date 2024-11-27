@@ -146,7 +146,7 @@ class AudioGenerationAgent(BaseAgent):
                 text = text_to_speech.get("text")
                 config = text_to_speech.get(config_key, {})
                 self.output_message.actions.append(
-                    f"Converting text <i>{text}</i> to speech using <b>{engine}</b>"
+                    f"Using <b> {engine} </b> to convert text <i>{text}</i> to speech"
                 )
                 self.output_message.push_update()
                 audio_gen_tool.text_to_speech(
