@@ -15,7 +15,7 @@ from director.core.session import (
     RoleTypes,
     VideoData,
 )
-from director.llm.openai import OpenAI, OpenaiConfig
+from director.llm import get_default_llm
 from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.stabilityai import (
     StabilityAITool,
@@ -125,7 +125,7 @@ class TextToMovieAgent(BaseAgent):
             "Agent for generating movies from storylines using Gen AI models"
         )
         self.parameters = TEXT_TO_MOVIE_AGENT_PARAMETERS
-        self.llm = OpenAI(OpenaiConfig(timeout=120))
+        self.llm = get_default_llm()
 
         self.engine_configs = {
             "kling": EngineConfig(
