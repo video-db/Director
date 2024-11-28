@@ -98,6 +98,17 @@ class VideoGenResult:
 
 
 @dataclass
+class AudioGenResult:
+    """Track results of audio generation"""
+
+    step_index: int
+    audio_path: Optional[str]
+    success: bool
+    error: Optional[str] = None
+    audio: Optional[dict] = None
+
+
+@dataclass
 class EngineConfig:
     name: str
     max_duration: int
@@ -221,6 +232,7 @@ class TextToMovieAgent(BaseAgent):
 
                 engine_config = self.engine_configs[engine]
                 generated_videos_results = []
+                generated_audio_results = []
 
                 # Generate videos sequentially
                 for index, scene in enumerate(scenes):
@@ -282,34 +294,67 @@ class TextToMovieAgent(BaseAgent):
                             f"Failed to generate video {result.step_index}: {result.error}"
                         )
 
-                # Generate audio prompt
-                sound_effects_description = self.generate_audio_prompt(raw_storyline)
-
                 self.output_message.actions.append("Generating background music...")
                 self.output_message.push_update()
 
-                # Generate and add sound effects
-                os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-                sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
-
-                self.audio_gen_tool.generate_sound_effect(
-                    prompt=sound_effects_description,
-                    save_at=sound_effects_path,
-                    duration=total_duration,
-                    config=audio_gen_config,
-                )
-
                 self.output_message.actions.append(
-                    "Uploading background music to VideoDB..."
+                    f"Generating {len(scenes)} audio tracks..."
                 )
                 self.output_message.push_update()
 
-                sound_effects_media = self.videodb_tool.upload(
-                    sound_effects_path, source_type="file_path", media_type="audio"
-                )
+                # Generate and add sound effects for each scene
+                for index, scene in enumerate(scenes):
+                    self.output_message.actions.append(
+                        f"Generating audio for scene {index + 1}..."
+                    )
+                    self.output_message.push_update()
 
-                if os.path.exists(sound_effects_path):
-                    os.remove(sound_effects_path)
+                    sound_effects_description = self.generate_audio_prompt(scene)
+                    scene_duration = float(scene["video"].get("length", 0))
+
+                    os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+                    sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
+
+                    self.audio_gen_tool.generate_sound_effect(
+                        prompt=sound_effects_description,
+                        save_at=sound_effects_path,
+                        duration=scene_duration,
+                        config=audio_gen_config,
+                    )
+
+                    generated_audio_results.append(
+                        AudioGenResult(
+                            step_index=index,
+                            audio_path=sound_effects_path,
+                            success=True,
+                        )
+                    )
+
+                self.output_message.actions.append(
+                    f"Uploading {len(generated_audio_results)} audio tracks to VideoDB..."
+                )
+                self.output_message.push_update()
+
+                for result in generated_audio_results:
+                    if result.success:
+                        self.output_message.actions.append(
+                            f"Uploading audio for scene {result.step_index + 1}..."
+                        )
+                        self.output_message.push_update()
+
+                        sound_effects_media = self.videodb_tool.upload(
+                            result.audio_path,
+                            source_type="file_path",
+                            media_type="audio",
+                        )
+                        scenes[result.step_index]["audio"] = sound_effects_media
+
+                        if os.path.exists(result.audio_path):
+                            os.remove(result.audio_path)
+                    else:
+                        raise Exception(
+                            f"Failed to generate audio for scene {result.step_index}: {result.error}"
+                        )
 
                 self.output_message.actions.append(
                     "Combining assets into final video..."
@@ -317,7 +362,7 @@ class TextToMovieAgent(BaseAgent):
                 self.output_message.push_update()
 
                 # Combine everything into final video
-                final_video = self.combine_assets(scenes, sound_effects_media)
+                final_video = self.combine_assets(scenes)
 
                 video_content.video = VideoData(stream_url=final_video)
                 video_content.status = MsgStatus.success
@@ -472,18 +517,19 @@ class TextToMovieAgent(BaseAgent):
             )
             return llm_response.content
 
-    def generate_audio_prompt(self, storyline: str) -> str:
-        """Generate minimal, music-focused prompt for ElevenLabs."""
+    def generate_audio_prompt(self, scene: dict) -> str:
+        """Generate scene-specific audio prompt for ElevenLabs."""
         audio_prompt = f"""
-        As a composer, create a simple musical description focusing ONLY on:
-        - Main instrument/sound
-        - One key mood change
-        - Basic progression
+        As a composer, create a musical description for this scene:
+        Story beat: {scene['story_beat']}
+        Scene description: {scene['scene_description']}
         
-        Keep it under 100 characters. No visual references or scene descriptions.
-        Focus on the music.
+        Focus on:
+        - Main instruments/sounds that match the scene's mood
+        - Tempo and rhythm that fits the action
+        - Any specific sound effects needed
         
-        Story context: {storyline}
+        Keep it under 100 characters. Focus only on audio elements.
         """
 
         prompt_message = ContextMessage(content=audio_prompt, role=RoleTypes.user)
@@ -492,19 +538,26 @@ class TextToMovieAgent(BaseAgent):
         )
         return llm_response.content[:100]
 
-    def combine_assets(self, scenes: List[dict], audio_media: Optional[dict]) -> str:
+    def combine_assets(self, scenes: List[dict]) -> str:
+        print("Combining assets...", scenes)
         timeline = self.videodb_tool.get_and_set_timeline()
 
-        # Add videos sequentially
+        seeker = 0
+
+        # Add videos and their corresponding audio sequentially
         for scene in scenes:
             video_asset = VideoAsset(asset_id=scene["video"]["id"])
             timeline.add_inline(video_asset)
+            video_length = float(scene["video"].get("length", 0))
 
-        # Add background score if available
-        if audio_media:
-            audio_asset = AudioAsset(
-                asset_id=audio_media["id"], start=0, disable_other_tracks=True
-            )
-            timeline.add_overlay(0, audio_asset)
+            if "audio" in scene:
+                audio_asset = AudioAsset(
+                    asset_id=scene["audio"]["id"],
+                    start=0,
+                    end=video_length,
+                    disable_other_tracks=True,
+                )
+                timeline.add_overlay(seeker, audio_asset)
+            seeker += video_length
 
         return timeline.generate_stream()
