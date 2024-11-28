@@ -85,6 +85,27 @@ def get_video_or_all(collection_id, video_id):
         return videodb.get_videos()
 
 
+@videodb_bp.route("/collection/<collection_id>/upload", methods=["POST"])
+def upload_video(collection_id):
+    """Upload a video to a collection."""
+    videodb = VideoDBHandler(collection_id)
+
+    if "file" in request.files:
+        file = request.files["file"]
+        file_bytes = file.read()
+        file_name = file.filename.split(".")[0]
+        media_type = file.content_type.split("/")[0]
+        return videodb.upload(
+            source=file_bytes, source_type="file", media_type=media_type, name=file_name
+        )
+    elif "source" in request.json:
+        source = request.json["source"]
+        source_type = request.json["source_type"]
+        return videodb.upload(source=source, source_type=source_type)
+    else:
+        return {"message": "No valid source provided"}, 400
+
+
 @config_bp.route("/check", methods=["GET"])
 def config_check():
     config_handler = ConfigHandler()

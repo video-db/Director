@@ -134,6 +134,11 @@ class VideoDBHandler:
     def __init__(self, collection_id):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
+    def upload(
+        self, source, source_type="url", media_type="video", name=None
+    ):
+        return self.videodb_tool.upload(source, source_type, media_type, name)
+
     def get_collection(self):
         """Get a collection by ID."""
         return self.videodb_tool.get_collection()
