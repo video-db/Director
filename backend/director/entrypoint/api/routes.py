@@ -12,8 +12,6 @@ session_bp = Blueprint("session", __name__, url_prefix="/session")
 videodb_bp = Blueprint("videodb", __name__, url_prefix="/videodb")
 config_bp = Blueprint("config", __name__, url_prefix="/config")
 
-SUPPORTED_MEDIA_TYPES = ["audio/mpeg", "video/mp4", "image/jpeg", "image/png"]
-
 
 @agent_bp.route("/", methods=["GET"], strict_slashes=False)
 def agent():
@@ -101,7 +99,6 @@ def upload_video(collection_id):
             if not safe_filename:
                 return {"message": "Invalid filename"}, 400
             file_name = os.path.splitext(safe_filename)[0]
-            # TODO: Check if the media type is supported, if not, return 400
             media_type = file.content_type.split("/")[0]
             return videodb.upload(
                 source=file_bytes,
