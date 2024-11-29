@@ -128,6 +128,10 @@ class VisualStyle:
     setting_constants: Dict
 
 
+def truncate_to_one_decimal(num):
+    return int(num * 10) / 10
+
+
 class TextToMovieAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         """Initialize agent with basic parameters"""
@@ -551,11 +555,14 @@ class TextToMovieAgent(BaseAgent):
             video_length = float(scene["video"].get("length", 0))
 
             if "audio" in scene:
+                audio_length = float(scene["audio"].get("length", 0))
                 audio_asset = AudioAsset(
                     asset_id=scene["audio"]["id"],
                     start=0,
-                    end=video_length,
+                    end=truncate_to_one_decimal(min(video_length, audio_length)),
                     disable_other_tracks=True,
+                    fade_in_duration=0.5,
+                    fade_out_duration=0.5,
                 )
                 timeline.add_overlay(seeker, audio_asset)
             seeker += video_length
