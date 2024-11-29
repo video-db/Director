@@ -150,7 +150,7 @@ class StoryboardingAgent(BaseAgent):
                         f"Error in generating audio for step {step['step']}."
                     )
                     self.output_message.publish()
-                    error_message = f"Agent failed with error in generating audio for step {index+1}."
+                    error_message = f"Agent failed with error in generating audio for step {index+1}. Error: {str(e)}"
                     return AgentResponse(
                         status=AgentStatus.ERROR, message=error_message
                     )
@@ -201,24 +201,20 @@ class StoryboardingAgent(BaseAgent):
         :param app_description: Description of the app.
         :return: List of dicts with 'step_description' and 'voiceover_script'.
         """
-        try:
-            # Build the prompt
-            prompt = self.prompt_voiceover_scripts(steps, app_description)
-            # Call OpenAI API
-            message = ContextMessage(
-                content=prompt,
-                role=RoleTypes.user,
-            )
-            llm_response = self.llm.chat_completions(
-                [message.to_llm_msg()],
-                response_format={"type": "json_object"},
-            )
-            # Parse the response
-            step_data = json.loads(llm_response.content)["steps"]
-            return step_data
-        except Exception as e:
-            logger.exception("Error in generating voiceover scripts.")
-            return None
+        # Build the prompt
+        prompt = self.prompt_voiceover_scripts(steps, app_description)
+        # Call OpenAI API
+        message = ContextMessage(
+            content=prompt,
+            role=RoleTypes.user,
+        )
+        llm_response = self.llm.chat_completions(
+            [message.to_llm_msg()],
+            response_format={"type": "json_object"},
+        )
+        # Parse the response
+        step_data = json.loads(llm_response.content)["steps"]
+        return step_data
 
     def prompt_voiceover_scripts(self, steps, app_description):
         """
@@ -250,17 +246,13 @@ Keep it narrative-driven, within two sentences."""
         :param app_description: Description of the app.
         :return: URL of the generated image.
         """
-        try:
-            prompt = self.prompt_image_generation(step, app_description)
-            flux_output = flux_dev(prompt)
-            if not flux_output:
-                logger.error("Error in generating image with Flux")
-                return None
-            image_url = flux_output[0].url
-            return image_url
-        except Exception as e:
-            logger.exception("Error in generating image with Flux.")
+        prompt = self.prompt_image_generation(step, app_description)
+        flux_output = flux_dev(prompt)
+        if not flux_output:
+            logger.error("Error in generating image with Flux")
             return None
+        image_url = flux_output[0].url
+        return image_url
 
     def prompt_image_generation(self, step, app_description):
         """
@@ -277,63 +269,56 @@ Keep it narrative-driven, within two sentences."""
         :param steps: List of dicts containing image and audio URLs.
         :return: URL of the generated video.
         """
-        try:
-            # Initialize VideoDB client
-            timeline = self.videodb_tool.get_and_set_timeline()
-            # Upload base video
-            base_video = self.videodb_tool.upload(
-                "https://www.youtube.com/watch?v=4dW1ybhA5bM"
+        # Initialize VideoDB client
+        timeline = self.videodb_tool.get_and_set_timeline()
+        # Upload base video
+        base_video = self.videodb_tool.upload(
+            "https://www.youtube.com/watch?v=4dW1ybhA5bM"
+        )
+        base_video_id = base_video["id"]
+
+        seeker = 0
+        for step in steps:
+            # Upload image and audio
+            audio = self.videodb_tool.get_audio(step["audio_id"])
+            image = self.videodb_tool.get_image(step["image_id"])
+
+            audio_duration = float(audio["length"])
+
+            image_asset = ImageAsset(
+                asset_id=image["id"],
+                duration=audio_duration,
+                x="(main_w-overlay_w)/2",
+                y="(main_h-overlay_h)/2",
+                height="w=iw/3",
+                width="h=ih/3",
             )
-            base_video_id = base_video["id"]
+            audio_asset = AudioAsset(asset_id=audio["id"], disable_other_tracks=True)
+            text_asset = TextAsset(
+                step["step"],
+                duration=audio_duration,
+                style=TextStyle(
+                    x="(w-text_w)/2",
+                    y="(h-text_h*2)",
+                    font="League Spartan",
+                    fontsize="(h/20)",
+                    fontcolor="Snow",
+                    boxcolor="OrangeRed",
+                    boxborderw=10,
+                ),
+            )
 
-            seeker = 0
-            for index, step in enumerate(steps):
-                # Upload image and audio
-                audio = self.videodb_tool.get_audio(step["audio_id"])
-                image = self.videodb_tool.get_image(step["image_id"])
+            # Add assets to timeline
+            timeline.add_overlay(seeker, image_asset)
+            timeline.add_overlay(seeker, audio_asset)
+            timeline.add_overlay(seeker, text_asset)
 
-                audio_duration = float(audio["length"])
+            seeker += audio_duration
 
-                image_asset = ImageAsset(
-                    asset_id=image["id"],
-                    duration=audio_duration,
-                    x="(main_w-overlay_w)/2",
-                    y="(main_h-overlay_h)/2",
-                    height="w=iw/3",
-                    width="h=ih/3",
-                )
-                audio_asset = AudioAsset(
-                    asset_id=audio["id"], disable_other_tracks=True
-                )
-                text_asset = TextAsset(
-                    step["step"],
-                    duration=audio_duration,
-                    style=TextStyle(
-                        x="(w-text_w)/2",
-                        y="(h-text_h*2)",
-                        font="League Spartan",
-                        fontsize="(h/20)",
-                        fontcolor="Snow",
-                        boxcolor="OrangeRed",
-                        boxborderw=10,
-                    ),
-                )
+        # Add base video to timeline
+        base_vid_asset = VideoAsset(base_video_id, end=seeker)
+        timeline.add_inline(base_vid_asset)
 
-                # Add assets to timeline
-                timeline.add_overlay(seeker, image_asset)
-                timeline.add_overlay(seeker, audio_asset)
-                timeline.add_overlay(seeker, text_asset)
-
-                seeker += audio_duration
-
-            # Add base video to timeline
-            base_vid_asset = VideoAsset(base_video_id, end=seeker)
-            timeline.add_inline(base_vid_asset)
-
-            # Generate the video
-            video_url = timeline.generate_stream()
-            return video_url
-        except Exception as e:
-            logger.exception("Error in combining assets into video.")
-            return None
-
+        # Generate the video
+        video_url = timeline.generate_stream()
+        return video_url
