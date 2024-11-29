@@ -13,6 +13,7 @@ from director.core.session import (
     ContextMessage,
     RoleTypes,
 )
+from director.constants import LLMType
 from director.llm import get_default_llm
 from director.tools.videodb_tool import VideoDBTool
 
@@ -34,6 +35,7 @@ class ProfanityRemoverAgent(BaseAgent):
         )
         self.parameters = self.get_parameters()
         self.llm = get_default_llm()
+        self.supported_llm = [LLMType.OPENAI, LLMType.VIDEODB_PROXY]
         super().__init__(session=session, **kwargs)
 
     def add_beep(self, videodb_tool, video_id, beep_audio_id, timestamps):

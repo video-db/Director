@@ -11,6 +11,7 @@ from director.core.session import (
     VideoData,
     MsgStatus,
 )
+from director.constants import LLMType
 from director.tools.videodb_tool import VideoDBTool
 from director.llm import get_default_llm
 
@@ -111,6 +112,7 @@ class SubtitleAgent(BaseAgent):
         self.description = "An agent designed to add different languages subtitles to a specified video within VideoDB."
         self.llm = get_default_llm()
         self.parameters = SUBTITLE_AGENT_PARAMETERS
+        self.supported_llm = [LLMType.OPENAI, LLMType.VIDEODB_PROXY]
         super().__init__(session=session, **kwargs)
 
     def wrap_text(self, text, video_width, max_width_percent=0.60, avg_char_width=20):

@@ -11,6 +11,7 @@ from director.core.session import (
     VideoContent,
     VideoData,
 )
+from director.constants import LLMType
 from director.tools.videodb_tool import VideoDBTool
 from director.llm import get_default_llm
 
@@ -47,6 +48,7 @@ class PromptClipAgent(BaseAgent):
         self.description = "Generates video clips based on user prompts. This agent uses AI to analyze the text of a video transcript and identify sentences relevant to the user prompt for making clips. It then generates video clips based on the identified sentences. Use this tool to create clips based on specific themes or topics from a video."
         self.parameters = PROMPTCLIP_AGENT_PARAMETERS
         self.llm = get_default_llm()
+        self.supported_llm = [LLMType.OPENAI, LLMType.VIDEODB_PROXY]
         super().__init__(session=session, **kwargs)
 
     def _chunk_docs(self, docs, chunk_size):

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from openai_function_calling import FunctionInferrer
 
-from director.core.session import Session, OutputMessage
+from director.core.session import Session, OutputMessage, TextContent, MsgStatus
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,20 @@ class BaseAgent(ABC):
             )
         return parameters
 
+    def _check_supported_llm(self):
+        """Check if supported_llm is present and validate LLM."""
+        if hasattr(self, "supported_llm") and hasattr(self, "llm"):
+            if self.llm.llm_type not in self.supported_llm:
+                error = f"`@{self.agent_name}` Agent does not support the configured LLM `{self.llm.llm_type.upper()}`, To use this Agent, please configure one of the following LLMs: {[llm.upper() for llm in self.supported_llm]}."
+                self.output_message.content.append(
+                    TextContent(
+                        status_message="LLM not supported.",
+                        text=error,
+                        status=MsgStatus.error,
+                    )
+                )
+                raise Exception(error)
+
     def to_llm_format(self):
         """Convert the agent to LLM tool format."""
         return {
@@ -59,6 +73,7 @@ class BaseAgent(ABC):
 
     def safe_call(self, *args, **kwargs):
         try:
+            self._check_supported_llm()
             return self.run(*args, **kwargs)
 
         except Exception as e:
