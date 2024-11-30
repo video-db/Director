@@ -1,10 +1,10 @@
 import os
+import requests
 import videodb
 
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
 from videodb.timeline import Timeline
 from videodb.asset import VideoAsset, ImageAsset
-
 
 
 class VideoDBTool:
@@ -81,6 +81,16 @@ class VideoDBTool:
             upload_args["name"] = name
         if source_type == "url":
             upload_args["url"] = source
+        elif source_type == "file":
+            upload_url_data = self.conn.get(
+                path=f"/collection/{self.collection.id}/upload_url",
+                params={"name": name},
+            )
+            upload_url = upload_url_data.get("upload_url")
+            files = {"file": (name, source)}
+            response = requests.post(upload_url, files=files)
+            response.raise_for_status()
+            upload_args["url"] = upload_url
         else:
             upload_args["file_path"] = source
         media = self.conn.upload(**upload_args)
