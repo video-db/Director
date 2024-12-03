@@ -25,17 +25,23 @@
 
 
   <p align="center">
-    Intelligent agents for your video library
+    Framework to build video agents that can reason through complex video tasks like search, editing, compilation, generation etc & instantly stream the results. 
+    <p align="center">
+        ⭐️ Built on top of the cutting edge 'Video-as-Data' infrastructure, <a href="https://videodb.io">VideoDB </a>
+    </p>
     <br />
-    <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw"><strong>View Demo »</strong></a>
-    <br />
-    <br />
+    <p align="center">
+        <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw"><strong>⚡️Watch Agent Demos</strong></a>
+        &nbsp;&nbsp;&nbsp;
+        <a href="https://chat.videodb.io"><strong>✨Try Hosted Version</strong></a>
+    <br /><br />
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=bug&projects=&template=bug_report.yml">Report Bug</a>
     ·
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.yml">Request Feature</a>
     ·
     <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=agent_request.yml">New Agent Request</a>
   </p>
+   </p>
 </p>
 <br/>
 
@@ -43,21 +49,19 @@
 
 ##  🧐 What is The Director?
 
-The Director is an AI-powered framework that lets you interact with your video and audio collections using natural language. Forget complex tools—just tell The Director what you want, and it gets it done.
+Think of Director as ChatGPT for videos. It is a framework to build video agents that can reason through complex video tasks like search, editing, compilation, generation etc & instantly stream the results. 
 
-Whether you’re working with social media clips, lectures, movies, YouTube videos, or any other content, The Director enables you to:
+For example, a simple natural language command like: `Upload this video and send the highlights to my Slack`, sets everything in motion - Director’s reasoning will orchestrate the different agents intelligently to complete the task for you. 
 
-- Summarize videos in seconds.
-- Search for specific moments.
-- Create clips instantly.
-- Add overlays, generate thumbnails, and much more.
-All powered by VideoDB’s scalable ["video-as-data"](https://videodb.io/video-as-data) infrastructure.
+Built on top of VideoDB’s ‘video-as-data’ infrastructure, Director enables you to:
 
-For example, a simple command like:
-`Upload this video and send the highlights to my Slack,`
-sets everything in motion.
+* Summarize videos in seconds.
+* Search for specific moments.
+* Create clips instantly.
+* Integrate top GenAI projects and APIs and create and edit content instantly.
+* Add overlays, generate thumbnails, and much more. 
 
-Built with flexibility in mind, The Director is perfect for developers, creators, and teams looking to harness AI to simplify media workflows and unlock new possibilities. 📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
+Built with flexibility in mind, Director is perfect for developers, creators, and teams looking to harness AI to simplify media workflows and unlock new possibilities.  📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
 
 
 
@@ -71,30 +75,41 @@ https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 <br/>
 
 ## ⭐️ Key Features
-### 🤖Build Smart Video Agents
-Create custom AI agents that handle tedious tasks for you:
+### 🤖 20+ pre-built video agents that you can customize to 
+* Summarize videos in seconds.
+* Generate full movies with voiceovers from a script.
+* Search and index your media library.
+* Organize and clip your content effortlessly.
+* Dub and edit your audio and video with ease.
+* Translate and add subtitle in any languge.
+* ....and a whole lot more >>
 
-- Summarize videos in seconds.
-- Search and index your media library.
-- Organize and clip your content effortlessly.
+
 ### 🎨 A New Way to Interact
 Experience a sleek, chat-based interface with built-in video playback and intuitive controls. It’s like having a personal assistant for your media.
 
-### 🔍 Smarter Media Analysis
-Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable.
+### 🥣 A mixing bowl of your GenAI APIs
+Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable for cloud storage, indexing and streaming your content effortlessly. 
+![Integration-Updated](https://github.com/user-attachments/assets/d06e3b57-1135-4c3b-9f3a-d427d4142b42)
 
 ### 🧩 Customizable and Flexible
-Easily add new features and tools to your workflow. Whether you want to run it locally or on your cloud, The Director adapts to your needs.
+Easily add new agents and tools to your workflow. Whether you want to run it locally or on your cloud, The Director adapts to your needs.
 
 <br/>
+
+## 😎 Agent Examples
+
+  1. Highlight Creator: [link](https://www.youtube.com/watch?v=Dncn_0RWrro&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=11)
+  2. Text to Movie: [link](https://www.youtube.com/watch?v=QpnRxuEBDCc&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=2)
+  3. Video Search: [link](https://www.youtube.com/watch?v=kCiCI2KCnC8&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=4)
 
 ## ⚙️ Architecture Overview
 Director's architecture brings together:
 
-Backend Reasoning Engine: Handles workflows and decision-making.
-Chat-Based UI: Engage with your media library conversationally.
-Video Player: Advanced playback and interaction tools.
-Collection View: Organize and browse your media effortlessly.
+- **Backend Reasoning Engine:** Handles workflows and decision-making. Checkout the [backend folder](https://github.com/video-db/Director/tree/main/backend) in director codebase. 
+- **Chat-Based UI:** Engage with your media library conversationally. Check [videodb-chat](https://github.com/video-db/videodb-chat) for the source code.
+- **Video Player:** Advanced playback and interaction tools. Check [videodb-player](https://github.com/video-db/videodb-player) for the details about the multi platform video player. 
+- **Collection View:** Organize and browse your media effortlessly.
 
   ![Director architecture](https://github.com/user-attachments/assets/9afb2783-66db-4899-9308-03cbd12e74d7)
   
@@ -115,7 +130,7 @@ At the heart of The Director is its **Reasoning Engine**, a powerful core that d
 ### **See It in Action**
 The Reasoning Engine works in tandem with the chat-based UI, making video interaction intuitive and efficient. For example:  
 - **Input**: "Create a clip of the funniest scene in this video and share it on Slack."  
-- **Output**: The engine orchestrates upload, scene detection, clipping, and sharing agents to deliver results seamlessly.
+- **Output**: The engine orchestrates upload, scene detection, clipping, and sharing agents to deliver results seamlessly. Watch the video [here](https://www.youtube.com/watch?v=fxhMgQf7v8s&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=3)
 
 For a closer look, check out the detailed architecture diagram below:  
 ![Reasoning Engine Architecture](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
@@ -125,7 +140,6 @@ Explore how the Reasoning Engine powers The Director to simplify and supercharge
 
 
 ## 🏃 Getting Started
-📺 [Watch: Setup video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/fe85e051-5dfb-4409-8033-3963d8bde37a.m3u8)
 
 ### Prerequisites
 
@@ -187,6 +201,9 @@ For specific tasks:
 <!-- CONTRIBUTING -->
 
 ## 📘 Creating a New Agent
+
+> Checkout hosted documentation at https://docs.director.videodb.io
+
 To create a new agent in Director, follow these steps:
 
 1. **Copy the template**: 
@@ -222,7 +239,7 @@ Remember to consider creating reusable tools if your agent's functionality could
 
 
 ## 📖 Documentation
-
+> Checkout hosted documentation at https://docs.director.videodb.io
 ### Serve Locally
 To serve the documentation on port 9000:
 
@@ -242,7 +259,10 @@ mkdocs build
 
 ## 🤝 Contributing
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+We welcome integrations from projects that can make video workflows easy and increase capabilities of the projects. Please check issues and discussions for details. 
+
+
+Any contributions you make are **greatly appreciated**. Here's the process:
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
