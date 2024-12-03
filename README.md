@@ -77,16 +77,20 @@ https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 ## ⭐️ Key Features
 ### 🤖 20+ pre-built video agents that you can customize to 
 * Summarize videos in seconds.
-* Generate full movies with voiceovers from a script
+* Generate full movies with voiceovers from a script.
 * Search and index your media library.
-* Organize and clip your content effortlessly & whole lot more.
+* Organize and clip your content effortlessly.
+* Dub and edit your audio and video with ease.
+* Translate and add subtitle in any languge.
+* ....and a whole lot more >>
 
 
 ### 🎨 A New Way to Interact
 Experience a sleek, chat-based interface with built-in video playback and intuitive controls. It’s like having a personal assistant for your media.
 
-### 🔍 Smarter Media Analysis
+### 🥣 A mixing bowl of your GenAI APIs
 Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable for cloud storage, indexing and streaming your content effortlessly. 
+![Integration-Updated](https://github.com/user-attachments/assets/d06e3b57-1135-4c3b-9f3a-d427d4142b42)
 
 ### 🧩 Customizable and Flexible
 Easily add new agents and tools to your workflow. Whether you want to run it locally or on your cloud, The Director adapts to your needs.
