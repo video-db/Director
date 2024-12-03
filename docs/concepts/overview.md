@@ -48,9 +48,9 @@ For example, the task "Give me a summary of this video" can be accomplished by c
 
 ### Agent Examples
 
-  1. Highlight Creator: [link](https://www.youtube.com/watch?v=Dncn_0RWrro&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=11)
-  2. Text to Movie: [link](https://www.youtube.com/watch?v=QpnRxuEBDCc&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=2)
-  3. Video Search: [link](https://www.youtube.com/watch?v=kCiCI2KCnC8&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=4)
+  1. Highlight Creator: <a href="https://www.youtube.com/watch?v=Dncn_0RWrro&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=11" target="_blank" rel="noopener noreferrer">link</a>
+  2. Text to Movie: <a href="https://www.youtube.com/watch?v=QpnRxuEBDCc&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=2" target="_blank" rel="noopener noreferrer">link</a>
+  3. Video Search: <a href="https://www.youtube.com/watch?v=kCiCI2KCnC8&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=4" target="_blank" rel="noopener noreferrer">link</a>
 
 
 ## Tools
