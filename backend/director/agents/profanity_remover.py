@@ -29,8 +29,8 @@ class ProfanityRemoverAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "profanity_remover"
         self.description = (
-            "This agent beep the profanities in the given video and return the updated video stream."
-            "if user has not given those optional param of beep_audio_id  send it as `None` so defaults are picked from env"
+            "This agent beeps the profanities in the given video and returns the updated video stream. "
+            "If the user has not provided the optional parameter `beep_audio_id`, send it as `None` so defaults are picked from the environment."
         )
         self.parameters = self.get_parameters()
         self.llm = get_default_llm()
