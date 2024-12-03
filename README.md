@@ -31,15 +31,13 @@
     </p>
     <br />
     <p align="center">
-        <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw"><strong>⚡️Watch Agent Demos</strong></a>
+        <a href="https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw" target="_blank" rel="noopener noreferrer"><strong>⚡️Watch Agent Demos</strong></a>
         &nbsp;&nbsp;&nbsp;
-        <a href="https://chat.videodb.io"><strong>✨Try Hosted Version</strong></a>
+        <a href="https://chat.videodb.io" target="_blank" rel="noopener noreferrer"><strong>✨Try Hosted Version</strong></a>
     <br /><br />
-    <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=bug&projects=&template=bug_report.yml">Report Bug</a>
-    ·
-    <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.yml">Request Feature</a>
-    ·
-    <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=agent_request.yml">New Agent Request</a>
+    <a href="https://docs.director.videodb.io/index.html" target="_blank" rel="noopener noreferrer">📖 Documentation</a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://github.com/video-db/Director/issues/new?assignees=&labels=enhancement&projects=&template=agent_request.yml" target="_blank" rel="noopener noreferrer">👩‍💻New Agent Request</a>
   </p>
    </p>
 </p>
@@ -134,8 +132,6 @@ The Reasoning Engine works in tandem with the chat-based UI, making video intera
 
 For a closer look, check out the detailed architecture diagram below:  
 ![Reasoning Engine Architecture](https://github.com/user-attachments/assets/13a92f0d-5b66-4a95-a2d4-0b73aa359ca6)
-
-Explore how the Reasoning Engine powers The Director to simplify and supercharge your media workflows.
 
 
 
