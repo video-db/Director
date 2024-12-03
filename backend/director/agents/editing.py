@@ -75,7 +75,7 @@ EDITING_AGENT_PARAMETERS = {
 class EditingAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "editing"
-        self.description = "An agent designed to edit and combine videos and audio files within VideoDB."
+        self.description = "An agent designed to edit and combine videos and audio files uploaded on VideoDB."
         self.parameters = EDITING_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
         self.timeline = None

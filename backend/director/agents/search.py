@@ -60,7 +60,7 @@ SEARCH_AGENT_PARAMETERS = {
 class SearchAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "search"
-        self.description = "Agent to retreive data from VideoDB collections and videos."
+        self.description = "Agent to search information from VideoDB collections. Mainly used with a collection of videos."
         self.llm = get_default_llm()
         self.parameters = SEARCH_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)

@@ -11,7 +11,7 @@ class StreamVideoAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "stream_video"
         self.description = (
-            "Agent to get the video player of the existing video or given m3u8 stream_url"
+            "Agent to play the requested video or given m3u8 stream_url by getting the video player"
         )
         self.parameters = self.get_parameters()
         super().__init__(session=session, **kwargs)
