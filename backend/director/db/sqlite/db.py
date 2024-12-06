@@ -2,6 +2,7 @@ import json
 import sqlite3
 import time
 import logging
+import os
 
 from typing import List
 
@@ -13,12 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class SQLiteDB(BaseDB):
-    def __init__(self, db_path: str = "director.db"):
+    def __init__(self, db_path: str = None):
         """
         :param db_path: Path to the SQLite database file.
         """
         self.db_type = DBType.SQLITE
-        self.db_path = db_path
+        if db_path is None:
+            self.db_path = os.getenv("SQLITE_DB_PATH", "director.db")
+        else:
+            self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path, check_same_thread=True)
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()

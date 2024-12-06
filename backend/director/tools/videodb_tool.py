@@ -1,4 +1,5 @@
 import os
+import requests
 import videodb
 
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
@@ -63,6 +64,16 @@ class VideoDBTool:
             }
             for video in videos
         ]
+    
+    def get_audio(self, audio_id):
+        """Get an audio by ID."""
+        audio = self.collection.get_audio(audio_id)
+        return {
+            "id": audio.id,
+            "name": audio.name,
+            "collection_id": audio.collection_id,
+            "length": audio.length,
+        }
 
     def upload(self, source, source_type="url", media_type="video", name=None):
         upload_args = {"media_type": media_type}
@@ -70,6 +81,16 @@ class VideoDBTool:
             upload_args["name"] = name
         if source_type == "url":
             upload_args["url"] = source
+        elif source_type == "file":
+            upload_url_data = self.conn.get(
+                path=f"/collection/{self.collection.id}/upload_url",
+                params={"name": name},
+            )
+            upload_url = upload_url_data.get("upload_url")
+            files = {"file": (name, source)}
+            response = requests.post(upload_url, files=files)
+            response.raise_for_status()
+            upload_args["url"] = upload_url
         else:
             upload_args["file_path"] = source
         media = self.conn.upload(**upload_args)
@@ -157,8 +178,7 @@ class VideoDBTool:
             video = self.collection.get_video(video_id)
             search_resuls = video.search(query=query, index_type=index_type, **kwargs)
         else:
-            if index_type == IndexType.scene:
-                kwargs.pop("scene_index_id", None)
+            kwargs.pop("scene_index_id", None)
             search_resuls = self.collection.search(
                 query=query, index_type=index_type, **kwargs
             )
@@ -202,3 +222,5 @@ class VideoDBTool:
         video = self.collection.get_video(video_id)
         stream_url = video.add_subtitle(style)
         return stream_url
+    
+

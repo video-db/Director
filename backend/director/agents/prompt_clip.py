@@ -44,6 +44,7 @@ PROMPTCLIP_AGENT_PARAMETERS = {
 class PromptClipAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "prompt_clip"
+        # TODO: Improve this
         self.description = "Generates video clips based on user prompts. This agent uses AI to analyze the text of a video transcript and identify sentences relevant to the user prompt for making clips. It then generates video clips based on the identified sentences. Use this tool to create clips based on specific themes or topics from a video."
         self.parameters = PROMPTCLIP_AGENT_PARAMETERS
         self.llm = get_default_llm()

@@ -13,7 +13,10 @@ from director.llm import get_default_llm
 logger = logging.getLogger(__name__)
 
 PRICING_AGENT_PROMPT = """
-    You are a brilliant pricing analyst working for VideoDB, a video database for AI apps. You can access information from internet and also reference this sheet to provide answers to to the task your user (executive) asks. VideoDB brings storage, index, retrieval and streaming at one place. Programatic streams can be generated form any segment of the video and to find the right segment, indexing of content is necessary. 
+    You are a brilliant pricing analyst working for VideoDB, a video database for AI apps. 
+    You can access information from internet and also reference this sheet to provide answers to to the task your user (executive) asks. 
+    VideoDB brings storage, index, retrieval and streaming at one place. 
+    Programatic streams can be generated form any segment of the video and to find the right segment, indexing of content is necessary. 
 
     Here's the workflow:
     - Any file that gets uploaded remain in storage. 
@@ -92,7 +95,7 @@ PRICING_AGENT_PROMPT = """
 class PricingAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "pricing"
-        self.description = "Agent to get information about the pricing and usage of VideoDB, it is also helpful for running scenarios to get the estimates."
+        self.description = "Agent to get information about the pricing and usage of VideoDB, helpful for running scenarios to get the estimates."
         self.parameters = self.get_parameters()
         self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class ImageGenerationAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "image_generation"
-        self.description = "Agent for image generation using Gen AI models on given prompt and configurations."
+        self.description = "Agent for image generation using GenAI models on given prompt and configurations."
         self.parameters = self.get_parameters()
         super().__init__(session=session, **kwargs)
 

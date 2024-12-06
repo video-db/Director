@@ -12,11 +12,15 @@ from director.agents.index import IndexAgent
 from director.agents.brandkit import BrandkitAgent
 from director.agents.profanity_remover import ProfanityRemoverAgent
 from director.agents.image_generation import ImageGenerationAgent
+from director.agents.audio_generation import AudioGenerationAgent
+from director.agents.video_generation import VideoGenerationAgent
 from director.agents.stream_video import StreamVideoAgent
 from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
-from director.agents.meme_maker import MemeMakerAgent
+from director.agents.editing import EditingAgent
 from director.agents.dubbing import DubbingAgent
+from director.agents.text_to_movie import TextToMovieAgent
+from director.agents.meme_maker import MemeMakerAgent
 from director.agents.composio import ComposioAgent
 from director.agents.transcription import TranscriptionAgent
 
@@ -47,12 +51,16 @@ class ChatHandler:
             BrandkitAgent,
             ProfanityRemoverAgent,
             ImageGenerationAgent,
+            AudioGenerationAgent,
+            VideoGenerationAgent,
             StreamVideoAgent,
             SubtitleAgent,
             SlackAgent,
-            MemeMakerAgent,
+            EditingAgent,
             DubbingAgent,
             TranscriptionAgent,
+            TextToMovieAgent,
+            MemeMakerAgent,
             ComposioAgent,
         ]
 
@@ -69,7 +77,6 @@ class ChatHandler:
             session.state["video"] = session.state["collection"].get_video(
                 session.video_id
             )
-        logger.info("videodb state added to session")
 
     def agents_list(self):
         return [
@@ -128,6 +135,11 @@ class SessionHandler:
 class VideoDBHandler:
     def __init__(self, collection_id):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
+
+    def upload(
+        self, source, source_type="url", media_type="video", name=None
+    ):
+        return self.videodb_tool.upload(source, source_type, media_type, name)
 
     def get_collection(self):
         """Get a collection by ID."""
