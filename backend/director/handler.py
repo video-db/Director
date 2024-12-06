@@ -22,6 +22,7 @@ from director.agents.dubbing import DubbingAgent
 from director.agents.text_to_movie import TextToMovieAgent
 from director.agents.meme_maker import MemeMakerAgent
 from director.agents.composio import ComposioAgent
+from director.agents.transcription import TranscriptionAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -57,6 +58,7 @@ class ChatHandler:
             SlackAgent,
             EditingAgent,
             DubbingAgent,
+            TranscriptionAgent,
             TextToMovieAgent,
             MemeMakerAgent,
             ComposioAgent,
