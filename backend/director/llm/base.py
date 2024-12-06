@@ -42,7 +42,7 @@ class BaseLLMConfig(BaseSettings):
     temperature: float = 0.9
     top_p: float = 1
     max_tokens: int = 4096
-    timeout: int = 30
+    timeout: int = 120
     enable_langfuse: bool = False
 
 
