@@ -178,6 +178,7 @@ class VideoDBTool:
             video = self.collection.get_video(video_id)
             search_resuls = video.search(query=query, index_type=index_type, **kwargs)
         else:
+            kwargs.pop("scene_index_id", None)
             search_resuls = self.collection.search(
                 query=query, index_type=index_type, **kwargs
             )
