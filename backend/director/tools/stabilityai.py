@@ -45,7 +45,7 @@ class StabilityAITool:
         )
         self.video_endpoint = "https://api.stability.ai/v2beta/image-to-video"
         self.result_endpoint = "https://api.stability.ai/v2beta/image-to-video/result"
-        self.polling_interval = 30  # seconds
+        self.polling_interval = 10  # seconds
 
     def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
         """
