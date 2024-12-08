@@ -79,7 +79,7 @@ https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 * Search and index your media library.
 * Organize and clip your content effortlessly.
 * Dub and edit your audio and video with ease.
-* Translate and add subtitle in any languge.
+* Translate and add subtitle in any language.
 * ....and a whole lot more >>
 
 
