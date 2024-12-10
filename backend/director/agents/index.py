@@ -7,6 +7,24 @@ from director.tools.videodb_tool import VideoDBTool
 
 logger = logging.getLogger(__name__)
 
+EXTRACTION_CONFIGS_DEFAULTS = {
+    "shot": {
+        "threshold": 20,
+        "min_scene_len": 15,
+        "frame_count": 4,
+    },
+    "time": {
+        "time": 10,
+        "select_frames": ["first", "middle", "last"],
+    },
+}
+
+SCENE_INDEX_CONFIG_DEFAULTS = {
+    "type": "shot",
+    "shot_based_config": EXTRACTION_CONFIGS_DEFAULTS["shot"],
+    "time_based_config": EXTRACTION_CONFIGS_DEFAULTS["time"],
+}
+
 INDEX_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -17,10 +35,73 @@ INDEX_AGENT_PARAMETERS = {
         "index_type": {
             "type": "string",
             "enum": ["spoken_words", "scene"],
+            "default": "spoken_words",
         },
         "scene_index_prompt": {
             "type": "string",
-            "description": "The prompt to use for scene indexing. Optional parameter only for scene indexing also it must be explicitly provided by the user.",
+            "description": "The prompt to use for scene indexing. Optional parameter only for scene based indexing ",
+        },
+        "scene_index_config": {
+            "type": "object",
+            "description": "Configuration for scene indexing behavior, Don't ask user to provide this parameter, provide if user explicitly mentions itt ",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["shot", "time"],
+                    "default": "shot",
+                    "description": "Method to use for scene detection and frame extraction",
+                },
+                "shot_based_config": {
+                    "type": "object",
+                    "description": "Configuration for shot-based scene detection and frame extraction, This is a required parameter for shot_based indexing",
+                    "properties": {
+                        "threshold": {
+                            "type": "number",
+                            "default": SCENE_INDEX_CONFIG_DEFAULTS["shot_based_config"][
+                                "threshold"
+                            ],
+                            "description": "Threshold value for scene change detection",
+                        },
+                        "min_scene_len": {
+                            "type": "number",
+                            "default": SCENE_INDEX_CONFIG_DEFAULTS["shot_based_config"][
+                                "min_scene_len"
+                            ],
+                            "description": "Minimum length of a scene in frames",
+                        },
+                        "frame_count": {
+                            "type": "number",
+                            "default": SCENE_INDEX_CONFIG_DEFAULTS["shot_based_config"][
+                                "frame_count"
+                            ],
+                            "description": "Number of frames to extract per scene",
+                        },
+                    },
+                    "required": ["threshold", "min_scene_len", "frame_count"],
+                },
+                "time_based_config": {
+                    "type": "object",
+                    "description": "Configuration for time-based scene detection and frame extraction, This is a required parameter for time_based indexing",
+                    "properties": {
+                        "time": {
+                            "type": "number",
+                            "default": SCENE_INDEX_CONFIG_DEFAULTS["time_based_config"][
+                                "time"
+                            ],
+                            "description": "Time interval in seconds between frame extractions",
+                        },
+                        "select_frames": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "default": SCENE_INDEX_CONFIG_DEFAULTS["time_based_config"][
+                                "select_frames"
+                            ],
+                            "description": "Which frames to select from each time interval, In this array first, middle and last are the only allowed values",
+                        },
+                    },
+                    "required": ["time", "select_frames"],
+                },
+            },
         },
         "collection_id": {
             "type": "string",
@@ -136,6 +217,7 @@ class IndexAgent(BaseAgent):
         video_id: str,
         index_type: str,
         scene_index_prompt=SCENE_INDEX_PROMPT,
+        scene_index_config=SCENE_INDEX_CONFIG_DEFAULTS,
         collection_id=None,
         *args,
         **kwargs,
@@ -163,9 +245,14 @@ class IndexAgent(BaseAgent):
                 self.videodb_tool.index_spoken_words(video_id)
 
             elif index_type == "scene":
+                scene_index_type = scene_index_config["type"]
+                scene_index_config = scene_index_config[
+                    scene_index_type + "_based_config"
+                ]
                 scene_index_id = self.videodb_tool.index_scene(
                     video_id=video_id,
-                    extraction_config={"threshold": 20, "frame_count": 4},
+                    extraction_type=scene_index_type,
+                    extraction_config=scene_index_config,
                     prompt=scene_index_prompt,
                 )
                 self.videodb_tool.get_scene_index(
