@@ -51,6 +51,12 @@ INDEX_AGENT_PARAMETERS = {
                     "default": "shot",
                     "description": "Method to use for scene detection and frame extraction",
                 },
+                "model_name": {
+                    "type": "string",
+                    "description": "The name of the model to use for scene detection and frame extraction",
+                    "default": "gemini-1.5-flash",
+                    "enum": ["gemini-1.5-flash", "gemini-1.5-pro", "gpt4-o"],
+                },
                 "shot_based_config": {
                     "type": "object",
                     "description": "Configuration for shot-based scene detection and frame extraction, This is a required parameter for shot_based indexing",
@@ -246,6 +252,9 @@ class IndexAgent(BaseAgent):
 
             elif index_type == "scene":
                 scene_index_type = scene_index_config["type"]
+                scene_index_model_name = scene_index_config.get(
+                    "model_name", "gemini-1.5-flash"
+                )
                 scene_index_config = scene_index_config[
                     scene_index_type + "_based_config"
                 ]
@@ -254,6 +263,7 @@ class IndexAgent(BaseAgent):
                     extraction_type=scene_index_type,
                     extraction_config=scene_index_config,
                     prompt=scene_index_prompt,
+                    model_name=scene_index_model_name,
                 )
                 self.videodb_tool.get_scene_index(
                     video_id=video_id, scene_id=scene_index_id

@@ -150,6 +150,7 @@ class VideoDBTool:
         video_id: str,
         extraction_type=SceneExtractionType.shot_based,
         extraction_config={},
+        model_name=None,
         prompt=None,
     ):
         video = self.collection.get_video(video_id)
@@ -157,6 +158,7 @@ class VideoDBTool:
             extraction_type=extraction_type,
             extraction_config=extraction_config,
             prompt=prompt,
+            model_name=model_name,
         )
 
     def list_scene_index(self, video_id: str):
