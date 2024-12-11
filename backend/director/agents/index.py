@@ -54,7 +54,7 @@ INDEX_AGENT_PARAMETERS = {
                 "model_name": {
                     "type": "string",
                     "description": "The name of the model to use for scene detection and frame extraction",
-                    "default": "gemini-1.5-flash",
+                    "default": "gpt4-o",
                     "enum": ["gemini-1.5-flash", "gemini-1.5-pro", "gpt4-o"],
                 },
                 "shot_based_config": {
