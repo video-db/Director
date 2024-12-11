@@ -253,7 +253,7 @@ class IndexAgent(BaseAgent):
             elif index_type == "scene":
                 scene_index_type = scene_index_config["type"]
                 scene_index_model_name = scene_index_config.get(
-                    "model_name", "gemini-1.5-flash"
+                    "model_name", "gpt4-o"
                 )
                 scene_index_config = scene_index_config[
                     scene_index_type + "_based_config"
