@@ -189,7 +189,15 @@ class VideoGenerationAgent(BaseAgent):
                 f"Uploaded generated video to VideoDB with Video ID {media['id']}"
             )
             stream_url = media["stream_url"]
-            video_content.video = VideoData(stream_url=stream_url)
+            id = media["id"]
+            collection_id = media["collection_id"]
+            name = media["name"]
+            video_content.video = VideoData(
+                stream_url=stream_url,
+                id=id,
+                collection_id=collection_id,
+                name=name,
+            )
             video_content.status = MsgStatus.success
             video_content.status_message = "Here is your generated video"
             self.output_message.push_update()
@@ -206,5 +214,9 @@ class VideoGenerationAgent(BaseAgent):
         return AgentResponse(
             status=AgentStatus.SUCCESS,
             message=f"Generated video ID {media['id']}",
-            data={"video_id": media["id"], "video_stream_url": stream_url},
+            data={
+                "video_id": media["id"],
+                "video_stream_url": stream_url,
+                "video_content": video_content,
+            },
         )

@@ -1,7 +1,8 @@
 import logging
+import concurrent.futures
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
-from director.core.session import Session
+from director.core.session import Session, VideosContent, VideoData, MsgStatus
 from director.agents.video_generation import VideoGenerationAgent
 from director.agents.video_generation import VIDEO_GENERATION_AGENT_PARAMETERS
 
@@ -49,6 +50,14 @@ class ComparisonAgent(BaseAgent):
         self.parameters = COMPARISON_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
+    def _run_video_generation(self, index, params):
+        """Helper method to run video generation with given params"""
+        print("we are here", index, params)
+        video_gen_agent = VideoGenerationAgent(session=self.session)
+        self.output_message.actions.append(f"{params['description']}")
+        self.output_message.push_update()
+        return video_gen_agent.run(**params, stealth_mode=True)
+
     def run(
         self, job_type: str, video_generation_comparison: list, *args, **kwargs
     ) -> AgentResponse:
@@ -64,30 +73,62 @@ class ComparisonAgent(BaseAgent):
         """
         try:
             if job_type == "video_generation_comparison":
-                video_gen_agent = VideoGenerationAgent(session=self.session)
-                results = []
- #
+                # Use ThreadPoolExecutor to run video generations in parallel
+                # with concurrent.futures.ThreadPoolExecutor() as executor:
+                #     # Submit all tasks and get future objects
+                #     future_to_params = {
+                #         executor.submit(self._run_video_generation, index, params): (
+                #             index,
+                #             params,
+                #         )
+                #         for index, params in enumerate(video_generation_comparison)
+                #     }
+
+                #     # Process completed tasks as they finish
+                #     for future in concurrent.futures.as_completed(future_to_params):
+                #         params = future_to_params[future]
+                #         try:
+                #             result = future.result()
+                #             print("we got this result", result)
+                #             # results.append({
+                #             #     "engine": params["engine"],
+                #             #     "video_id": result.data["video_id"],
+                #             #     "video_url": result.data["video_stream_url"],
+                #             # })
+                #         except Exception as e:
+                #             logger.exception(f"Error processing task: {e}")
+
+                videos_content = VideosContent(
+                    agent_name=self.agent_name,
+                    status=MsgStatus.progress,
+                    status_message="Processing...",
+                    videos=[],
+                )
+
                 for params in video_generation_comparison:
-                    self.output_message.actions.append(
-                        f"{params['description']}"
+                    print("we are here", params["text_to_video"]["name"])
+                    video_data = VideoData(
+                        name=params["text_to_video"]["name"],
+                        stream_url="",
                     )
-                    self.output_message.push_update()
+                    videos_content.videos.append(video_data)
 
-                    result = video_gen_agent.run(**params, stealth_mode=True)
-                    print("we got this result", result)
-                    # results.append(
-                    #     {
-                    #         "engine": params["engine"],
-                    #         "video_id": result.data["video_id"],
-                    #         "video_url": result.data["video_stream_url"],
-                    #     }
-                    # )
+                self.output_message.content.append(videos_content)
+                self.output_message.push_update()
 
-                # return AgentResponse(
-                #     status=AgentStatus.SUCCESS,
-                #     message="Video generation comparison complete",
-                #     data={"results": results},
-                # )
+                for index, params in enumerate(video_generation_comparison):
+                    res = self._run_video_generation(index, params)
+                    videos_content.videos[index] = res.data["video_content"].video
+
+                videos_content.status = MsgStatus.success
+                videos_content.status_message = "Here are your generated videos"
+                self.output_message.push_update()
+
+                return AgentResponse(
+                    status=AgentStatus.SUCCESS,
+                    message="Video generation comparison complete",
+                    data={"videos": videos_content},
+                )
             else:
                 raise Exception(f"Unsupported comparison type: {job_type}")
 

@@ -40,6 +40,7 @@ class ContentType(str, Enum):
 
     text = "text"
     video = "video"
+    videos = "videos"
     image = "image"
     search_results = "search_results"
 
@@ -84,6 +85,13 @@ class VideoContent(BaseContent):
 
     video: Optional[VideoData] = None
     type: ContentType = ContentType.video
+
+
+class VideosContent(BaseContent):
+    """Videos content model class for videos content."""
+
+    videos: Optional[List[VideoData]] = None
+    type: ContentType = ContentType.videos
 
 
 class ImageData(BaseModel):
