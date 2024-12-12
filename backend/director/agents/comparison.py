@@ -101,7 +101,7 @@ class ComparisonAgent(BaseAgent):
                 videos_content = VideosContent(
                     agent_name=self.agent_name,
                     status=MsgStatus.progress,
-                    status_message="Processing...",
+                    status_message="Generating videos...",
                     videos=[],
                 )
 
@@ -119,6 +119,7 @@ class ComparisonAgent(BaseAgent):
                 for index, params in enumerate(video_generation_comparison):
                     res = self._run_video_generation(index, params)
                     videos_content.videos[index] = res.data["video_content"].video
+                    self.output_message.push_update()
 
                 videos_content.status = MsgStatus.success
                 videos_content.status_message = "Here are your generated videos"
