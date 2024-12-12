@@ -12,12 +12,15 @@ from director.tools.stabilityai import (
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
 )
 from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
-
+from director.tools.fal_video import (
+    FalVideoGenerationTool,
+    PARAMS_CONFIG as FAL_VIDEO_GEN_PARAMS_CONFIG,
+)
 from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling"]
+SUPPORTED_ENGINES = ["stabilityai", "kling", "fal"]
 
 VIDEO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
@@ -29,8 +32,8 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
         "engine": {
             "type": "string",
             "description": "The video generation engine to use",
-            "default": "stabilityai",
-            "enum": ["stabilityai", "kling"],
+            "default": "fal",
+            "enum": ["stabilityai", "kling", "fal"],
         },
         "job_type": {
             "type": "string",
@@ -48,6 +51,10 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                     "type": "string",
                     "description": "The text prompt to generate the video",
                 },
+                "name": {
+                    "type": "string",
+                    "description": "The name of the video, Keep the name short and descriptive, it should convey the neccessary information about the config",
+                },
                 "duration": {
                     "type": "number",
                     "description": "The duration of the video in seconds",
@@ -63,8 +70,13 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                     "properties": KLING_PARAMS_CONFIG["text_to_video"],
                     "description": "Config to use when kling engine is used",
                 },
+                "fal_config": {
+                    "type": "object",
+                    "properties": FAL_VIDEO_GEN_PARAMS_CONFIG["text_to_video"],
+                    "description": "Config to use when fal engine is used",
+                },
             },
-            "required": ["prompt"],
+            "required": ["prompt", "name"],
         },
     },
     "required": ["job_type", "collection_id", "engine"],
@@ -99,6 +111,7 @@ class VideoGenerationAgent(BaseAgent):
         """
         try:
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
+            stealth_mode = kwargs.get("stealth_mode", False)
 
             if engine not in SUPPORTED_ENGINES:
                 raise Exception(f"{engine} not supported")
@@ -119,6 +132,12 @@ class VideoGenerationAgent(BaseAgent):
                     secret_key=KLING_AI_SECRET_API_KEY,
                 )
                 config_key = "kling_config"
+            elif engine == "fal":
+                FAL_KEY = os.getenv("FAL_KEY")
+                if not FAL_KEY:
+                    raise Exception("FAL API key not found")
+                video_gen_tool = FalVideoGenerationTool(api_key=FAL_KEY)
+                config_key = "fal_config"
             else:
                 raise Exception(f"{engine} not supported")
 
@@ -131,10 +150,12 @@ class VideoGenerationAgent(BaseAgent):
                 status=MsgStatus.progress,
                 status_message="Processing...",
             )
-            self.output_message.content.append(video_content)
+            if not stealth_mode:
+                self.output_message.content.append(video_content)
 
             if job_type == "text_to_video":
                 prompt = text_to_video.get("prompt")
+                video_name = text_to_video.get("name")
                 duration = text_to_video.get("duration", 5)
                 config = text_to_video.get(config_key, {})
                 if prompt is None:
@@ -159,7 +180,10 @@ class VideoGenerationAgent(BaseAgent):
 
             # Upload to VideoDB
             media = self.videodb_tool.upload(
-                output_path, source_type="file_path", media_type="video"
+                output_path,
+                source_type="file_path",
+                media_type="video",
+                name=video_name,
             )
             self.output_message.actions.append(
                 f"Uploaded generated video to VideoDB with Video ID {media['id']}"
