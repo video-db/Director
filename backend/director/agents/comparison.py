@@ -54,9 +54,7 @@ class ComparisonAgent(BaseAgent):
         """Helper method to run video generation with given params"""
         print("we are here", index, params)
         video_gen_agent = VideoGenerationAgent(session=self.session)
-        self.output_message.actions.append(f"{params['description']}")
-        self.output_message.push_update()
-        return video_gen_agent.run(**params, stealth_mode=True)
+        return (index, video_gen_agent.run(**params, stealth_mode=True))
 
     def run(
         self, job_type: str, video_generation_comparison: list, *args, **kwargs
@@ -73,31 +71,6 @@ class ComparisonAgent(BaseAgent):
         """
         try:
             if job_type == "video_generation_comparison":
-                # Use ThreadPoolExecutor to run video generations in parallel
-                # with concurrent.futures.ThreadPoolExecutor() as executor:
-                #     # Submit all tasks and get future objects
-                #     future_to_params = {
-                #         executor.submit(self._run_video_generation, index, params): (
-                #             index,
-                #             params,
-                #         )
-                #         for index, params in enumerate(video_generation_comparison)
-                #     }
-
-                #     # Process completed tasks as they finish
-                #     for future in concurrent.futures.as_completed(future_to_params):
-                #         params = future_to_params[future]
-                #         try:
-                #             result = future.result()
-                #             print("we got this result", result)
-                #             # results.append({
-                #             #     "engine": params["engine"],
-                #             #     "video_id": result.data["video_id"],
-                #             #     "video_url": result.data["video_stream_url"],
-                #             # })
-                #         except Exception as e:
-                #             logger.exception(f"Error processing task: {e}")
-
                 videos_content = VideosContent(
                     agent_name=self.agent_name,
                     status=MsgStatus.progress,
@@ -106,7 +79,6 @@ class ComparisonAgent(BaseAgent):
                 )
 
                 for params in video_generation_comparison:
-                    print("we are here", params["text_to_video"]["name"])
                     video_data = VideoData(
                         name=params["text_to_video"]["name"],
                         stream_url="",
@@ -116,10 +88,27 @@ class ComparisonAgent(BaseAgent):
                 self.output_message.content.append(videos_content)
                 self.output_message.push_update()
 
-                for index, params in enumerate(video_generation_comparison):
-                    res = self._run_video_generation(index, params)
-                    videos_content.videos[index] = res.data["video_content"].video
-                    self.output_message.push_update()
+                # Use ThreadPoolExecutor to run video generations in parallel
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    # Submit all tasks and get future objects
+                    future_to_params = {
+                        executor.submit(self._run_video_generation, index, params): (
+                            index,
+                            params,
+                        )
+                        for index, params in enumerate(video_generation_comparison)
+                    }
+
+                    # Process completed tasks as they finish
+                    for future in concurrent.futures.as_completed(future_to_params):
+                        params = future_to_params[future]
+                        try:
+                            index, result = future.result()
+                            videos_content.videos[index] = result.data[
+                                "video_content"
+                            ].video
+                        except Exception as e:
+                            logger.exception(f"Error processing task: {e}")
 
                 videos_content.status = MsgStatus.success
                 videos_content.status_message = "Here are your generated videos"
