@@ -1,5 +1,6 @@
 import logging
 import concurrent.futures
+import threading
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, VideosContent, VideoData, MsgStatus
@@ -44,15 +45,18 @@ class ComparisonAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "comparison"
         self.description = """Primary agent for video generation from prompts. Handles all video creation requests including single and multi-model generation. If multiple models or variations are mentioned, automatically parallelizes the work. For single model requests, delegates to specialized video generation subsystem. Keywords: generate video, create video, make video, text to video."""
-  
+
         self.parameters = COMPARISON_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
     def _run_video_generation(self, index, params):
         """Helper method to run video generation with given params"""
-        print("we are here", index, params)
         video_gen_agent = VideoGenerationAgent(session=self.session)
         return (index, video_gen_agent.run(**params, stealth_mode=True))
+
+    def _update_videos_content(self, videos_content, index, result):
+        videos_content.videos[index] = result.data["video_content"].video
+        self.output_message.push_update()
 
     def run(
         self, job_type: str, video_generation_comparison: list, *args, **kwargs
@@ -72,7 +76,7 @@ class ComparisonAgent(BaseAgent):
                 videos_content = VideosContent(
                     agent_name=self.agent_name,
                     status=MsgStatus.progress,
-                    status_message="Generating videos...",
+                    status_message="Generating videos (Usually takes 3-7 mins)",
                     videos=[],
                 )
 
@@ -83,34 +87,34 @@ class ComparisonAgent(BaseAgent):
                     )
                     videos_content.videos.append(video_data)
 
+
+
                 self.output_message.content.append(videos_content)
                 self.output_message.push_update()
 
                 # Use ThreadPoolExecutor to run video generations in parallel
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     # Submit all tasks and get future objects
-                    future_to_params = {
-                        executor.submit(self._run_video_generation, index, params): (
-                            index,
-                            params,
+                    futures = []
+                    for index, params in enumerate(video_generation_comparison):
+                        future = executor.submit(
+                            self._run_video_generation, index, params
                         )
-                        for index, params in enumerate(video_generation_comparison)
-                    }
+                        future.add_done_callback(
+                            lambda fut: self._update_videos_content(
+                                videos_content, fut.result()[0], fut.result()[1]
+                            )
+                        )
+                        futures.append(future)
 
                     # Process completed tasks as they finish
-                    for future in concurrent.futures.as_completed(future_to_params):
-                        params = future_to_params[future]
+                    for future in concurrent.futures.as_completed(futures):
                         try:
-                            index, result = future.result()
-                            videos_content.videos[index] = result.data[
-                                "video_content"
-                            ].video
+                            videos_content.status = MsgStatus.success
+                            videos_content.status_message = "Here are your generated videos"
+                            self.output_message.push_update()
                         except Exception as e:
                             logger.exception(f"Error processing task: {e}")
-
-                videos_content.status = MsgStatus.success
-                videos_content.status_message = "Here are your generated videos"
-                self.output_message.push_update()
 
                 return AgentResponse(
                     status=AgentStatus.SUCCESS,
