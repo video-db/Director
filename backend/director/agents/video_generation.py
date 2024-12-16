@@ -53,7 +53,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                 },
                 "name": {
                     "type": "string",
-                    "description": "The name of the video, Keep the name short and descriptive, it should convey the neccessary information about the config",
+                    "description": "Description of the video generation run in two lines. Keep the engine name and parameter configuration of the engine in separate lines. Keep it short, but show the prompt in full. Here's an example: [Tokyo Sunset - Luma - Prompt: 'An aerial shot of a quiet sunset at Tokyo', Duration: 5s, Luma Dream Machine]",
                 },
                 "duration": {
                     "type": "number",
@@ -86,7 +86,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
 class VideoGenerationAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "video_generation"
-        self.description = "Creates videos using ONE specific model/engine. Only use this agent when the request mentions exactly one model/engine, without any comparison words like 'compare', 'test', 'versus', 'vs' and no connecting words (and/&/,) between model names. If the request mentions wanting to compare models or try multiple engines, do not use this agent - use the videomaker agent instead."
+        self.description = "Creates videos using ONE specific model/engine. Only use this agent when the request mentions exactly ONE model/engine, without any comparison words like 'compare', 'test', 'versus', 'vs' and no connecting words (and/&/,) between model names. If the request mentions wanting to compare models or try multiple engines, do not use this agent - use the comparison agent instead."
         self.parameters = VIDEO_GENERATION_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
