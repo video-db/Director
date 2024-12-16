@@ -31,9 +31,9 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
         },
         "engine": {
             "type": "string",
-            "description": "The video generation engine to use",
+            "description": "The video generation engine to use. Use Fal by default. If the query includes any of the following: 'minimax-video, mochi-v1, hunyuan-video, luma-dream-machine, cogvideox-5b, ltx-video, fast-svd, fast-svd-lcm, t2v-turbo, kling video v 1.0, kling video v1.5 pro, fast-animatediff, fast-animatediff turbo, and animatediff-sparsectrl-lcm'- always use Fal. In case user specifies any other engine, use the supported engines like Stability.",
             "default": "fal",
-            "enum": ["stabilityai", "kling", "fal"],
+            "enum": ["fal", "stabilityai"],
         },
         "job_type": {
             "type": "string",
@@ -86,7 +86,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
 class VideoGenerationAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "video_generation"
-        self.description = "Agent designed to generate videos from text prompts"
+        self.description = "Creates videos using ONE specific model/engine. Only use this agent when the request mentions exactly one model/engine, without any comparison words like 'compare', 'test', 'versus', 'vs' and no connecting words (and/&/,) between model names. If the request mentions wanting to compare models or try multiple engines, do not use this agent - use the videomaker agent instead."
         self.parameters = VIDEO_GENERATION_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 

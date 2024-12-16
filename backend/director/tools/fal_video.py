@@ -7,7 +7,7 @@ PARAMS_CONFIG = {
         "model_name": {
             "type": "string", 
             "description": "The model name to use for video generation",
-            "default": "fal-ai/minimax-video",
+            "default": "fal-ai/fast-animatediff/text-to-video",
             "enum": [
                 "fal-ai/minimax-video",
                 "fal-ai/mochi-v1",
@@ -36,7 +36,7 @@ class FalVideoGenerationTool:
         os.environ["FAL_KEY"] = api_key
 
     def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
-        model_name = config.get("model_name", "fal-ai/minimax-video")
+        model_name = config.get("model_name", "fal-ai/fast-animatediff/text-to-video")
         res = fal_client.run(
             model_name,
             arguments={"prompt": prompt, "duration": duration},

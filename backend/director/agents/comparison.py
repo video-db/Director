@@ -14,10 +14,7 @@ COMPARISON_AGENT_PARAMETERS = {
         "job_type": {
             "type": "string",
             "enum": ["video_generation_comparison"],
-            "description": """Type of comparison job to perform
-                Available job types:
-                    - video_generation_comparison: Run multiple runs of @video_generation agent with different inputs/configurations and compare the outputs
-            """,
+            "description": "Creates videos using MULTIPLE video generation models/engines. This agent should be used in two scenarios: 1) When request contains model names connected by words like 'and', '&', 'with', ',', 'versus', 'vs' (e.g. 'using Stability and Kling'), 2) When request mentions comparing/testing multiple models even if mentioned later in the prompt (e.g. 'Generate X. Compare results from Y, Z'). If the request suggests using more than one model in any way, use this agent rather than calling single generation multiple times.",
         },
         "video_generation_comparison": {
             "type": "array",
@@ -34,9 +31,9 @@ COMPARISON_AGENT_PARAMETERS = {
                     "description",
                     *VIDEO_GENERATION_AGENT_PARAMETERS["required"],
                 ],
-                "description": "Parameters to use for each video generation run, each object in this is the parameters that would be required for each @video_generation run",
+                "description": "Parameters to use for each video generation run, each object in this is the parameters that would be required for each @single_video_generation run",
             },
-            "description": "List of parameters to use for each video generation run, each object in this is the parameters that would be required for each @video_generation run",
+            "description": "List of parameters to use for each video generation run, each object in this is the parameters that would be required for each @single_video_generation run",
         },
     },
     "required": ["job_type", "video_generation_comparison"],
@@ -46,7 +43,8 @@ COMPARISON_AGENT_PARAMETERS = {
 class ComparisonAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "comparison"
-        self.description = "This agent can be used when user wants to run a single agent multiple times but with different inputs/configurations and compare the outputs"
+        self.description = """Primary agent for video generation from prompts. Handles all video creation requests including single and multi-model generation. If multiple models or variations are mentioned, automatically parallelizes the work. For single model requests, delegates to specialized video generation subsystem. Keywords: generate video, create video, make video, text to video."""
+  
         self.parameters = COMPARISON_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
