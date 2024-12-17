@@ -1,6 +1,6 @@
 import logging
 import concurrent.futures
-import threading
+import queue
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, VideosContent, VideoData, MsgStatus
@@ -54,6 +54,10 @@ class ComparisonAgent(BaseAgent):
         video_gen_agent = VideoGenerationAgent(session=self.session)
         return (index, video_gen_agent.run(**params, stealth_mode=True))
 
+    def done_callback(self, fut):
+        result = fut.result()
+        self.notification_queue.put(result)
+
     def _update_videos_content(self, videos_content, index, result):
         videos_content.videos[index] = result.data["video_content"].video
         self.output_message.push_update()
@@ -79,6 +83,7 @@ class ComparisonAgent(BaseAgent):
                     status_message="Generating videos (Usually takes 3-7 mins)",
                     videos=[],
                 )
+                self.notification_queue = queue.Queue()
 
                 for params in video_generation_comparison:
                     video_data = VideoData(
@@ -86,8 +91,6 @@ class ComparisonAgent(BaseAgent):
                         stream_url="",
                     )
                     videos_content.videos.append(video_data)
-
-
 
                 self.output_message.content.append(videos_content)
                 self.output_message.push_update()
@@ -100,14 +103,20 @@ class ComparisonAgent(BaseAgent):
                         future = executor.submit(
                             self._run_video_generation, index, params
                         )
-                        future.add_done_callback(
-                            lambda fut: self._update_videos_content(
-                                videos_content, fut.result()[0], fut.result()[1]
-                            )
-                        )
+                        future.add_done_callback(self.done_callback)
                         futures.append(future)
 
                     # Process completed tasks as they finish
+                    completed_count = 0
+                    total = len(futures)
+
+                    while completed_count < total:
+                        res = self.notification_queue.get()
+                        self._update_videos_content(
+                            videos_content, res[0], res[1]
+                        )
+                        completed_count += 1
+
                     for future in concurrent.futures.as_completed(futures):
                         try:
                             videos_content.status = MsgStatus.success
