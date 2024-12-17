@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 # SQL to create the sessions table
 CREATE_SESSIONS_TABLE = """
@@ -57,4 +58,5 @@ def initialize_sqlite(db_name="director.db"):
 
 
 if __name__ == "__main__":
-    initialize_sqlite()
+    db_path = os.getenv("SQLITE_DB_PATH", "director.db")
+    initialize_sqlite(db_path)

@@ -1,11 +1,11 @@
 -e .
 anthropic==0.37.1
-composio_openai==0.5.42
+composio_openai==0.5.50
 elevenlabs==1.9.0
 Flask==3.0.3
 Flask-SocketIO==5.3.6
 Flask-Cors==4.0.1
-openai==1.42.0
+openai==1.55.3
 PyJWT==2.10.0
 Pillow==11.0.0
 openai-function-calling==2.3.0
