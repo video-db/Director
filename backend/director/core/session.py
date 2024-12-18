@@ -70,7 +70,8 @@ class TextContent(BaseContent):
 class VideoData(BaseModel):
     """Video data model class for video content."""
 
-    stream_url: str
+    stream_url: Optional[str] = None
+    external_url: Optional[str] = None
     player_url: Optional[str] = None
     id: Optional[str] = None
     collection_id: Optional[str] = None
