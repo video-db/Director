@@ -88,7 +88,7 @@ class WebSearchAgent(BaseAgent):
 
             formatted_results = [
                 {
-                    "source": r.get("link") or "",
+                    "source": r.get("video_link") or r.get("link"),  # Use video_link if available, fallback to link
                     "source_type": "url",
                     "media_type": "video",
                     "name": r.get("title") or f"Untitled Video {idx + 1}",
@@ -97,7 +97,7 @@ class WebSearchAgent(BaseAgent):
                     "duration": r.get("duration") or "unknown",
                 }
                 for idx, r in enumerate(results)
-                if r.get("link")
+                if r.get("link") or r.get("video_link")
             ]
 
             suggested = formatted_results[0] if formatted_results else None
