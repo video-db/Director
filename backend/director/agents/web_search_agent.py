@@ -1,10 +1,6 @@
 import logging
-import requests
 import os
 from dotenv import load_dotenv
-
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import (
@@ -12,6 +8,7 @@ from director.core.session import (
     TextContent,
     MsgStatus,
 )
+from director.tools.serp import SerpAPI
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -67,37 +64,6 @@ class WebSearchAgent(BaseAgent):
         :param duration: Filter videos by duration (short, medium, long).
         :return: A structured response containing video search results.
         """
-        base_url = "https://serpapi.com/search.json"
-        params = {
-            "q": query,
-            "tbm": "vid",
-            "num": count,
-            "hl": "en",
-            "gl": "us",
-            "api_key": self.api_key,
-        }
-
-        # Map duration values to API's expected format
-        duration_mapping = {
-            "short": "short",
-            "medium": "medium",
-            "long": "long"
-        }
-        if duration:
-            if duration not in duration_mapping:
-                raise ValueError(f"Invalid duration value: {duration}")
-            params["video_duration"] = duration_mapping[duration]
-
-        # Configure retries
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session = requests.Session()
-        session.mount("https://", adapter)
-
         text_content = TextContent(
             agent_name=self.agent_name,
             status=MsgStatus.progress,
@@ -106,12 +72,10 @@ class WebSearchAgent(BaseAgent):
         self.output_message.content.append(text_content)
         self.output_message.push_update()
 
-        try:
-            response = session.get(base_url, params=params, timeout=10)
-            response.raise_for_status()
-            raw_response = response.json()
+        serp_api = SerpAPI(api_key=self.api_key)
 
-            results = raw_response.get("video_results", [])
+        try:
+            results = serp_api.search_videos(query=query, count=count, duration=duration)
             if not results:
                 text_content.status = MsgStatus.error
                 text_content.status_message = "No video results found. Consider refining your query."
@@ -148,28 +112,12 @@ class WebSearchAgent(BaseAgent):
                 data={"results": formatted_results, "suggested": suggested},
             )
 
-        except requests.exceptions.RequestException as e:
-            error_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
-            logger.exception(f"API request failed in {self.agent_name}: {e}, Status code: {error_code}")
-
-            # Generic user-facing messages
-            error_message = "API request failed. Please try again later."
-            if isinstance(e, requests.exceptions.Timeout):
-                error_message = "The search is taking longer than expected. Please try again."
-            elif isinstance(e, requests.exceptions.TooManyRedirects):
-                error_message = "Unable to complete the search. Please try again."
-            elif isinstance(e, requests.exceptions.HTTPError):
-                if e.response.status_code == 429:
-                    error_message = "Rate limit exceeded. Please try again in a few minutes."
-                elif e.response.status_code == 401:
-                    error_message = "API authentication failed. Please check your API key."
-                elif e.response.status_code >= 500:
-                    error_message = "Search service is temporarily unavailable. Please try again later."
-
+        except RuntimeError as e:
+            logger.exception(f"Error in SerpAPI call: {e}")
             text_content.status = MsgStatus.error
-            text_content.status_message = error_message
+            text_content.status_message = "An error occurred while searching for videos."
             self.output_message.publish()
             return AgentResponse(
                 status=AgentStatus.ERROR,
-                message=error_message,
+                message="An error occurred during the video search. Please try again later.",
             )
