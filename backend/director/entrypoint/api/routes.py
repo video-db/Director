@@ -1,6 +1,7 @@
 import os
 
 from flask import Blueprint, request, current_app as app
+from werkzeug.utils import secure_filename
 
 from director.db import load_db
 from director.handler import ChatHandler, SessionHandler, VideoDBHandler, ConfigHandler
@@ -83,6 +84,36 @@ def get_video_or_all(collection_id, video_id):
         return videodb.get_video(video_id)
     else:
         return videodb.get_videos()
+
+
+@videodb_bp.route("/collection/<collection_id>/upload", methods=["POST"])
+def upload_video(collection_id):
+    """Upload a video to a collection."""
+    try:
+        videodb = VideoDBHandler(collection_id)
+
+        if "file" in request.files:
+            file = request.files["file"]
+            file_bytes = file.read()
+            safe_filename = secure_filename(file.filename)
+            if not safe_filename:
+                return {"message": "Invalid filename"}, 400
+            file_name = os.path.splitext(safe_filename)[0]
+            media_type = file.content_type.split("/")[0]
+            return videodb.upload(
+                source=file_bytes,
+                source_type="file",
+                media_type=media_type,
+                name=file_name,
+            )
+        elif "source" in request.json:
+            source = request.json["source"]
+            source_type = request.json["source_type"]
+            return videodb.upload(source=source, source_type=source_type)
+        else:
+            return {"message": "No valid source provided"}, 400
+    except Exception as e:
+        return {"message": str(e)}, 500
 
 
 @config_bp.route("/check", methods=["GET"])

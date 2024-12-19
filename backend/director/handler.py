@@ -1,10 +1,8 @@
 import os
 import logging
 
-from dotenv import dotenv_values
-
 from director.agents.thumbnail import ThumbnailAgent
-from director.agents.video_summary import VideoSummaryAgent
+from director.agents.summarize_video import SummarizeVideoAgent
 from director.agents.download import DownloadAgent
 from director.agents.pricing import PricingAgent
 from director.agents.upload import UploadAgent
@@ -14,11 +12,15 @@ from director.agents.index import IndexAgent
 from director.agents.brandkit import BrandkitAgent
 from director.agents.profanity_remover import ProfanityRemoverAgent
 from director.agents.image_generation import ImageGenerationAgent
+from director.agents.audio_generation import AudioGenerationAgent
+from director.agents.video_generation import VideoGenerationAgent
 from director.agents.stream_video import StreamVideoAgent
 from director.agents.subtitle import SubtitleAgent
 from director.agents.slack_agent import SlackAgent
-from director.agents.meme_maker import MemeMakerAgent
+from director.agents.editing import EditingAgent
 from director.agents.dubbing import DubbingAgent
+from director.agents.text_to_movie import TextToMovieAgent
+from director.agents.meme_maker import MemeMakerAgent
 from director.agents.composio import ComposioAgent
 
 
@@ -38,7 +40,7 @@ class ChatHandler:
         # Register the agents here
         self.agents = [
             ThumbnailAgent,
-            VideoSummaryAgent,
+            SummarizeVideoAgent,
             DownloadAgent,
             PricingAgent,
             UploadAgent,
@@ -48,11 +50,15 @@ class ChatHandler:
             BrandkitAgent,
             ProfanityRemoverAgent,
             ImageGenerationAgent,
+            AudioGenerationAgent,
+            VideoGenerationAgent,
             StreamVideoAgent,
             SubtitleAgent,
             SlackAgent,
-            MemeMakerAgent,
+            EditingAgent,
             DubbingAgent,
+            TextToMovieAgent,
+            MemeMakerAgent,
             ComposioAgent,
         ]
 
@@ -69,7 +75,6 @@ class ChatHandler:
             session.state["video"] = session.state["collection"].get_video(
                 session.video_id
             )
-        logger.info("videodb state added to session")
 
     def agents_list(self):
         return [
@@ -128,6 +133,11 @@ class SessionHandler:
 class VideoDBHandler:
     def __init__(self, collection_id):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
+
+    def upload(
+        self, source, source_type="url", media_type="video", name=None
+    ):
+        return self.videodb_tool.upload(source, source_type, media_type, name)
 
     def get_collection(self):
         """Get a collection by ID."""

@@ -8,7 +8,14 @@ def composio_tool(task: str):
     from composio_openai import ComposioToolSet
     from openai import OpenAI
 
-    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    key = os.getenv("OPENAI_API_KEY")
+    base_url = "https://api.openai.com/v1"
+
+    if not key:
+        key = os.getenv("VIDEO_DB_API_KEY")
+        base_url = os.getenv("VIDEO_DB_BASE_URL", "https://api.videodb.io")
+
+    openai_client = OpenAI(api_key=key, base_url=base_url)
 
     toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
     tools = toolset.get_tools(apps=json.loads(os.getenv("COMPOSIO_APPS")))
