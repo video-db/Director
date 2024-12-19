@@ -95,7 +95,7 @@ class WebSearchAgent(BaseAgent):
                             "link": link,
                             "snippet": description
                         })
-                        reranker_documents.append(f"Search Title: {result.get('title')}. Search Snippet: {result.get('snippet')}.")
+                        reranker_documents.append(f"Search Title: {title}. Search Snippet: {description}.")
 
                 for result in search_results.get("organic_results", []):
                     title = result.get("title")
