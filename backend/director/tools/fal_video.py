@@ -36,12 +36,15 @@ class FalVideoGenerationTool:
         os.environ["FAL_KEY"] = api_key
 
     def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
-        model_name = config.get("model_name", "fal-ai/fast-animatediff/text-to-video")
-        res = fal_client.run(
-            model_name,
-            arguments={"prompt": prompt, "duration": duration},
-        )
-        video_url = res["video"]["url"]
+        try:
+            model_name = config.get("model_name", "fal-ai/fast-animatediff/text-to-video")
+            res = fal_client.run(
+                model_name,
+                arguments={"prompt": prompt, "duration": duration},
+            )
+            video_url = res["video"]["url"]
 
-        with open(save_at, "wb") as f:
-            f.write(requests.get(video_url).content)
+            with open(save_at, "wb") as f:
+                f.write(requests.get(video_url).content)
+        except Exception as e:
+            raise Exception(f"Error generating video: {str(e)}")
