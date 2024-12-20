@@ -23,6 +23,7 @@ from director.agents.text_to_movie import TextToMovieAgent
 from director.agents.meme_maker import MemeMakerAgent
 from director.agents.composio import ComposioAgent
 from director.agents.comparison import ComparisonAgent
+from director.agents.web_search_agent import WebSearchAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -62,6 +63,7 @@ class ChatHandler:
             MemeMakerAgent,
             ComposioAgent,
             ComparisonAgent,
+            WebSearchAgent,
         ]
 
     def add_videodb_state(self, session):
