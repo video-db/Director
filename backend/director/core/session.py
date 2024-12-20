@@ -151,7 +151,7 @@ class BaseMessage(BaseModel):
     actions: List[str] = []
     agents: List[str] = []
     content: List[
-        Union[dict, TextContent, ImageContent, VideoContent, SearchResultsContent]
+        Union[dict, TextContent, ImageContent, VideoContent, VideosContent, SearchResultsContent]
     ] = []
     status: MsgStatus = MsgStatus.success
     msg_id: str = Field(

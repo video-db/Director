@@ -59,7 +59,15 @@ class ComparisonAgent(BaseAgent):
         self.notification_queue.put(result)
 
     def _update_videos_content(self, videos_content, index, result):
-        videos_content.videos[index] = result.data["video_content"].video
+        if result.status == AgentStatus.SUCCESS:
+            videos_content.videos[index] = result.data["video_content"].video
+        elif result.status == AgentStatus.ERROR:
+            videos_content.videos[index] = VideoData(
+                name=f"[Error] {videos_content.videos[index].name}",
+                stream_url="",
+                id=None,
+                collection_id=None,
+            )
         self.output_message.push_update()
 
     def run(
@@ -112,15 +120,15 @@ class ComparisonAgent(BaseAgent):
 
                     while completed_count < total:
                         res = self.notification_queue.get()
-                        self._update_videos_content(
-                            videos_content, res[0], res[1]
-                        )
+                        self._update_videos_content(videos_content, res[0], res[1])
                         completed_count += 1
 
                     for future in concurrent.futures.as_completed(futures):
                         try:
                             videos_content.status = MsgStatus.success
-                            videos_content.status_message = "Here are your generated videos"
+                            videos_content.status_message = (
+                                "Here are your generated videos"
+                            )
                             self.output_message.push_update()
                         except Exception as e:
                             logger.exception(f"Error processing task: {e}")
