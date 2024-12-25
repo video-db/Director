@@ -25,10 +25,10 @@ class TranscriptionAgent(BaseAgent):
         :return: AgentResponse with the transcription result.
         :rtype: AgentResponse
         """
-        self.output_message.actions.append("Trying to get the video transcription...")
+        self.output_message.actions.append("Trying to get the video transcription..")
         output_text_content = TextContent(
             agent_name=self.agent_name,
-            status_message="Processing the transcription...",
+            status_message="Processing the transcription..",
         )
         self.output_message.content.append(output_text_content)
         self.output_message.push_update()
@@ -40,14 +40,14 @@ class TranscriptionAgent(BaseAgent):
         try:
             transcript_text = videodb_tool.get_transcript(video_id)
         except Exception:
-            logger.error("Transcript not found. Indexing spoken words...")
-            self.output_message.actions.append("Indexing spoken words...")
+            logger.error("Transcript not found. Indexing spoken words..")
+            self.output_message.actions.append("Indexing spoken words..")
             self.output_message.push_update()
             videodb_tool.index_spoken_words(video_id)
             transcript_text = videodb_tool.get_transcript(video_id)
 
         if timestamp_mode:
-            self.output_message.actions.append("Formatting transcript with timestamps...")
+            self.output_message.actions.append("Formatting transcript with timestamps..")
             transcript_data = videodb_tool.get_transcript(video_id, text=False)
             output_text = self._group_transcript_with_timestamps(transcript_data, time_range, video_length)
         else:
