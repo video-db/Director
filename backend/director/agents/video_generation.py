@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+import asyncio
 
 from typing import Optional
 
@@ -90,7 +91,7 @@ class VideoGenerationAgent(BaseAgent):
         self.parameters = VIDEO_GENERATION_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
-    def run(
+    async def run_async(
         self,
         collection_id: str,
         job_type: str,
@@ -163,9 +164,8 @@ class VideoGenerationAgent(BaseAgent):
                 self.output_message.actions.append(
                     f"Generating video using <b>{engine}</b> for prompt <i>{prompt}</i>"
                 )
-                if not stealth_mode:
-                    self.output_message.push_update()
-                video_gen_tool.text_to_video(
+                self.output_message.push_update()
+                await video_gen_tool.text_to_video_async(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
@@ -177,8 +177,7 @@ class VideoGenerationAgent(BaseAgent):
             self.output_message.actions.append(
                 f"Generated video saved at <i>{output_path}</i>"
             )
-            if not stealth_mode:
-                self.output_message.push_update()
+            self.output_message.push_update()
 
             # Upload to VideoDB
             media = self.videodb_tool.upload(
@@ -202,17 +201,15 @@ class VideoGenerationAgent(BaseAgent):
             )
             video_content.status = MsgStatus.success
             video_content.status_message = "Here is your generated video"
-            if not stealth_mode:
-                self.output_message.push_update()
-                self.output_message.publish()
+            self.output_message.push_update()
+            self.output_message.publish()
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
             video_content.status = MsgStatus.error
             video_content.status_message = "Failed to generate video"
-            if not stealth_mode:
-                self.output_message.push_update()
-                self.output_message.publish()
+            self.output_message.push_update()
+            self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
         return AgentResponse(
@@ -224,3 +221,6 @@ class VideoGenerationAgent(BaseAgent):
                 "video_content": video_content,
             },
         )
+
+    def run(self, *args, **kwargs):
+        return asyncio.run(self.run_async(*args, **kwargs))
