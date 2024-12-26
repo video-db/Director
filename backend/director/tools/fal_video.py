@@ -54,7 +54,7 @@ class FalVideoGenerationTool:
         except Exception as e:
             raise Exception(f"Error generating video: {str(e)}")
 
-        return {"stauts": "success", "video_path": save_at}
+        return {"status": "success", "video_path": save_at}
 
     def text_to_video(self, *args, **kwargs):
         return asyncio.run(self.text_to_video_async(*args, **kwargs))
