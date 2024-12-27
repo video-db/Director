@@ -35,6 +35,7 @@ class FalVideoGenerationTool:
         if not api_key:
             raise Exception("FAL API key not found")
         os.environ["FAL_KEY"] = api_key
+        self.polling_interval = 10  # seconds
 
     async def text_to_video_async(
         self, prompt: str, save_at: str, duration: float, config: dict
@@ -43,14 +44,32 @@ class FalVideoGenerationTool:
             model_name = config.get(
                 "model_name", "fal-ai/fast-animatediff/text-to-video"
             )
-            res = await fal_client.run_async(
+            handler = await fal_client.submit_async(
                 model_name,
                 arguments={"prompt": prompt, "duration": duration},
             )
-            video_url = res["video"]["url"]
 
-            with open(save_at, "wb") as f:
-                f.write(requests.get(video_url).content)
+            request_id = handler.request_id
+
+            while True:
+                result_response = await fal_client.status_async(model_name, request_id)
+
+                if isinstance(
+                    result_response, (fal_client.InProgress, fal_client.Queued)
+                ):
+                    await asyncio.sleep(self.polling_interval)
+                    continue
+                elif isinstance(result_response, fal_client.Completed):
+                    result_response = await fal_client.result_async(
+                        model_name, request_id
+                    )
+                    video_url = result_response["video"]["url"]
+                    with open(save_at, "wb") as f:
+                        f.write(requests.get(video_url).content)
+                    break
+                else:
+                    raise ValueError(f"Unkown status for FAL request {result_response}")
+
         except Exception as e:
             raise Exception(f"Error generating video: {str(e)}")
 
