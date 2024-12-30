@@ -21,6 +21,10 @@ from director.tools.stabilityai import (
     StabilityAITool,
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
 )
+from director.tools.fal_video import (
+    FalVideoGenerationTool,
+    PARAMS_CONFIG as FAL_VIDEO_GEN_PARAMS_CONFIG,
+)
 from director.tools.elevenlabs import (
     ElevenLabsTool,
     PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
@@ -31,7 +35,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling"]
+SUPPORTED_ENGINES = ["stabilityai", "kling", "fal"]
 
 MOVIENARRATOR_AGENT_PARAMETERS = {
     "type": "object",
@@ -72,6 +76,11 @@ MOVIENARRATOR_AGENT_PARAMETERS = {
                     "type": "object",
                     "description": "Optional configuration for Kling engine",
                     "properties": KLING_PARAMS_CONFIG["text_to_video"],
+                },
+                "video_fal_config": {
+                    "type": "object",
+                    "description": "Optional configuration for Fal engine",
+                    "properties": FAL_VIDEO_GEN_PARAMS_CONFIG["text_to_video"],
                 },
                 "audio_elevenlabs_config": {
                     "type": "object",
@@ -138,6 +147,12 @@ class MovieNarratorAgent(BaseAgent):
                 preferred_style="photorealistic",
                 prompt_format="concise",
             ),
+            "fal": EngineConfig(
+                name="fal",
+                max_duration=10,
+                preferred_style="cinematic",
+                prompt_format="detailed",
+            ),
         }
         super().__init__(session=session, **kwargs)
 
@@ -186,6 +201,12 @@ class MovieNarratorAgent(BaseAgent):
                     access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
                 )
                 self.video_gen_config_key = "video_kling_config"
+            elif engine == "fal":
+                FAL_KEY = os.getenv("FAL_KEY")
+                if not FAL_KEY:
+                    raise Exception("FAL API key not found")
+                self.video_gen_tool = FalVideoGenerationTool(api_key=FAL_KEY)
+                self.video_gen_config_key = "video_fal_config"
             else:
                 raise Exception(f"{engine} not supported")
 
