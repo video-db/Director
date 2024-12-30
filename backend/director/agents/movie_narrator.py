@@ -240,7 +240,6 @@ class MovieNarratorAgent(BaseAgent):
 
                 engine_config = self.engine_configs[engine]
                 generated_videos_results = []
-                generated_audio_results = []
 
                 # Generate videos sequentially
                 for index, scene in enumerate(scenes):
@@ -303,7 +302,9 @@ class MovieNarratorAgent(BaseAgent):
                         )
 
                 # Generate audio prompt
-                voiceover_description = self.generate_audio_prompt(raw_storyline)
+                voiceover_description = self.generate_audio_prompt(
+                    raw_storyline, scenes
+                )
                 print("Generated voiceover script:", voiceover_description)
 
                 self.output_message.actions.append("Generating voiceover...")
@@ -393,11 +394,11 @@ class MovieNarratorAgent(BaseAgent):
     def generate_scene_sequence(
         self, storyline: str, style: VisualStyle, engine: str
     ) -> List[dict]:
-        """Generate 5 scenes with visual and narrative consistency."""
+        """Generate 2 scenes with visual and narrative consistency."""
         engine_config = self.engine_configs[engine]
 
         sequence_prompt = f"""
-        Break this storyline into 5 distinct scenes maintaining visual consistency.
+        Break this storyline into 2 distinct scenes maintaining visual consistency.
         Generate scene descriptions optimized for {engine} {engine_config.preferred_style} style.
         
         Visual Style:
@@ -489,8 +490,14 @@ class MovieNarratorAgent(BaseAgent):
             )
             return llm_response.content
 
-    def generate_audio_prompt(self, storyline: str) -> str:
+    def generate_audio_prompt(self, storyline: str, scenes) -> str:
         """Generate voiceover script for ElevenLabs."""
+
+        scenes_len = [float(media["video"].get("length", 0)) for media in scenes]
+        total_duration = sum(scenes_len)
+        char_per_sec = 14
+        max_characters = round(total_duration * char_per_sec)
+
         audio_prompt = f"""
         Write the exact words for a movie trailer voiceover about this story:
         "{storyline}"
@@ -504,14 +511,16 @@ class MovieNarratorAgent(BaseAgent):
         
         YOUR TURN - Write a dramatic movie trailer voiceover for: "{storyline}"
         Remember:
-        - Write ONLY the actual words to be spoken
+        - Write ONLY the actual words to be spoken, not other imformation like Scene 1 or Scene 2..
         - Use dramatic movie trailer style
-        - Keep it between 6-8 complete, but short sentences. IMPORTANT: keep it less than 850 characters.
+        - Keep it complete, but short sentences. IMPORTANT: keep it less than {max_characters} characters.
         - No descriptions, just pure narration
         - Include ... (ellipses) for a longer pause and , (comma) for a shorter pause. Use these to manage the tone and pace.
         - Ensure all sentences are complete
-        - Match the tempo and duration of a 60-second video, with 4-second scenes.
+        - Match the tempo and duration of a {total_duration}-second video, with {len(scenes_len)} scenes, where duration of scens are like this {[f'Scene {index+1} : {scene_len}s ' for (index, scene_len) in enumerate(scenes_len)]}.
         """
+
+        logger.info(f"Audio Generation prompt : {audio_prompt}")
 
         prompt_message = ContextMessage(content=audio_prompt, role=RoleTypes.user)
         llm_response = self.llm.chat_completions(
