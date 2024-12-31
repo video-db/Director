@@ -109,6 +109,10 @@ class ComparisonAgent(BaseAgent):
                 self.output_message.content.append(self.videos_content)
                 self.output_message.push_update()
 
+                try:
+                    print("At Checkpoint #1", asyncio.get_event_loop().is_closed())
+                except Exception as e:
+                    print("No event loop available", e)
                 asyncio.run(self.run_tasks(video_generation_comparison))
                 self.videos_content.status = MsgStatus.success
                 self.videos_content.status_message = "Here are your generated videos"

@@ -34,7 +34,9 @@ class FalVideoGenerationTool:
     def __init__(self, api_key: str):
         if not api_key:
             raise Exception("FAL API key not found")
-        os.environ["FAL_KEY"] = api_key
+        # os.environ["FAL_KEY"] = api_key
+        self.api_key = api_key
+        self.queue_endpoint = "https://queue.fal.run"
         self.polling_interval = 10  # seconds
 
     async def text_to_video_async(
@@ -44,35 +46,38 @@ class FalVideoGenerationTool:
             model_name = config.get(
                 "model_name", "fal-ai/fast-animatediff/text-to-video"
             )
-            handler = await fal_client.submit_async(
-                model_name,
-                arguments={"prompt": prompt, "duration": duration},
+
+            headers = {"authorization": f"Key {self.api_key}"}
+            fal_queue_payload = ({"prompt": prompt, "duration": duration},)
+            fal_queue_endpoint = f"{self.queue_endpoint}/{model_name}"
+
+            fal_response = requests.post(
+                fal_queue_endpoint, headers=headers, json=fal_queue_payload
             )
 
-            request_id = handler.request_id
+            status_url = fal_response.json()["status_url"]
+            response_url = fal_response.json()["response_url"]
 
             while True:
-                result_response = await fal_client.status_async(model_name, request_id)
+                response = requests.get(status_url, headers=headers)
+                res = response.json()
 
-                if isinstance(
-                    result_response, (fal_client.InProgress, fal_client.Queued)
-                ):
+                if res["status"] == "IN_QUEUE" or res["status"] == "IN_PROGRESS":
                     await asyncio.sleep(self.polling_interval)
                     continue
-                elif isinstance(result_response, fal_client.Completed):
-                    result_response = await fal_client.result_async(
-                        model_name, request_id
-                    )
-                    video_url = result_response["video"]["url"]
+                elif res["status"] == "COMPLETED":
+                    response = requests.get(response_url, headers=headers)
+                    res = response.json()
+                    print("res", res)
+                    video_url = res["video"]["url"]
                     with open(save_at, "wb") as f:
                         f.write(requests.get(video_url).content)
                     break
                 else:
-                    raise ValueError(f"Unkown status for FAL request {result_response}")
+                    raise ValueError(f"Unkown status for FAL request {res}")
 
         except Exception as e:
             raise Exception(f"Error generating video: {str(e)}")
-
         return {"status": "success", "video_path": save_at}
 
     def text_to_video(self, *args, **kwargs):
