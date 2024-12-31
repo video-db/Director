@@ -114,7 +114,6 @@ class StabilityAITool:
         generation_id = video_response.json().get("id")
         if not generation_id:
             raise Exception("No generation ID in response")
-        print("generation id", generation_id)
 
         # Poll for completion
         result_headers = {
@@ -123,11 +122,9 @@ class StabilityAITool:
         }
 
         while True:
-            print("Making the reqest again")
             result_response = requests.request(
                 "GET", f"{self.result_endpoint}/{generation_id}", headers=result_headers
             )
-            print("this is result response", result_response)
 
             result_response.raise_for_status()
 

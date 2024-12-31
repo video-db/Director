@@ -1,6 +1,4 @@
 import logging
-import concurrent.futures
-import queue
 import asyncio
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
@@ -40,6 +38,7 @@ COMPARISON_AGENT_PARAMETERS = {
     },
     "required": ["job_type", "video_generation_comparison"],
 }
+
 
 
 class ComparisonAgent(BaseAgent):
