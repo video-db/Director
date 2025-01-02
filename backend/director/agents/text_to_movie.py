@@ -426,7 +426,7 @@ class TextToMovieAgent(BaseAgent):
         {{
             "story_beat": "What happens in this scene",
             "scene_description": "Visual description optimized for {engine}",
-            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration})"
+            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration}), Strictly Keep it in multiples of 5"
         }}
         Make sure suggested_duration is a number, not a string.
         """

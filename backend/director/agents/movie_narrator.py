@@ -2,6 +2,7 @@ import logging
 import os
 import json
 import uuid
+import math
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 
@@ -306,6 +307,7 @@ class MovieNarratorAgent(BaseAgent):
                     raw_storyline, scenes
                 )
                 print("Generated voiceover script:", voiceover_description)
+                print("Total characters in script", len(voiceover_description))
 
                 self.output_message.actions.append("Generating voiceover...")
                 self.output_message.push_update()
@@ -423,7 +425,7 @@ class MovieNarratorAgent(BaseAgent):
         {{
             "story_beat": "What happens in this scene",
             "scene_description": "Visual description optimized for {engine}",
-            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration})"
+            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration}), Strictly Keep it in multiplees of 5"
         }}
         Make sure suggested_duration is a number, not a string.
         """
@@ -488,7 +490,7 @@ class MovieNarratorAgent(BaseAgent):
             llm_response = self.llm.chat_completions(
                 [compression_message.to_llm_msg()], response_format={"type": "text"}
             )
-            return llm_response.content
+            return llm_response.content[:2500]
 
     def generate_audio_prompt(self, storyline: str, scenes) -> str:
         """Generate voiceover script for ElevenLabs."""
@@ -496,11 +498,13 @@ class MovieNarratorAgent(BaseAgent):
         scenes_len = [float(media["video"].get("length", 0)) for media in scenes]
         total_duration = sum(scenes_len)
         char_per_sec = 14
-        max_characters = round(total_duration * char_per_sec)
+        max_characters = round(math.floor(total_duration) * char_per_sec)
 
         audio_prompt = f"""
         Write the exact words for a movie trailer voiceover about this story:
         "{storyline}"
+
+        IMPORTANT: Keep the output striclty {max_characters} characters
 
         EXAMPLE FORMAT:
         For storyline "A chef discovers he can taste memories":
@@ -513,11 +517,11 @@ class MovieNarratorAgent(BaseAgent):
         Remember:
         - Write ONLY the actual words to be spoken, not other imformation like Scene 1 or Scene 2..
         - Use dramatic movie trailer style
-        - Keep it complete, but short sentences. IMPORTANT: keep it less than {max_characters} characters.
+        - Keep it complete, but short sentences. .
         - No descriptions, just pure narration
         - Include ... (ellipses) for a longer pause and , (comma) for a shorter pause. Use these to manage the tone and pace.
         - Ensure all sentences are complete
-        - Match the tempo and duration of a {total_duration}-second video, with {len(scenes_len)} scenes, where duration of scens are like this {[f'Scene {index+1} : {scene_len}s ' for (index, scene_len) in enumerate(scenes_len)]}.
+        - Match the tempo and duration of a {total_duration}-second video, with {len(scenes_len)} scenes.
         """
 
         logger.info(f"Audio Generation prompt : {audio_prompt}")
