@@ -40,7 +40,6 @@ COMPARISON_AGENT_PARAMETERS = {
 }
 
 
-
 class ComparisonAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "comparison"
@@ -65,6 +64,7 @@ class ComparisonAgent(BaseAgent):
                 stream_url="",
                 id=None,
                 collection_id=None,
+                error=result.message,
             )
         self.output_message.push_update()
 
@@ -108,16 +108,18 @@ class ComparisonAgent(BaseAgent):
                 self.output_message.content.append(self.videos_content)
                 self.output_message.push_update()
 
-                try:
-                    print("At Checkpoint #1", asyncio.get_event_loop().is_closed())
-                except Exception as e:
-                    print("No event loop available", e)
                 asyncio.run(self.run_tasks(video_generation_comparison))
                 self.videos_content.status = MsgStatus.success
                 self.videos_content.status_message = "Here are your generated videos"
+                agent_response_message = f"Video generation comparison complete with {len(self.videos_content.videos)} videos"
+                for video in self.videos_content.videos:
+                    if video.error:
+                        agent_response_message += (
+                            f"\n Failed Video : {video.name}: Reason {video.error}"
+                        )
                 return AgentResponse(
                     status=AgentStatus.SUCCESS,
-                    message="Video generation comparison complete",
+                    message=agent_response_message,
                     data={"videos": self.videos_content},
                 )
             else:

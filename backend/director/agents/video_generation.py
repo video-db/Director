@@ -117,6 +117,14 @@ class VideoGenerationAgent(BaseAgent):
             if engine not in SUPPORTED_ENGINES:
                 raise Exception(f"{engine} not supported")
 
+            video_content = VideoContent(
+                agent_name=self.agent_name,
+                status=MsgStatus.progress,
+                status_message="Processing...",
+            )
+            if not stealth_mode:
+                self.output_message.content.append(video_content)
+
             if engine == "stabilityai":
                 STABILITYAI_API_KEY = os.getenv("STABILITYAI_API_KEY")
                 if not STABILITYAI_API_KEY:
@@ -145,14 +153,6 @@ class VideoGenerationAgent(BaseAgent):
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
             output_file_name = f"video_{job_type}_{str(uuid.uuid4())}.mp4"
             output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
-
-            video_content = VideoContent(
-                agent_name=self.agent_name,
-                status=MsgStatus.progress,
-                status_message="Processing...",
-            )
-            if not stealth_mode:
-                self.output_message.content.append(video_content)
 
             if job_type == "text_to_video":
                 prompt = text_to_video.get("prompt")
