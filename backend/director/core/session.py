@@ -79,6 +79,7 @@ class VideoData(BaseModel):
     description: Optional[str] = None
     thumbnail_url: Optional[str] = None
     length: Optional[Union[int, float]] = None
+    error: Optional[str] = None
 
 
 class VideoContent(BaseContent):
