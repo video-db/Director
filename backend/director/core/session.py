@@ -89,10 +89,15 @@ class VideoContent(BaseContent):
     type: ContentType = ContentType.video
 
 
+class VideosContentUIConfig(BaseModel):
+    columns: Optional[int] = 4
+
+
 class VideosContent(BaseContent):
     """Videos content model class for videos content."""
 
     videos: Optional[List[VideoData]] = None
+    ui_config: VideosContentUIConfig = VideosContentUIConfig()
     type: ContentType = ContentType.videos
 
 
@@ -152,7 +157,14 @@ class BaseMessage(BaseModel):
     actions: List[str] = []
     agents: List[str] = []
     content: List[
-        Union[dict, TextContent, ImageContent, VideoContent, VideosContent, SearchResultsContent]
+        Union[
+            dict,
+            TextContent,
+            ImageContent,
+            VideoContent,
+            VideosContent,
+            SearchResultsContent,
+        ]
     ] = []
     status: MsgStatus = MsgStatus.success
     msg_id: str = Field(
