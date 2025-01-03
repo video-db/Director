@@ -12,7 +12,6 @@ from director.tools.stabilityai import (
     StabilityAITool,
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
 )
-from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.fal_video import (
     FalVideoGenerationTool,
     PARAMS_CONFIG as FAL_VIDEO_GEN_PARAMS_CONFIG,
@@ -21,7 +20,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling", "fal"]
+SUPPORTED_ENGINES = ["stabilityai", "fal"]
 
 VIDEO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
@@ -65,11 +64,6 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                     "type": "object",
                     "properties": STABILITYAI_PARAMS_CONFIG["text_to_video"],
                     "description": "Config to use when stabilityai engine is used",
-                },
-                "kling_config": {
-                    "type": "object",
-                    "properties": KLING_PARAMS_CONFIG["text_to_video"],
-                    "description": "Config to use when kling engine is used",
                 },
                 "fal_config": {
                     "type": "object",
@@ -131,16 +125,6 @@ class VideoGenerationAgent(BaseAgent):
                     raise Exception("Stability AI API key not found")
                 video_gen_tool = StabilityAITool(api_key=STABILITYAI_API_KEY)
                 config_key = "stabilityai_config"
-            elif engine == "kling":
-                KLING_AI_ACCESS_API_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
-                KLING_AI_SECRET_API_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
-                if not KLING_AI_ACCESS_API_KEY or not KLING_AI_SECRET_API_KEY:
-                    raise Exception("Kling AI API key not found")
-                video_gen_tool = KlingAITool(
-                    access_key=KLING_AI_ACCESS_API_KEY,
-                    secret_key=KLING_AI_SECRET_API_KEY,
-                )
-                config_key = "kling_config"
             elif engine == "fal":
                 FAL_KEY = os.getenv("FAL_KEY")
                 if not FAL_KEY:
