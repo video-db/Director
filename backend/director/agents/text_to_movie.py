@@ -16,7 +16,7 @@ from director.core.session import (
     VideoData,
 )
 from director.llm import get_default_llm
-from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
+# from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.stabilityai import (
     StabilityAITool,
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
@@ -35,7 +35,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling", "fal"]
+SUPPORTED_ENGINES = ["stabilityai", "fal"]
 
 TEXT_TO_MOVIE_AGENT_PARAMETERS = {
     "type": "object",
@@ -72,11 +72,11 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
                     "description": "Optional configuration for StabilityAI engine",
                     "properties": STABILITYAI_PARAMS_CONFIG["text_to_video"],
                 },
-                "video_kling_config": {
-                    "type": "object",
-                    "description": "Optional configuration for Kling engine",
-                    "properties": KLING_PARAMS_CONFIG["text_to_video"],
-                },
+                # "video_kling_config": {
+                #     "type": "object",
+                #     "description": "Optional configuration for Kling engine",
+                #     "properties": KLING_PARAMS_CONFIG["text_to_video"],
+                # },
                 "video_fal_config": {
                     "type": "object",
                     "description": "Optional configuration for Fal engine",
@@ -131,18 +131,18 @@ class TextToMovieAgent(BaseAgent):
         """Initialize agent with basic parameters"""
         self.agent_name = "text_to_movie"
         self.description = (
-            "Agent for generating movies from storylines using Gen AI models"
+            "Agent for generating movies with background music from storylines using Gen AI models"
         )
         self.parameters = TEXT_TO_MOVIE_AGENT_PARAMETERS
         self.llm = get_default_llm()
 
         self.engine_configs = {
-            "kling": EngineConfig(
-                name="kling",
-                max_duration=10,
-                preferred_style="cinematic",
-                prompt_format="detailed",
-            ),
+            # "kling": EngineConfig(
+            #     name="kling",
+            #     max_duration=10,
+            #     preferred_style="cinematic",
+            #     prompt_format="detailed",
+            # ),
             "stabilityai": EngineConfig(
                 name="stabilityai",
                 max_duration=4,
@@ -194,15 +194,15 @@ class TextToMovieAgent(BaseAgent):
                     raise Exception("Stability AI API key not found")
                 self.video_gen_tool = StabilityAITool(api_key=STABILITY_API_KEY)
                 self.video_gen_config_key = "video_stabilityai_config"
-            elif engine == "kling":
-                KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
-                KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
-                if not KLING_API_ACCESS_KEY or not KLING_API_SECRET_KEY:
-                    raise Exception("Kling AI API key not found")
-                self.video_gen_tool = KlingAITool(
-                    access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
-                )
-                self.video_gen_config_key = "video_kling_config"
+            # elif engine == "kling":
+            #     KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
+            #     KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
+            #     if not KLING_API_ACCESS_KEY or not KLING_API_SECRET_KEY:
+            #         raise Exception("Kling AI API key not found")
+            #     self.video_gen_tool = KlingAITool(
+            #         access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
+            #     )
+            #     self.video_gen_config_key = "video_kling_config"
             elif engine == "fal":
                 FAL_KEY = os.getenv("FAL_KEY")
                 if not FAL_KEY:
