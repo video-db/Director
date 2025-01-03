@@ -22,7 +22,10 @@ PARAMS_CONFIG = {
                 "fal-ai/t2v-turbo",
                 "fal-ai/fast-animatediff/text-to-video",
                 "fal-ai/fast-animatediff/turbo/text-to-video",
-                "fal-ai/animatediff-sparsectrl-lcm"
+                "fal-ai/animatediff-sparsectrl-lcm",
+                "fal-ai/haiper-video-v2",
+                "fal-ai/minimax/video-01-live",
+                "fal-ai/ltx-video",
             ],
         },
     },

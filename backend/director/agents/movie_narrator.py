@@ -17,7 +17,7 @@ from director.core.session import (
     VideoData,
 )
 from director.llm import get_default_llm
-from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
+# from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.stabilityai import (
     StabilityAITool,
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
@@ -36,7 +36,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling", "fal"]
+SUPPORTED_ENGINES = ["stabilityai", "fal"]
 
 MOVIENARRATOR_AGENT_PARAMETERS = {
     "type": "object",
@@ -73,11 +73,11 @@ MOVIENARRATOR_AGENT_PARAMETERS = {
                     "description": "Optional configuration for StabilityAI engine",
                     "properties": STABILITYAI_PARAMS_CONFIG["text_to_video"],
                 },
-                "video_kling_config": {
-                    "type": "object",
-                    "description": "Optional configuration for Kling engine",
-                    "properties": KLING_PARAMS_CONFIG["text_to_video"],
-                },
+                # "video_kling_config": {
+                #     "type": "object",
+                #     "description": "Optional configuration for Kling engine",
+                #     "properties": KLING_PARAMS_CONFIG["text_to_video"],
+                # },
                 "video_fal_config": {
                     "type": "object",
                     "description": "Optional configuration for Fal engine",
@@ -136,12 +136,12 @@ class MovieNarratorAgent(BaseAgent):
         self.llm = get_default_llm()
 
         self.engine_configs = {
-            "kling": EngineConfig(
-                name="kling",
-                max_duration=10,
-                preferred_style="cinematic",
-                prompt_format="detailed",
-            ),
+            # "kling": EngineConfig(
+            #     name="kling",
+            #     max_duration=10,
+            #     preferred_style="cinematic",
+            #     prompt_format="detailed",
+            # ),
             "stabilityai": EngineConfig(
                 name="stabilityai",
                 max_duration=4,
@@ -193,15 +193,15 @@ class MovieNarratorAgent(BaseAgent):
                     raise Exception("Stability AI API key not found")
                 self.video_gen_tool = StabilityAITool(api_key=STABILITY_API_KEY)
                 self.video_gen_config_key = "video_stabilityai_config"
-            elif engine == "kling":
-                KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
-                KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
-                if not KLING_API_ACCESS_KEY or not KLING_API_SECRET_KEY:
-                    raise Exception("Kling AI API key not found")
-                self.video_gen_tool = KlingAITool(
-                    access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
-                )
-                self.video_gen_config_key = "video_kling_config"
+            # elif engine == "kling":
+            #     KLING_API_ACCESS_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
+            #     KLING_API_SECRET_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
+            #     if not KLING_API_ACCESS_KEY or not KLING_API_SECRET_KEY:
+            #         raise Exception("Kling AI API key not found")
+            #     self.video_gen_tool = KlingAITool(
+            #         access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
+            #     )
+            #     self.video_gen_config_key = "video_kling_config"
             elif engine == "fal":
                 FAL_KEY = os.getenv("FAL_KEY")
                 if not FAL_KEY:
@@ -396,11 +396,11 @@ class MovieNarratorAgent(BaseAgent):
     def generate_scene_sequence(
         self, storyline: str, style: VisualStyle, engine: str
     ) -> List[dict]:
-        """Generate 2 scenes with visual and narrative consistency."""
+        """Generate 5 scenes with visual and narrative consistency."""
         engine_config = self.engine_configs[engine]
 
         sequence_prompt = f"""
-        Break this storyline into 2 distinct scenes maintaining visual consistency.
+        Break this storyline into 5 distinct scenes maintaining visual consistency.
         Generate scene descriptions optimized for {engine} {engine_config.preferred_style} style.
         
         Visual Style:
@@ -497,14 +497,14 @@ class MovieNarratorAgent(BaseAgent):
 
         scenes_len = [float(media["video"].get("length", 0)) for media in scenes]
         total_duration = sum(scenes_len)
-        char_per_sec = 14
+        char_per_sec = 13
         max_characters = round(math.floor(total_duration) * char_per_sec)
 
         audio_prompt = f"""
         Write the exact words for a movie trailer voiceover about this story:
         "{storyline}"
 
-        IMPORTANT: Keep the output striclty {max_characters} characters
+        IMPORTANT: Keep the output strictly {max_characters} characters
 
         EXAMPLE FORMAT:
         For storyline "A chef discovers he can taste memories":
@@ -515,7 +515,7 @@ class MovieNarratorAgent(BaseAgent):
         
         YOUR TURN - Write a dramatic movie trailer voiceover for: "{storyline}"
         Remember:
-        - Write ONLY the actual words to be spoken, not other imformation like Scene 1 or Scene 2..
+        - Write ONLY the actual words to be spoken, no other imformation like Scene 1 or Scene 2..
         - Use dramatic movie trailer style
         - Keep it complete, but short sentences. .
         - No descriptions, just pure narration
