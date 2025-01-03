@@ -36,6 +36,28 @@ class VideoDBTool:
             for collection in collections
         ]
 
+    def get_image(self, image_id: str = None):
+        """
+        Fetch image details by ID or validate an image URL.
+        """
+        if image_id:
+            try:
+                image = self.collection.get_image(image_id)
+                if not getattr(image, "url", None):
+                    raise Exception(f"Image with ID {image_id} has no associated URL.")
+                return {
+                    "id": image.id,
+                    "url": image.url,
+                    "name": image.name,
+                    "description": getattr(image, "description", None),
+                    "collection_id": image.collection_id,
+                }
+            except Exception as e:
+                raise Exception(f"Failed to fetch image with ID {image_id}: {e}") from e
+
+        else:
+            raise ValueError("'image_id' must be provided.")
+        
     def get_video(self, video_id):
         """Get a video by ID."""
         video = self.collection.get_video(video_id)
