@@ -2,7 +2,13 @@ import logging
 import asyncio
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
-from director.core.session import Session, VideosContent, VideoData, MsgStatus
+from director.core.session import (
+    Session,
+    VideosContent,
+    VideoData,
+    MsgStatus,
+    VideosContentUIConfig,
+)
 from director.agents.video_generation import VideoGenerationAgent
 from director.agents.video_generation import VIDEO_GENERATION_AGENT_PARAMETERS
 
@@ -94,6 +100,7 @@ class ComparisonAgent(BaseAgent):
             if job_type == "video_generation_comparison":
                 self.videos_content = VideosContent(
                     agent_name=self.agent_name,
+                    ui_config=VideosContentUIConfig(columns=3),
                     status=MsgStatus.progress,
                     status_message="Generating videos (Usually takes 3-7 mins)",
                     videos=[],
