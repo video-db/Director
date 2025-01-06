@@ -36,12 +36,16 @@ class FalVideoGenerationTool:
         self.queue_endpoint = "https://queue.fal.run"
         self.polling_interval = 10  # seconds
 
-    async def text_to_video_async(self, prompt: str, save_at: str, duration: float, config: dict):
+    async def text_to_video_async(
+        self, prompt: str, save_at: str, duration: float, config: dict
+    ):
         """
         Generates a video asynchronously by calling the Fal text-to-video API using aiohttp.
         """
         try:
-            model_name = config.get("model_name", "fal-ai/fast-animatediff/text-to-video")
+            model_name = config.get(
+                "model_name", "fal-ai/fast-animatediff/text-to-video"
+            )
 
             headers = {"authorization": f"Key {self.api_key}"}
             fal_queue_payload = {"prompt": prompt, "duration": duration}
@@ -54,6 +58,14 @@ class FalVideoGenerationTool:
                 )
                 fal_response_json = await fal_response.json()
 
+                if (
+                    "status_url" not in fal_response_json
+                    or "response_url" not in fal_response_json
+                ):
+                    raise ValueError(
+                        f"Invalid response from FAL queue: Missing 'status_url' or 'response_url'. Response: {fal_response_json}"
+                    )
+
                 status_url = fal_response_json["status_url"]
                 response_url = fal_response_json["response_url"]
 
@@ -61,6 +73,11 @@ class FalVideoGenerationTool:
                 while True:
                     status_response = await session.get(status_url, headers=headers)
                     status_json = await status_response.json()
+
+                    if "status" not in status_json: 
+                        raise ValueError(
+                            f"Invalid response from FAL queue: Missing 'status'. Response: {status_json}"
+                        )
 
                     if status_json["status"] in ["IN_QUEUE", "IN_PROGRESS"]:
                         await asyncio.sleep(self.polling_interval)
@@ -78,7 +95,9 @@ class FalVideoGenerationTool:
                                 f.write(await video_response.read())
                         break
                     else:
-                        raise ValueError(f"Unknown status for FAL request: {status_json}")
+                        raise ValueError(
+                            f"Unknown status for FAL request: {status_json}"
+                        )
 
         except Exception as e:
             raise Exception(f"Error generating video: {str(e)}")
