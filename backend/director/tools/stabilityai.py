@@ -4,6 +4,8 @@ import asyncio
 from PIL import Image
 import io
 
+from director.utils.asyncio import is_event_loop_running
+
 PARAMS_CONFIG = {
     "text_to_video": {
         "strength": {
@@ -143,4 +145,9 @@ class StabilityAITool:
                 raise Exception(str(result_response.json()))
 
     def text_to_video(self, *args, **kwargs):
-        return asyncio.run(self.text_to_video_async(*args, **kwargs))
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            asyncio.run(self.text_to_video_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.text_to_video_async(*args, **kwargs))

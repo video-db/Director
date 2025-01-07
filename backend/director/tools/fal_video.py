@@ -1,6 +1,8 @@
 import asyncio
 import aiohttp
 
+from director.utils.asyncio import is_event_loop_running
+
 PARAMS_CONFIG = {
     "text_to_video": {
         "model_name": {
@@ -74,7 +76,7 @@ class FalVideoGenerationTool:
                     status_response = await session.get(status_url, headers=headers)
                     status_json = await status_response.json()
 
-                    if "status" not in status_json: 
+                    if "status" not in status_json:
                         raise ValueError(
                             f"Invalid response from FAL queue: Missing 'status'. Response: {status_json}"
                         )
@@ -108,4 +110,9 @@ class FalVideoGenerationTool:
         """
         Blocking call to generate video (synchronous wrapper around the async method).
         """
-        return asyncio.run(self.text_to_video_async(*args, **kwargs))
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            asyncio.run(self.text_to_video_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.text_to_video_async(*args, **kwargs))
