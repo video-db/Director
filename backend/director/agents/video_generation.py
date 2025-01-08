@@ -210,7 +210,7 @@ class VideoGenerationAgent(BaseAgent):
     def run(self, *args, **kwargs):
         is_loop_running = is_event_loop_running()
         if not is_loop_running:
-            asyncio.run(self.run_async(*args, **kwargs))
+            return asyncio.run(self.run_async(*args, **kwargs))
         else:
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.run_async(*args, **kwargs))
+            return loop.run_until_complete(self.run_async(*args, **kwargs))
