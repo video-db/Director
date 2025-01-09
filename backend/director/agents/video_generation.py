@@ -5,6 +5,7 @@ import asyncio
 
 from typing import Optional
 
+from director.utils.asyncio import is_event_loop_running
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, VideoContent, VideoData, MsgStatus
 from director.tools.videodb_tool import VideoDBTool
@@ -207,4 +208,9 @@ class VideoGenerationAgent(BaseAgent):
         )
 
     def run(self, *args, **kwargs):
-        return asyncio.run(self.run_async(*args, **kwargs))
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            return asyncio.run(self.run_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.run_async(*args, **kwargs))

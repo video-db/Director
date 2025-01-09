@@ -1,6 +1,7 @@
 import logging
 import asyncio
 
+from director.utils.asyncio import is_event_loop_running
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import (
     Session,
@@ -115,7 +116,13 @@ class ComparisonAgent(BaseAgent):
                 self.output_message.content.append(self.videos_content)
                 self.output_message.push_update()
 
-                asyncio.run(self.run_tasks(video_generation_comparison))
+                is_loop_running = is_event_loop_running()
+                if not is_loop_running:
+                    asyncio.run(self.run_tasks(video_generation_comparison))
+                else:
+                    loop = asyncio.get_event_loop()
+                    loop.run_until_complete(self.run_tasks(video_generation_comparison))
+
                 self.videos_content.status = MsgStatus.success
                 self.videos_content.status_message = "Here are your generated videos"
                 agent_response_message = f"Video generation comparison complete with {len(self.videos_content.videos)} videos"
