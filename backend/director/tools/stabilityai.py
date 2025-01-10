@@ -1,7 +1,10 @@
 import requests
 import time
+import asyncio
 from PIL import Image
 import io
+
+from director.utils.asyncio import is_event_loop_running
 
 PARAMS_CONFIG = {
     "text_to_video": {
@@ -47,7 +50,9 @@ class StabilityAITool:
         self.result_endpoint = "https://api.stability.ai/v2beta/image-to-video/result"
         self.polling_interval = 10  # seconds
 
-    def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
+    async def text_to_video_async(
+        self, prompt: str, save_at: str, duration: float, config: dict
+    ):
         """
         Generate a video from a text prompt using Stability AI's API.
         First generates an image from text, then converts it to video.
@@ -129,7 +134,7 @@ class StabilityAITool:
 
             if result_response.status_code == 202:
                 # Still processing
-                time.sleep(self.polling_interval)
+                await asyncio.sleep(self.polling_interval)
                 continue
             elif result_response.status_code == 200:
                 # Generation complete, save video
@@ -138,3 +143,11 @@ class StabilityAITool:
                 break
             else:
                 raise Exception(str(result_response.json()))
+
+    def text_to_video(self, *args, **kwargs):
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            return asyncio.run(self.text_to_video_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.text_to_video_async(*args, **kwargs))

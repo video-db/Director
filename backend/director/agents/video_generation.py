@@ -1,9 +1,11 @@
 import logging
 import os
 import uuid
+import asyncio
 
 from typing import Optional
 
+from director.utils.asyncio import is_event_loop_running
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, VideoContent, VideoData, MsgStatus
 from director.tools.videodb_tool import VideoDBTool
@@ -11,7 +13,6 @@ from director.tools.stabilityai import (
     StabilityAITool,
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
 )
-from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.fal_video import (
     FalVideoGenerationTool,
     PARAMS_CONFIG as FAL_VIDEO_GEN_PARAMS_CONFIG,
@@ -20,7 +21,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling", "fal"]
+SUPPORTED_ENGINES = ["stabilityai", "fal"]
 
 VIDEO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
@@ -65,11 +66,6 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                     "properties": STABILITYAI_PARAMS_CONFIG["text_to_video"],
                     "description": "Config to use when stabilityai engine is used",
                 },
-                "kling_config": {
-                    "type": "object",
-                    "properties": KLING_PARAMS_CONFIG["text_to_video"],
-                    "description": "Config to use when kling engine is used",
-                },
                 "fal_config": {
                     "type": "object",
                     "properties": FAL_VIDEO_GEN_PARAMS_CONFIG["text_to_video"],
@@ -90,7 +86,7 @@ class VideoGenerationAgent(BaseAgent):
         self.parameters = VIDEO_GENERATION_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
-    def run(
+    async def run_async(
         self,
         collection_id: str,
         job_type: str,
@@ -116,22 +112,20 @@ class VideoGenerationAgent(BaseAgent):
             if engine not in SUPPORTED_ENGINES:
                 raise Exception(f"{engine} not supported")
 
+            video_content = VideoContent(
+                agent_name=self.agent_name,
+                status=MsgStatus.progress,
+                status_message="Processing...",
+            )
+            if not stealth_mode:
+                self.output_message.content.append(video_content)
+
             if engine == "stabilityai":
                 STABILITYAI_API_KEY = os.getenv("STABILITYAI_API_KEY")
                 if not STABILITYAI_API_KEY:
                     raise Exception("Stability AI API key not found")
                 video_gen_tool = StabilityAITool(api_key=STABILITYAI_API_KEY)
                 config_key = "stabilityai_config"
-            elif engine == "kling":
-                KLING_AI_ACCESS_API_KEY = os.getenv("KLING_AI_ACCESS_API_KEY")
-                KLING_AI_SECRET_API_KEY = os.getenv("KLING_AI_SECRET_API_KEY")
-                if not KLING_AI_ACCESS_API_KEY or not KLING_AI_SECRET_API_KEY:
-                    raise Exception("Kling AI API key not found")
-                video_gen_tool = KlingAITool(
-                    access_key=KLING_AI_ACCESS_API_KEY,
-                    secret_key=KLING_AI_SECRET_API_KEY,
-                )
-                config_key = "kling_config"
             elif engine == "fal":
                 FAL_KEY = os.getenv("FAL_KEY")
                 if not FAL_KEY:
@@ -145,14 +139,6 @@ class VideoGenerationAgent(BaseAgent):
             output_file_name = f"video_{job_type}_{str(uuid.uuid4())}.mp4"
             output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
 
-            video_content = VideoContent(
-                agent_name=self.agent_name,
-                status=MsgStatus.progress,
-                status_message="Processing...",
-            )
-            if not stealth_mode:
-                self.output_message.content.append(video_content)
-
             if job_type == "text_to_video":
                 prompt = text_to_video.get("prompt")
                 video_name = text_to_video.get("name")
@@ -163,9 +149,8 @@ class VideoGenerationAgent(BaseAgent):
                 self.output_message.actions.append(
                     f"Generating video using <b>{engine}</b> for prompt <i>{prompt}</i>"
                 )
-                if not stealth_mode:
-                    self.output_message.push_update()
-                video_gen_tool.text_to_video(
+                self.output_message.push_update()
+                await video_gen_tool.text_to_video_async(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
@@ -177,8 +162,7 @@ class VideoGenerationAgent(BaseAgent):
             self.output_message.actions.append(
                 f"Generated video saved at <i>{output_path}</i>"
             )
-            if not stealth_mode:
-                self.output_message.push_update()
+            self.output_message.push_update()
 
             # Upload to VideoDB
             media = self.videodb_tool.upload(
@@ -202,17 +186,15 @@ class VideoGenerationAgent(BaseAgent):
             )
             video_content.status = MsgStatus.success
             video_content.status_message = "Here is your generated video"
-            if not stealth_mode:
-                self.output_message.push_update()
-                self.output_message.publish()
+            self.output_message.push_update()
+            self.output_message.publish()
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
             video_content.status = MsgStatus.error
             video_content.status_message = "Failed to generate video"
-            if not stealth_mode:
-                self.output_message.push_update()
-                self.output_message.publish()
+            self.output_message.push_update()
+            self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
         return AgentResponse(
@@ -224,3 +206,11 @@ class VideoGenerationAgent(BaseAgent):
                 "video_content": video_content,
             },
         )
+
+    def run(self, *args, **kwargs):
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            return asyncio.run(self.run_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.run_async(*args, **kwargs))

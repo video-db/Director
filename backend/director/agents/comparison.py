@@ -1,9 +1,15 @@
 import logging
-import concurrent.futures
-import queue
+import asyncio
 
+from director.utils.asyncio import is_event_loop_running
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
-from director.core.session import Session, VideosContent, VideoData, MsgStatus
+from director.core.session import (
+    Session,
+    VideosContent,
+    VideoData,
+    MsgStatus,
+    VideosContentUIConfig,
+)
 from director.agents.video_generation import VideoGenerationAgent
 from director.agents.video_generation import VIDEO_GENERATION_AGENT_PARAMETERS
 
@@ -49,26 +55,34 @@ class ComparisonAgent(BaseAgent):
         self.parameters = COMPARISON_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
-    def _run_video_generation(self, index, params):
+    async def _run_video_generation(self, index, params):
         """Helper method to run video generation with given params"""
         video_gen_agent = VideoGenerationAgent(session=self.session)
-        return (index, video_gen_agent.run(**params, stealth_mode=True))
+        res = await video_gen_agent.run_async(**params, stealth_mode=True)
+        return index, res
 
-    def done_callback(self, fut):
-        result = fut.result()
-        self.notification_queue.put(result)
-
-    def _update_videos_content(self, videos_content, index, result):
+    def done_callback(self, task):
+        index, result = task.result()
         if result.status == AgentStatus.SUCCESS:
-            videos_content.videos[index] = result.data["video_content"].video
+            self.videos_content.videos[index] = result.data["video_content"].video
         elif result.status == AgentStatus.ERROR:
-            videos_content.videos[index] = VideoData(
-                name=f"[Error] {videos_content.videos[index].name}",
+            self.videos_content.videos[index] = VideoData(
+                name=f"[Error] {self.videos_content.videos[index].name}",
                 stream_url="",
                 id=None,
                 collection_id=None,
+                error=result.message,
             )
         self.output_message.push_update()
+
+    async def run_tasks(self, tasks):
+        asyncio_tasks = []
+        for index, task in enumerate(tasks):
+            asyncio_task = asyncio.create_task(self._run_video_generation(index, task))
+            asyncio_task.add_done_callback(self.done_callback)
+            asyncio_tasks.append(asyncio_task)
+        results = await asyncio.gather(*asyncio_tasks)
+        return results
 
     def run(
         self, job_type: str, video_generation_comparison: list, *args, **kwargs
@@ -85,58 +99,42 @@ class ComparisonAgent(BaseAgent):
         """
         try:
             if job_type == "video_generation_comparison":
-                videos_content = VideosContent(
+                self.videos_content = VideosContent(
                     agent_name=self.agent_name,
+                    ui_config=VideosContentUIConfig(columns=3),
                     status=MsgStatus.progress,
                     status_message="Generating videos (Usually takes 3-7 mins)",
                     videos=[],
                 )
-                self.notification_queue = queue.Queue()
-
                 for params in video_generation_comparison:
                     video_data = VideoData(
                         name=params["text_to_video"]["name"],
                         stream_url="",
                     )
-                    videos_content.videos.append(video_data)
+                    self.videos_content.videos.append(video_data)
 
-                self.output_message.content.append(videos_content)
+                self.output_message.content.append(self.videos_content)
                 self.output_message.push_update()
 
-                # Use ThreadPoolExecutor to run video generations in parallel
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    # Submit all tasks and get future objects
-                    futures = []
-                    for index, params in enumerate(video_generation_comparison):
-                        future = executor.submit(
-                            self._run_video_generation, index, params
+                is_loop_running = is_event_loop_running()
+                if not is_loop_running:
+                    asyncio.run(self.run_tasks(video_generation_comparison))
+                else:
+                    loop = asyncio.get_event_loop()
+                    loop.run_until_complete(self.run_tasks(video_generation_comparison))
+
+                self.videos_content.status = MsgStatus.success
+                self.videos_content.status_message = "Here are your generated videos"
+                agent_response_message = f"Video generation comparison complete with {len(self.videos_content.videos)} videos"
+                for video in self.videos_content.videos:
+                    if video.error:
+                        agent_response_message += (
+                            f"\n Failed Video : {video.name}: Reason {video.error}"
                         )
-                        future.add_done_callback(self.done_callback)
-                        futures.append(future)
-
-                    # Process completed tasks as they finish
-                    completed_count = 0
-                    total = len(futures)
-
-                    while completed_count < total:
-                        res = self.notification_queue.get()
-                        self._update_videos_content(videos_content, res[0], res[1])
-                        completed_count += 1
-
-                    for future in concurrent.futures.as_completed(futures):
-                        try:
-                            videos_content.status = MsgStatus.success
-                            videos_content.status_message = (
-                                "Here are your generated videos"
-                            )
-                            self.output_message.push_update()
-                        except Exception as e:
-                            logger.exception(f"Error processing task: {e}")
-
                 return AgentResponse(
                     status=AgentStatus.SUCCESS,
-                    message="Video generation comparison complete",
-                    data={"videos": videos_content},
+                    message=agent_response_message,
+                    data={"videos": self.videos_content},
                 )
             else:
                 raise Exception(f"Unsupported comparison type: {job_type}")

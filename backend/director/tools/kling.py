@@ -1,6 +1,9 @@
 import requests
 import time
 import jwt
+import asyncio
+
+from director.utils.asyncio import is_event_loop_running
 
 PARAMS_CONFIG = {
     "text_to_video": {
@@ -126,7 +129,9 @@ class KlingAITool:
         token = jwt.encode(payload, self.secret_key, headers=headers)
         return token
 
-    def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
+    async def text_to_video_async(
+        self, prompt: str, save_at: str, duration: float, config: dict
+    ):
         """
         Generate a video from a text prompt using KlingAI's API.
         :param str prompt: The text prompt to generate the video
@@ -181,5 +186,13 @@ class KlingAITool:
                 break
             else:
                 # Still processing
-                time.sleep(self.polling_interval)
+                await asyncio.sleep(self.polling_interval)
                 continue
+
+    def text_to_video(self, *args, **kwargs):
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            return asyncio.run(self.text_to_video_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.text_to_video_async(*args, **kwargs))
