@@ -2,6 +2,7 @@ import logging
 import os
 import json
 import uuid
+import math
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 
@@ -16,6 +17,7 @@ from director.core.session import (
     VideoData,
 )
 from director.llm import get_default_llm
+
 # from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.stabilityai import (
     StabilityAITool,
@@ -37,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_ENGINES = ["stabilityai", "fal"]
 
-TEXT_TO_MOVIE_AGENT_PARAMETERS = {
+MOVIENARRATOR_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "collection_id": {
@@ -52,19 +54,19 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
         },
         "job_type": {
             "type": "string",
-            "enum": ["text_to_movie"],
+            "enum": ["movie_narrator"],
             "description": "The type of video generation to perform",
         },
-        "text_to_movie": {
+        "movie_narrator": {
             "type": "object",
             "properties": {
                 "storyline": {
                     "type": "string",
                     "description": "The storyline to generate the video",
                 },
-                "sound_effects_description": {
+                "voiceover_description": {
                     "type": "string",
-                    "description": "Optional description for background music generation",
+                    "description": "Optional description for voiceover script generation",
                     "default": None,
                 },
                 "video_stabilityai_config": {
@@ -85,7 +87,7 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
                 "audio_elevenlabs_config": {
                     "type": "object",
                     "description": "Optional configuration for ElevenLabs engine",
-                    "properties": ELEVENLABS_PARAMS_CONFIG["sound_effect"],
+                    "properties": ELEVENLABS_PARAMS_CONFIG["text_to_speech"],
                 },
             },
             "required": ["storyline"],
@@ -126,14 +128,12 @@ class VisualStyle:
     setting_constants: Dict
 
 
-class TextToMovieAgent(BaseAgent):
+class MovieNarratorAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         """Initialize agent with basic parameters"""
-        self.agent_name = "text_to_movie"
-        self.description = (
-            "Agent for generating movies with background music from storylines using Gen AI models"
-        )
-        self.parameters = TEXT_TO_MOVIE_AGENT_PARAMETERS
+        self.agent_name = "movie_narrator"
+        self.description = "Agent for generating movies with narrations and voiceovers from storylines using Gen AI models"
+        self.parameters = MOVIENARRATOR_AGENT_PARAMETERS
         self.llm = get_default_llm()
 
         self.engine_configs = {
@@ -162,8 +162,8 @@ class TextToMovieAgent(BaseAgent):
         self,
         collection_id: str,
         engine: str = "stabilityai",
-        job_type: str = "text_to_movie",
-        text_to_movie: Optional[dict] = None,
+        job_type: str = "movie_narrator",
+        movie_narrator: Optional[dict] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -220,10 +220,10 @@ class TextToMovieAgent(BaseAgent):
             self.audio_gen_config_key = "audio_elevenlabs_config"
 
             # Initialize steps
-            if job_type == "text_to_movie":
-                raw_storyline = text_to_movie.get("storyline", [])
-                video_gen_config = text_to_movie.get(self.video_gen_config_key, {})
-                audio_gen_config = text_to_movie.get(self.audio_gen_config_key, {})
+            if job_type == "movie_narrator":
+                raw_storyline = movie_narrator.get("storyline", [])
+                video_gen_config = movie_narrator.get(self.video_gen_config_key, {})
+                audio_gen_config = movie_narrator.get(self.audio_gen_config_key, {})
 
                 # Generate visual style
                 visual_style = self.generate_visual_style(raw_storyline)
@@ -304,33 +304,33 @@ class TextToMovieAgent(BaseAgent):
                         )
 
                 # Generate audio prompt
-                sound_effects_description = self.generate_audio_prompt(raw_storyline)
+                voiceover_description = self.generate_audio_prompt(
+                    raw_storyline, scenes
+                )
+                print("Generated voiceover script:", voiceover_description)
+                print("Total characters in script", len(voiceover_description))
 
-                self.output_message.actions.append("Generating background music...")
+                self.output_message.actions.append("Generating voiceover...")
                 self.output_message.push_update()
 
-                # Generate and add sound effects
+                # Generate and add voiceover
                 os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-                sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
-
-                self.audio_gen_tool.generate_sound_effect(
-                    prompt=sound_effects_description,
-                    save_at=sound_effects_path,
-                    duration=total_duration,
+                voiceover_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
+                self.audio_gen_tool.text_to_speech(
+                    text=voiceover_description,
+                    save_at=voiceover_path,
                     config=audio_gen_config,
                 )
 
-                self.output_message.actions.append(
-                    "Uploading background music to VideoDB..."
-                )
+                self.output_message.actions.append("Uploading voiceover to VideoDB...")
                 self.output_message.push_update()
 
-                sound_effects_media = self.videodb_tool.upload(
-                    sound_effects_path, source_type="file_path", media_type="audio"
+                voiceover_media = self.videodb_tool.upload(
+                    voiceover_path, source_type="file_path", media_type="audio"
                 )
 
-                if os.path.exists(sound_effects_path):
-                    os.remove(sound_effects_path)
+                if os.path.exists(voiceover_path):
+                    os.remove(voiceover_path)
 
                 self.output_message.actions.append(
                     "Combining assets into final video..."
@@ -338,7 +338,7 @@ class TextToMovieAgent(BaseAgent):
                 self.output_message.push_update()
 
                 # Combine everything into final video
-                final_video = self.combine_assets(scenes, sound_effects_media)
+                final_video = self.combine_assets(scenes, voiceover_media)
 
                 video_content.video = VideoData(stream_url=final_video)
                 video_content.status = MsgStatus.success
@@ -397,11 +397,11 @@ class TextToMovieAgent(BaseAgent):
     def generate_scene_sequence(
         self, storyline: str, style: VisualStyle, engine: str
     ) -> List[dict]:
-        """Generate 3-5 scenes with visual and narrative consistency."""
+        """Generate 5 scenes with visual and narrative consistency."""
         engine_config = self.engine_configs[engine]
 
         sequence_prompt = f"""
-        Break this storyline into 3 distinct scenes maintaining visual consistency.
+        Break this storyline into 5 distinct scenes maintaining visual consistency.
         Generate scene descriptions optimized for {engine} {engine_config.preferred_style} style.
         
         Visual Style:
@@ -426,7 +426,7 @@ class TextToMovieAgent(BaseAgent):
         {{
             "story_beat": "What happens in this scene",
             "scene_description": "Visual description optimized for {engine}",
-            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration}), Strictly Keep it in multiples of 5"
+            "suggested_duration": "Duration as integer in seconds (max {engine_config.max_duration}), Strictly Keep it in multiplees of 5"
         }}
         Make sure suggested_duration is a number, not a string.
         """
@@ -450,15 +450,7 @@ class TextToMovieAgent(BaseAgent):
         self, scene: dict, style: VisualStyle, engine: str
     ) -> str:
         """Generate engine-specific prompt"""
-        if engine == "stabilityai":
-            return f"""
-            {style.director_reference} style.
-            {scene['scene_description']}.
-            {style.character_constants['physical_description']}.
-            {style.lighting_style}, {style.color_grading}.
-            Photorealistic, detailed, high quality, masterful composition.
-            """
-        else:  # Kling
+        if engine == "kling":  # Kling
             initial_prompt = f"""
             {style.director_reference} style shot. 
             Filmed on {style.camera_setup}.
@@ -480,7 +472,7 @@ class TextToMovieAgent(BaseAgent):
 
             # Run through LLM to compress while maintaining structure
             compression_prompt = f"""
-            Compress the following prompt to under 2450 characters while maintaining its structure and key information:
+            IMPORTANT: Compress the following prompt to under 2450 characters while maintaining its structure and key information:
 
             {initial_prompt}
             """
@@ -491,29 +483,60 @@ class TextToMovieAgent(BaseAgent):
             llm_response = self.llm.chat_completions(
                 [compression_message.to_llm_msg()], response_format={"type": "text"}
             )
-            return llm_response.content
+            return llm_response.content[:2500]
 
-    def generate_audio_prompt(self, storyline: str) -> str:
-        """Generate minimal, music-focused prompt for ElevenLabs."""
+        else:
+            return f"""
+            {style.director_reference} style.
+            {scene['scene_description']}.
+            {style.character_constants['physical_description']}.
+            {style.lighting_style}, {style.color_grading}.
+            Photorealistic, detailed, high quality, masterful composition.
+            """
+
+    def generate_audio_prompt(self, storyline: str, scenes) -> str:
+        """Generate voiceover script for ElevenLabs."""
+
+        scenes_len = [float(media["video"].get("length", 0)) for media in scenes]
+        total_duration = sum(scenes_len)
+        char_per_sec = 13
+        max_characters = round(math.floor(total_duration) * char_per_sec)
+
         audio_prompt = f"""
-        As a composer, create a simple musical description focusing ONLY on:
-        - Main instrument/sound
-        - One key mood change
-        - Basic progression
+        Write the exact words for a movie trailer voiceover about this story:
+        "{storyline}"
+
+        IMPORTANT: Keep the output strictly {max_characters} characters
+
+        EXAMPLE FORMAT:
+        For storyline "A chef discovers he can taste memories":
+        "One man's gift will change everything. In a world of ordinary flavors, he tastes what no one else can - the very essence of memories themselves."
+
+        For storyline "A cat learns to drive":
+        "They said four legs couldn't reach the pedals. They were wrong. This summer, witness the tail of the most extraordinary driver in history."
         
-        Keep it under 100 characters. No visual references or scene descriptions.
-        Focus on the music.
-        
-        Story context: {storyline}
+        YOUR TURN - Write a dramatic movie trailer voiceover for: "{storyline}"
+        Remember:
+        - Write ONLY the actual words to be spoken, no other imformation like Scene 1 or Scene 2..
+        - Use dramatic movie trailer style
+        - Keep it complete, but short sentences. .
+        - No descriptions, just pure narration
+        - Include ... (ellipses) for a longer pause and , (comma) for a shorter pause. Use these to manage the tone and pace.
+        - Ensure all sentences are complete
+        - Match the tempo and duration of a {total_duration}-second video, with {len(scenes_len)} scenes.
         """
+
+        logger.info(f"Audio Generation prompt : {audio_prompt}")
 
         prompt_message = ContextMessage(content=audio_prompt, role=RoleTypes.user)
         llm_response = self.llm.chat_completions(
             [prompt_message.to_llm_msg()], response_format={"type": "text"}
         )
-        return llm_response.content[:100]
+        return llm_response.content.strip()  # Remove the [:100] truncation
 
-    def combine_assets(self, scenes: List[dict], audio_media: Optional[dict]) -> str:
+    def combine_assets(
+        self, scenes: List[dict], voiceover_media: Optional[dict]
+    ) -> str:
         timeline = self.videodb_tool.get_and_set_timeline()
 
         # Add videos sequentially
@@ -521,11 +544,11 @@ class TextToMovieAgent(BaseAgent):
             video_asset = VideoAsset(asset_id=scene["video"]["id"])
             timeline.add_inline(video_asset)
 
-        # Add background score if available
-        if audio_media:
-            audio_asset = AudioAsset(
-                asset_id=audio_media["id"], start=0, disable_other_tracks=True
+        # Add voiceover if available
+        if voiceover_media:
+            voiceover_asset = AudioAsset(
+                asset_id=voiceover_media["id"], start=0, disable_other_tracks=True
             )
-            timeline.add_overlay(0, audio_asset)
+            timeline.add_overlay(0, voiceover_asset)
 
         return timeline.generate_stream()
