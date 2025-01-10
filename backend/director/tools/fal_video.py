@@ -27,6 +27,20 @@ PARAMS_CONFIG = {
             ],
         },
     },
+    "image_to_image": {
+        "model_name": {
+            "type": "string",
+            "description": "The model name to use for image-to-image transformation",
+            "default": "fal-ai/flux-lora-canny",
+            "enum": [
+                "fal-ai/flux-pro/v1.1-ultra/redux",
+                "fal-ai/flux-lora-canny",
+                "fal-ai/flux-lora-depth",
+                "fal-ai/ideogram/v2/turbo/remix",
+                "fal-ai/iclight-v2",
+            ],
+        },
+    },
 }
 
 
@@ -116,3 +130,81 @@ class FalVideoGenerationTool:
         else:
             loop = asyncio.get_event_loop()
             return loop.run_until_complete(self.text_to_video_async(*args, **kwargs))
+
+    async def image_to_image_async(self, image_url: str, save_at: str, prompt: str, config: dict):
+        """
+        Asynchronous method for generating an image using the FAL image-to-image API.
+        """
+        try:
+            if not image_url or not save_at:
+                raise ValueError("image_url and save_at are required parameters")
+            if not prompt:
+                raise ValueError("prompt is a required parameter")
+
+            model_name = config.get("model_name", "fal-ai/flux-lora-canny")
+
+            headers = {"authorization": f"Key {self.api_key}"}
+            fal_queue_payload = {"image_url": image_url, "prompt": prompt}
+            fal_queue_endpoint = f"{self.queue_endpoint}/{model_name}"
+
+            async with aiohttp.ClientSession() as session:
+                fal_response = await session.post(
+                    fal_queue_endpoint, headers=headers, json=fal_queue_payload
+                )
+                fal_response.raise_for_status()
+                fal_response_json = await fal_response.json()
+
+                if "status_url" not in fal_response_json or "response_url" not in fal_response_json:
+                    raise ValueError(
+                        f"Invalid response from FAL queue: Missing 'status_url' or 'response_url'. Response: {fal_response_json}"
+                    )
+
+                status_url = fal_response_json["status_url"]
+                response_url = fal_response_json["response_url"]
+
+                max_retries = 30  # 5 minutes with 10-second intervals
+                retry_count = 0
+                while True:
+                    if retry_count >= max_retries:
+                        raise TimeoutError("FAL API request timed out after 5 minutes")
+
+                    status_response = await session.get(status_url, headers=headers)
+                    status_json = await status_response.json()
+
+                    if status_json["status"] in ["IN_QUEUE", "IN_PROGRESS"]:
+                        await asyncio.sleep(self.polling_interval)
+                        retry_count += 1
+                        continue
+                    elif status_json["status"] == "COMPLETED":
+                        response = await session.get(response_url, headers=headers)
+                        res = await response.json()
+
+                        if not res.get("images"):
+                            raise Exception("No images returned in FAL response.")
+                        elif not res["images"]:
+                           raise Exception("Empty images list in FAL response.")
+
+                        image_url_result = res["images"][0]["url"]
+
+                        async with session.get(image_url_result) as image_response:
+                            with open(save_at, "wb") as f:
+                                f.write(await image_response.read())
+                        break
+                    else:
+                        raise ValueError(f"Unknown status for FAL request: {status_json}")
+
+        except Exception as e:
+            raise Exception(f"Error generating image: {str(e)}") from e
+
+        return {"status": "success", "image_url": image_url_result, "image_path": save_at}
+
+    def image_to_image(self, *args, **kwargs):
+        """
+        Blocking call to generate image (synchronous wrapper around the async method).
+        """
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            return asyncio.run(self.image_to_image_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.image_to_image_async(*args, **kwargs))
