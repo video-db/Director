@@ -17,15 +17,15 @@ PARAMS_CONFIG = {
                 "fal-ai/kling-video/v1/standard/text-to-video",
                 "fal-ai/kling-video/v1.5/pro/text-to-video",
                 "fal-ai/cogvideox-5b",
-                "fal-ai/ltx-video",
+                # "fal-ai/ltx-video",
                 "fal-ai/fast-svd/text-to-video",
                 "fal-ai/fast-svd-lcm/text-to-video",
                 "fal-ai/t2v-turbo",
                 "fal-ai/fast-animatediff/text-to-video",
                 "fal-ai/fast-animatediff/turbo/text-to-video",
-                "fal-ai/haiper-video-v2",
-                "fal-ai/minimax/video-01-live",
-                "fal-ai/ltx-video",
+                # "fal-ai/haiper-video-v2",
+                # "fal-ai/minimax/video-01-live",
+                # "fal-ai/ltx-video",
                 # "fal-ai/animatediff-sparsectrl-lcm",
             ],
         },
@@ -91,6 +91,11 @@ class FalVideoGenerationTool:
                         # Fetch results
                         response = await session.get(response_url, headers=headers)
                         res = await response.json()
+
+                        if "video" not in res or "url" not in res["video"]:
+                            raise ValueError(
+                                f"Invalid response from FAL queue: Missing 'video' or 'url'. Response: {res}"
+                            )
 
                         video_url = res["video"]["url"]
 

@@ -17,6 +17,7 @@ from director.core.session import (
     VideoData,
 )
 from director.llm import get_default_llm
+
 # from director.tools.kling import KlingAITool, PARAMS_CONFIG as KLING_PARAMS_CONFIG
 from director.tools.stabilityai import (
     StabilityAITool,
@@ -449,15 +450,7 @@ class MovieNarratorAgent(BaseAgent):
         self, scene: dict, style: VisualStyle, engine: str
     ) -> str:
         """Generate engine-specific prompt"""
-        if engine == "stabilityai":
-            return f"""
-            {style.director_reference} style.
-            {scene['scene_description']}.
-            {style.character_constants['physical_description']}.
-            {style.lighting_style}, {style.color_grading}.
-            Photorealistic, detailed, high quality, masterful composition.
-            """
-        else:  # Kling
+        if engine == "kling":  # Kling
             initial_prompt = f"""
             {style.director_reference} style shot. 
             Filmed on {style.camera_setup}.
@@ -491,6 +484,15 @@ class MovieNarratorAgent(BaseAgent):
                 [compression_message.to_llm_msg()], response_format={"type": "text"}
             )
             return llm_response.content[:2500]
+
+        else:
+            return f"""
+            {style.director_reference} style.
+            {scene['scene_description']}.
+            {style.character_constants['physical_description']}.
+            {style.lighting_style}, {style.color_grading}.
+            Photorealistic, detailed, high quality, masterful composition.
+            """
 
     def generate_audio_prompt(self, storyline: str, scenes) -> str:
         """Generate voiceover script for ElevenLabs."""
