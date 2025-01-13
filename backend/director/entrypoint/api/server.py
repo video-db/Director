@@ -47,7 +47,7 @@ class BaseAppConfig:
     """Secret key for the app."""
     LOGGING_CONFIG: dict = LOGGING_CONFIG
     """Logging configuration for the app."""
-    DB_TYPE: str = "sqlite"
+    DB_TYPE: str = os.getenv("DB_TYPE", "sqlite")
     """Database type for the app."""
     HOST: str = "0.0.0.0"
     """Host for the app."""

@@ -27,6 +27,10 @@ init-sqlite-db:
 	source $(VENV_DIR)/bin/activate && \
 	python director/db/sqlite/initialize.py
 
+init-postgres-db:
+	source $(VENV_DIR)/bin/activate && \
+	python director/db/postgres/initialize.py
+
 
 install:
 	source $(VENV_DIR)/bin/activate && \
