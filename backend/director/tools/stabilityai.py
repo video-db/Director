@@ -4,6 +4,8 @@ import asyncio
 from PIL import Image
 import io
 
+from director.utils.asyncio import is_event_loop_running
+
 PARAMS_CONFIG = {
     "text_to_video": {
         "strength": {
@@ -228,3 +230,4 @@ class StabilityAITool:
                 break
             else:
                 raise Exception(f"Error fetching video: {result_response.text}")
+

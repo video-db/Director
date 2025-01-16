@@ -3,6 +3,8 @@ import time
 import jwt
 import asyncio
 
+from director.utils.asyncio import is_event_loop_running
+
 PARAMS_CONFIG = {
     "text_to_video": {
         "model": {
@@ -188,4 +190,9 @@ class KlingAITool:
                 continue
 
     def text_to_video(self, *args, **kwargs):
-        return asyncio.run(self.text_to_video_async(*args, **kwargs))
+        is_loop_running = is_event_loop_running()
+        if not is_loop_running:
+            return asyncio.run(self.text_to_video_async(*args, **kwargs))
+        else:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.text_to_video_async(*args, **kwargs))

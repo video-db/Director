@@ -5,6 +5,8 @@ import asyncio
 import aiohttp
 from typing import Optional
 
+from director.utils.asyncio import is_event_loop_running
+
 PARAMS_CONFIG = {
     "text_to_video": {
         "model_name": {
@@ -25,7 +27,7 @@ PARAMS_CONFIG = {
                 "fal-ai/t2v-turbo",
                 "fal-ai/fast-animatediff/text-to-video",
                 "fal-ai/fast-animatediff/turbo/text-to-video",
-                "fal-ai/animatediff-sparsectrl-lcm",
+                # "fal-ai/animatediff-sparsectrl-lcm",
             ],
         },
     },
@@ -96,7 +98,7 @@ class FalVideoGenerationTool:
                     status_response = await session.get(status_url, headers=headers)
                     status_json = await status_response.json()
 
-                    if "status" not in status_json: 
+                    if "status" not in status_json:
                         raise ValueError(
                             f"Invalid response from FAL queue: Missing 'status'. Response: {status_json}"
                         )
