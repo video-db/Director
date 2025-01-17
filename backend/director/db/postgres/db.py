@@ -24,6 +24,11 @@ class PostgresDB(BaseDB):
             port=os.getenv("POSTGRES_PORT", "5432")
         )
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+
+        if not self.health_check():
+            logger.error("Database health check failed - unable to initialize tables")
+            raise Exception("Failed to initialize database")
+
         logger.info("Connected to PostgreSQL DB..........")
 
     def create_session(

@@ -32,6 +32,7 @@ from director.core.reasoning import ReasoningEngine
 from director.db.base import BaseDB
 from director.db import load_db
 from director.tools.videodb_tool import VideoDBTool
+from flask import current_app as app
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +168,7 @@ class ConfigHandler:
         """Check the configuration of the server."""
         videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False
 
-        db = load_db(os.getenv("SERVER_DB_TYPE", "sqlite"))
+        db = load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
         db_configured = db.health_check()
         return {
             "videodb_configured": videodb_configured,

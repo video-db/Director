@@ -12,10 +12,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Initialize database based on environment variable
-COPY ./scripts/init_db.sh /app/
-RUN chmod +x /app/scripts/init_db.sh
-RUN ./scripts/init_db.sh
 
 EXPOSE 8000 
 

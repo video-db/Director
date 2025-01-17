@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS context_messages (
 def initialize_postgres():
     """Initialize the PostgreSQL database by creating the necessary tables."""
     conn = psycopg2.connect(
-        dbname=os.getenv("POSTGRES_DB", "director"),
+        dbname=os.getenv("POSTGRES_DB", "postgres"),
         user=os.getenv("POSTGRES_USER", "postgres"),
         password=os.getenv("POSTGRES_PASSWORD", "postgres"),
         host=os.getenv("POSTGRES_HOST", "localhost"),
