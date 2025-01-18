@@ -63,6 +63,11 @@ EDITING_AGENT_PARAMETERS = {
                         "description": "End time (the end time in the original audio file) in seconds, pass non-null if the audio needs to be trimmed",
                         "default": None,
                     },
+                    "disable_other_tracks": {
+                        "type": "boolean",
+                        "description": "Whether to disable audio track of underlying video when adding this one",
+                        "default": True,
+                    },
                 },
                 "required": ["id"],
             },
@@ -86,6 +91,7 @@ class EditingAgent(BaseAgent):
         for media in media_list:
             start = media.get("start", 0)
             end = media.get("end", None)
+            disable_other_tracks = media.get("disable_other_tracks", True)
 
             if media_type == "video":
                 asset = VideoAsset(asset_id=media["id"], start=start, end=end)
@@ -97,6 +103,7 @@ class EditingAgent(BaseAgent):
                     asset_id=media["id"],
                     start=start,
                     end=end,
+                    disable_other_tracks=disable_other_tracks,
                 )
                 self.timeline.add_overlay(seeker, asset)
                 seeker += float(audio["length"])
@@ -150,9 +157,7 @@ class EditingAgent(BaseAgent):
 
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
-            video_content.status_message = (
-                "Here is your stream."
-            )
+            video_content.status_message = "Here is your stream."
             self.output_message.publish()
 
         except Exception as e:
