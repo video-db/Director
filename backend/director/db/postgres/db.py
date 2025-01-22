@@ -68,16 +68,12 @@ class PostgresDB(BaseDB):
         row = self.cursor.fetchone()
         if row is not None:
             session = dict(row)
-            # session["metadata"] = json.loads(session["metadata"])
             return session
         return {}
 
     def get_sessions(self) -> list:
         self.cursor.execute("SELECT * FROM sessions ORDER BY updated_at DESC")
         rows = self.cursor.fetchall()
-        # sessions = [dict(r) for r in rows]
-        # for s in sessions:
-        #     s["metadata"] = json.loads(s["metadata"])
         return [dict(r) for r in rows]
 
     def add_or_update_msg_to_conv(
@@ -101,7 +97,7 @@ class PostgresDB(BaseDB):
         self.cursor.execute(
             """
             INSERT INTO conversations (
-                session_id, conv_id, msg_id, msg_type, agents, actions, 
+                session_id, conv_id, msg_id, msg_type, agents, actions,
                 content, status, created_at, updated_at, metadata
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -141,10 +137,6 @@ class PostgresDB(BaseDB):
         for row in rows:
             if row is not None:
                 conv_dict = dict(row)
-                # conv_dict["agents"] = json.loads(conv_dict["agents"])
-                # conv_dict["actions"] = json.loads(conv_dict["actions"])
-                # conv_dict["content"] = json.loads(conv_dict["content"])
-                # conv_dict["metadata"] = json.loads(conv_dict["metadata"])
                 conversations.append(conv_dict)
         return conversations
 
@@ -207,12 +199,12 @@ class PostgresDB(BaseDB):
             failed_components.append("conversation")
         if not self.delete_context(session_id):
             failed_components.append("context")
-        
+
         self.cursor.execute("DELETE FROM sessions WHERE session_id = %s", (session_id,))
         self.conn.commit()
         if not self.cursor.rowcount > 0:
             failed_components.append("session")
-        
+
         success = len(failed_components) < 3
         return success, failed_components
 
@@ -226,7 +218,7 @@ class PostgresDB(BaseDB):
             """
             self.cursor.execute(query)
             table_count = self.cursor.fetchone()["count"]
-            
+
             if table_count < 3:
                 logger.info("Tables not found. Initializing PostgreSQL DB...")
                 initialize_postgres()
