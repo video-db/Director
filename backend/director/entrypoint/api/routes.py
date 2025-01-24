@@ -97,6 +97,27 @@ def get_video_or_all(collection_id, video_id):
     else:
         return videodb.get_videos()
 
+@videodb_bp.route("/collection/<collection_id>/video/<video_id>", methods=["DELETE"])
+def delete_video(collection_id, video_id):
+    """Delete a video by ID from a specific collection."""
+    try:
+        if not collection_id:
+            return {"message": "Collection ID is required"}, 400
+        if not video_id:
+            return {"message": "Video ID is required"}, 400
+
+        videodb = VideoDBHandler(collection_id)
+        if not videodb.videodb_tool.collection:
+            return {"message": f"Collection {collection_id} not found."}, 404
+        result = videodb.delete_video(video_id)
+        if not result.get("exists"):
+            return {"message": f"Video {video_id} not found in collection {collection_id}."}, 404
+        if not result.get("deleted"):
+            return {"message": f"Failed to delete video {video_id} from collection {collection_id}."}, 500
+
+        return result, 200
+    except Exception as e:
+        return {"message": str(e)}, 500
 
 @videodb_bp.route("/collection/<collection_id>/upload", methods=["POST"])
 def upload_video(collection_id):
