@@ -152,6 +152,9 @@ class VideoDBHandler:
     def get_collections(self):
         """Get all collections."""
         return self.videodb_tool.get_collections()
+    
+    def delete_collection(self):
+        return self.videodb_tool.delete_collection()
 
     def get_video(self, video_id):
         """Get a video by ID."""

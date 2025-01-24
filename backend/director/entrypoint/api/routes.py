@@ -72,6 +72,18 @@ def get_collection_or_all(collection_id):
     else:
         return videodb.get_collections()
 
+@videodb_bp.route("/collection/<collection_id>", methods=["DELETE"])
+def delete_collection(collection_id):
+    try:
+        if not collection_id:
+            return {"message": "Collection ID is required"}, 400
+
+        videodb = VideoDBHandler(collection_id)
+        result = videodb.delete_collection()
+        return result, 200
+    except Exception as e:
+        return {"message": str(e)}, 500
+
 
 @videodb_bp.route(
     "/collection/<collection_id>/video", defaults={"video_id": None}, methods=["GET"]

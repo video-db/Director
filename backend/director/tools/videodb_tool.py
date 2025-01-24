@@ -35,6 +35,16 @@ class VideoDBTool:
             }
             for collection in collections
         ]
+    
+    def delete_collection(self):
+        """Delete the current collection."""
+        if not self.collection:
+            raise ValueError("Collection ID is required to delete a collection.")
+        try:
+            self.collection.delete()
+            return {"success": True, "message": f"Collection {self.collection.id} deleted successfully"}
+        except Exception as e:
+            raise Exception(f"Failed to delete collection {self.collection.id}: {str(e)}")
 
     def get_video(self, video_id):
         """Get a video by ID."""
