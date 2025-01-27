@@ -209,15 +209,15 @@ class ElevenLabsTool:
             print(f"Error downloading dubbed file: {str(e)}")
             return None
         
-    def clone_audio(self, audio_url):
+    def clone_audio(self, audio_url, name_of_voice, description):
         voice = self.client.clone(
-            name="Clone voice",
+            name=name_of_voice,
             files=[audio_url],
-            description=""
+            description=description
         )
         
         return voice
     
     def synthesis_text(self, voice:Voice, text_to_synthesis:str):
-        audio = self.client.generate(text=text_to_synthesis, voice=voice)
+        audio = self.client.generate(text=text_to_synthesis, voice=voice, model="elevenlabs-multilingual-v2")
         return audio

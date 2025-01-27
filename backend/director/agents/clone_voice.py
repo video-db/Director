@@ -23,6 +23,14 @@ CLONE_VOICE_AGENT_PARAMETERS = {
             "description": "The text which the user wants to convert into audio in the voice given in the audio_url",
             "enum": ["url", "local_file"],
         },
+        "name_of_voice" : {
+            "type": "string",
+            "description": "The name to give to the voice",
+        },
+        "description" : {
+            "type": "string",
+            "description": "Description about how the voice sounds like. For example: This is a sounds of an old person, the voice is child like and cute etc."
+        },
         "is_authorized_to_clone_voice": {
             "type": "boolean",
             "description": "This is a flag to check if the user is authorised to clone the voice or not. If the user has explicitly mentioned that they are authorised to clone the voice, then the flag is TRUE else FALSE. Make sure to confirm that the user is authorised or not. If not specified explicitly or not specified at all, the flag should be FALSE"
@@ -65,6 +73,8 @@ class CloneVoiceAgent(BaseAgent):
             self, 
             audio_url: str, 
             text_to_synthesis: str,
+            name_of_voice: str,
+            description: str,
             is_authorized_to_clone_voice: str,
             collection_id: str,
             *args, 
@@ -75,6 +85,9 @@ class CloneVoiceAgent(BaseAgent):
         :param str audio_url: The url of the video given to clone
         :param str text_to_synthesis: The given text which needs to be synthesised in the cloned voice
         :param bool is_authorized_to_clone_voice: The flag which tells whether the user is authorised to clone the audio or not
+        :param name_of_voice: The name to be given to the cloned voice
+        :param descrption: The description about how the voice sounds like
+        :collection_id: The collection id to store generated voice
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about voice cloning.
@@ -97,7 +110,7 @@ class CloneVoiceAgent(BaseAgent):
 
             self._download_audio_file(audio_url, local_path=download_path)
 
-            voice = self.elevenlabs_tool.clone_audio(audio_url=download_path)
+            voice = self.elevenlabs_tool.clone_audio(audio_url=download_path, name_of_voice=name_of_voice, description=description)
 
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
