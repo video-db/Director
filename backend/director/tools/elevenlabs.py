@@ -222,5 +222,5 @@ class ElevenLabsTool:
         return voice
     
     def synthesis_text(self, voice:Voice, text_to_synthesis:str):
-        audio = self.client.generate(text=text_to_synthesis, voice=voice, model="elevenlabs-multilingual-v2")
+        audio = self.client.generate(text=text_to_synthesis, voice=voice, model="eleven_multilingual_v2")
         return audio
