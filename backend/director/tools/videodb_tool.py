@@ -1,6 +1,7 @@
 import os
 import requests
 import videodb
+import logging
 
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
 from videodb.timeline import Timeline
@@ -58,6 +59,24 @@ class VideoDBTool:
             "length": video.length,
             "thumbnail_url": video.thumbnail_url,
         }
+
+    def delete_video(self, video_id):
+        """Delete a specific video by its ID."""
+        if not video_id:
+            raise ValueError("Video ID is required to delete a video.")
+        try:
+            video = self.collection.get_video(video_id)
+            if not video:
+                raise ValueError(f"Video with ID {video_id} not found in collection {self.collection.id}.")
+            
+            video.delete()
+            return {"success": True, "message": f"Video {video.id} deleted successfully"}
+        except ValueError as ve:
+            logging.error(f"ValueError while deleting video: {ve}")
+            raise ve
+        except Exception as e:
+            logging.exception(f"Unexpected error occurred while deleting video {video_id}")
+            raise Exception("An unexpected error occurred while deleting the video. Please try again later.")
 
     def get_videos(self):
         """Get all videos in a collection."""

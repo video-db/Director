@@ -160,6 +160,10 @@ class VideoDBHandler:
         """Get a video by ID."""
         return self.videodb_tool.get_video(video_id)
 
+    def delete_video(self, video_id):
+        """Delete a specific video by its ID."""
+        return self.videodb_tool.delete_video(video_id)
+
     def get_videos(self):
         """Get all videos in a collection."""
         return self.videodb_tool.get_videos()
