@@ -10,13 +10,18 @@ from director.tools.videodb_tool import VideoDBTool
 from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 CLONE_VOICE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
-        "audio_url": {
-            "type": "string",
-            "description": "URL of the audio file which consists of the user's voice or the voice which the user is authorised to clone",
+        "sample_audios": {
+            "type": "array",
+            "description": "List of audio file URLs to add",
+            "items": {
+                "type": "string",
+                "description": "The URL of the audio file"
+            }
         },
         "text_to_synthesis": {
             "type": "string",
@@ -35,12 +40,16 @@ CLONE_VOICE_AGENT_PARAMETERS = {
             "type": "boolean",
             "description": "This is a flag to check if the user is authorised to clone the voice or not. If the user has explicitly mentioned that they are authorised to clone the voice, then the flag is TRUE else FALSE. Make sure to confirm that the user is authorised or not. If not specified explicitly or not specified at all, the flag should be FALSE"
         },
+        "cloned_voice_id": {
+            "type": "string",
+            "description": "This is the ID of the voice which is present if the user has already cloned a voice before. The cloned_voice_id can be taken from the previous results of cloning if the audio URL is not changed"
+        },
         "collection_id": {
             "type": "string",
             "description": "the ID of the collection to store the output audio file",
         }
     },
-    "required": ["audio_url", "text_to_synthesis", "is_authorized_to_clone_voice", "collection_id"],
+    "required": ["sample_audios", "text_to_synthesis", "is_authorized_to_clone_voice", "collection_id", "name"],
 }
 
 class CloneVoiceAgent(BaseAgent):
@@ -48,46 +57,56 @@ class CloneVoiceAgent(BaseAgent):
         self.agent_name = "clone_voice"
         self.description = "This agent is used to clone the voice of the given by the user. The user must be authorised to clone the voice"
         self.parameters = CLONE_VOICE_AGENT_PARAMETERS
-        self.elevenlabs_tool = ElevenLabsTool(api_key=os.getenv("ELEVENLABS_API_KEY"))
         super().__init__(session=session, **kwargs)
+        
 
+    def _download_audio_files(self, audio_urls: list[str]) -> list[str]:
 
-    def _download_audio_file(self, audio_url:str, local_path:str):
-        try:
-            
-            response = requests.get(audio_url, stream=True)
-            response.raise_for_status()
+        os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+        downloaded_files = []
 
-            if 'audio/mpeg' not in response.headers.get('Content-Type', ''):
-                raise ValueError("The URL does not point to an MP3 file.")
+        for audio_url in audio_urls:
+            try:
+                response = requests.get(audio_url, stream=True)
+                response.raise_for_status()
 
-            with open(local_path, 'wb') as file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    file.write(chunk)
+                if 'audio/mpeg' not in response.headers.get('Content-Type', ''):
+                    raise ValueError(f"The URL does not point to an MP3 file: {audio_url}")
 
-            return local_path
+                download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
+                local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
 
-        except Exception as e:
-            raise f"An error occurred while downloading the voice sample: {e}"
+                with open(local_path, 'wb') as file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        file.write(chunk)
+
+                downloaded_files.append(local_path)
+            except Exception as e:
+                print(f"Failed to download {audio_url}: {e}")
+
+        return downloaded_files
+
     def run(
-            self, 
-            audio_url: str, 
+            self,
+            sample_audios: list[str],
             text_to_synthesis: str,
             name_of_voice: str,
-            description: str,
             is_authorized_to_clone_voice: str,
             collection_id: str,
+            description="",
+            elevenlabs_voice_id=None,
             *args, 
             **kwargs) -> AgentResponse:
         """
         Clone the given audio file and synthesis the given text
 
-        :param str audio_url: The url of the video given to clone
+        :param list sample_audios: The urls of the video given to clone
         :param str text_to_synthesis: The given text which needs to be synthesised in the cloned voice
         :param bool is_authorized_to_clone_voice: The flag which tells whether the user is authorised to clone the audio or not
-        :param name_of_voice: The name to be given to the cloned voice
-        :param descrption: The description about how the voice sounds like
-        :collection_id: The collection id to store generated voice
+        :param str name_of_voice: The name to be given to the cloned voice
+        :param str descrption: The description about how the voice sounds like
+        :param str collection_id: The collection id to store generated voice
+        :param str elevenlabs_voice_id: The voice ID generated from the previously given voice which can be used for cloning
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about voice cloning.
@@ -97,6 +116,11 @@ class CloneVoiceAgent(BaseAgent):
             if not is_authorized_to_clone_voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Not authorised to clone the voice")
 
+            ELEVENLABS_API_KEY = os.getenv(os.getenv("ELEVENLABS_API_KEY"))
+            if not ELEVENLABS_API_KEY:
+                    raise Exception("Elevenlabs API key not present in .env")
+            
+            audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
             self.output_message.actions.append(
@@ -104,13 +128,15 @@ class CloneVoiceAgent(BaseAgent):
                 )
             self.output_message.push_update()
 
-            os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-            download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
-            download_path = f"{DOWNLOADS_PATH}/{download_file_name}"
+            sample_files = self._download_audio_files(sample_audios)
 
-            self._download_audio_file(audio_url, local_path=download_path)
+            if not sample_files:
+                return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audioss")
 
-            voice = self.elevenlabs_tool.clone_audio(audio_url=download_path, name_of_voice=name_of_voice, description=description)
+            if elevenlabs_voice_id:
+                voice = audio_gen_tool.get_voice(voice_id=elevenlabs_voice_id)
+            else:
+                voice = audio_gen_tool.clone_audio(audio_urls=sample_files, name_of_voice=name_of_voice, description=description)
 
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
@@ -120,7 +146,7 @@ class CloneVoiceAgent(BaseAgent):
                 )
             self.output_message.push_update()
 
-            synthesised_audio = self.elevenlabs_tool.synthesis_text(voice=voice, text_to_synthesis=text_to_synthesis)
+            synthesised_audio = audio_gen_tool.synthesis_text(voice=voice, text_to_synthesis=text_to_synthesis)
             
             if not synthesised_audio:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
@@ -141,6 +167,7 @@ class CloneVoiceAgent(BaseAgent):
             media = self.videodb_tool.upload(
                 output_path, source_type="file_path", media_type="audio"
             )
+
             self.output_message.actions.append(
                 f"Uploaded generated audio to VideoDB with Audio ID {media['id']}"
             )
@@ -154,9 +181,18 @@ class CloneVoiceAgent(BaseAgent):
                     text=f"""Click <a href='{data_url}' download='{output_file_name}' target='_blank'>here</a> to download the audio
                     """,
                 )
+
             self.output_message.content.append(text_content)
             self.output_message.push_update()
             self.output_message.publish()
+
+            return AgentResponse(
+                status=AgentStatus.SUCCESS,
+                message=f"Agent {self.name} completed successfully.",
+                data={
+                    "elevenlabs_voice_id": voice.voice_id
+                }
+            )
         except Exception as e:
             logger.exception(f"Error in {self.agent_name}")
             text_content = TextContent(
@@ -169,8 +205,3 @@ class CloneVoiceAgent(BaseAgent):
             self.output_message.publish()
             error_message = f"Agent failed with error {e}"
             return AgentResponse(status=AgentStatus.ERROR, message=error_message)
-        return AgentResponse(
-            status=AgentStatus.SUCCESS,
-            message=f"Agent {self.name} completed successfully.",
-            data={},
-        )
