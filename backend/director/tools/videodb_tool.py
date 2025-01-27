@@ -54,7 +54,8 @@ class VideoDBTool:
                 }
             }
         except Exception as e:
-            raise Exception(f"Failed to create collection '{name}': {str(e)}")
+            logging.error(f"Failed to create collection '{name}': {e}")
+            raise Exception(f"Failed to create collection '{name}': {str(e)}") from e
         
     def delete_collection(self):
         """Delete the current collection."""

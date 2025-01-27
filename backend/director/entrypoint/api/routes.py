@@ -81,17 +81,41 @@ def create_collection():
             return {"message": "Collection name is required"}, 400
         
         collection_name = data["name"]
+        # Sanitize inputs
+        collection_name = secure_filename(collection_name.strip())
+        # Validate collection name
+        if not collection_name.strip() or len(collection_name) > 255:
+            return {"message": "Collection name must be between 1 and 255 characters"}, 400
+        if not all(c.isalnum() or c in {"-", "_", " "} for c in collection_name):
+            return {"message": "Collection name must contain only alphanumeric characters, spaces, hyphens, and underscores"}, 400
+        
         description = data.get("description", "")
+        # Sanitize description
+        description = description.strip()
+        # Validate description length
+        if len(description) > 1000:
+            return {"message": "Description must not exceed 1000 characters"}, 400
         
         videodb = VideoDBHandler()
+        # Check for duplicate names
+        existing_collections = videodb.get_collections()
+        if any(c["name"] == collection_name for c in existing_collections):
+            return {"message": "A collection with this name already exists"}, 400
         result = videodb.create_collection(collection_name, description)
         
         if result.get("success"):
-            return {"message": "Collection created successfully", "data": result}, 201
+            return {
+                "success": True,
+                "message": "Collection created successfully",
+                "collection": result["collection"]
+            }, 201
         else:
-            return {"message": "Failed to create collection", "error": result.get("error")}, 400
+            return {
+                "success": False,
+                "message": f"Failed to create collection: {result.get('error', 'Unknown error')}"
+            }, 400
     except Exception as e:
-        return {"message": str(e)}, 500
+        return {"success": False, "message": str(e)}, 500
 
 @videodb_bp.route("/collection/<collection_id>", methods=["DELETE"])
 def delete_collection(collection_id):
