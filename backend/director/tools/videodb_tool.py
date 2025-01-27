@@ -36,7 +36,26 @@ class VideoDBTool:
             }
             for collection in collections
         ]
-    
+
+    def create_collection(self, name, description=""):
+        """Create a new collection with the given name and description."""
+        if not name:
+            raise ValueError("Collection name is required to create a collection.")
+        
+        try:
+            new_collection = self.conn.create_collection(name, description)
+            return {
+                "success": True,
+                "message": f"Collection '{new_collection.id}' created successfully",
+                "collection": {
+                    "id": new_collection.id,
+                    "name": new_collection.name,
+                    "description": new_collection.description,
+                }
+            }
+        except Exception as e:
+            raise Exception(f"Failed to create collection '{name}': {str(e)}")
+        
     def delete_collection(self):
         """Delete the current collection."""
         if not self.collection:

@@ -72,6 +72,27 @@ def get_collection_or_all(collection_id):
     else:
         return videodb.get_collections()
 
+@videodb_bp.route("/collection", methods=["POST"])
+def create_collection():
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get("name"):
+            return {"message": "Collection name is required"}, 400
+        
+        collection_name = data["name"]
+        description = data.get("description", "")
+        
+        videodb = VideoDBHandler()
+        result = videodb.create_collection(collection_name, description)
+        
+        if result.get("success"):
+            return {"message": "Collection created successfully", "data": result}, 201
+        else:
+            return {"message": "Failed to create collection", "error": result.get("error")}, 400
+    except Exception as e:
+        return {"message": str(e)}, 500
+
 @videodb_bp.route("/collection/<collection_id>", methods=["DELETE"])
 def delete_collection(collection_id):
     try:
