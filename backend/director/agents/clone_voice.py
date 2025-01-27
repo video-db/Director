@@ -10,14 +10,13 @@ from director.tools.videodb_tool import VideoDBTool
 from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 CLONE_VOICE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "sample_audios": {
             "type": "array",
-            "description": "List of audio file URLs to add",
+            "description": "List of audio file URLs to given by the urser to clone",
             "items": {
                 "type": "string",
                 "description": "The URL of the audio file"
@@ -25,8 +24,7 @@ CLONE_VOICE_AGENT_PARAMETERS = {
         },
         "text_to_synthesis": {
             "type": "string",
-            "description": "The text which the user wants to convert into audio in the voice given in the audio_url",
-            "enum": ["url", "local_file"],
+            "description": "The text which the user wants to convert into audio in the voice given in the sample audios",
         },
         "name_of_voice" : {
             "type": "string",
@@ -49,7 +47,7 @@ CLONE_VOICE_AGENT_PARAMETERS = {
             "description": "the ID of the collection to store the output audio file",
         }
     },
-    "required": ["sample_audios", "text_to_synthesis", "is_authorized_to_clone_voice", "collection_id", "name"],
+    "required": ["sample_audios", "text_to_synthesis", "is_authorized_to_clone_voice", "collection_id", "name_of_voice"],
 }
 
 class CloneVoiceAgent(BaseAgent):
@@ -94,7 +92,7 @@ class CloneVoiceAgent(BaseAgent):
             is_authorized_to_clone_voice: str,
             collection_id: str,
             description="",
-            elevenlabs_voice_id=None,
+            cloned_voice_id=None,
             *args, 
             **kwargs) -> AgentResponse:
         """
@@ -106,7 +104,7 @@ class CloneVoiceAgent(BaseAgent):
         :param str name_of_voice: The name to be given to the cloned voice
         :param str descrption: The description about how the voice sounds like
         :param str collection_id: The collection id to store generated voice
-        :param str elevenlabs_voice_id: The voice ID generated from the previously given voice which can be used for cloning
+        :param str cloned_voice_id: The voice ID generated from the previously given voice which can be used for cloning
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about voice cloning.
@@ -116,27 +114,30 @@ class CloneVoiceAgent(BaseAgent):
             if not is_authorized_to_clone_voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Not authorised to clone the voice")
 
-            ELEVENLABS_API_KEY = os.getenv(os.getenv("ELEVENLABS_API_KEY"))
+            ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
             if not ELEVENLABS_API_KEY:
                     raise Exception("Elevenlabs API key not present in .env")
             
             audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
-            self.output_message.actions.append(
-                    f"Cloning the voice"
-                )
-            self.output_message.push_update()
-
             sample_files = self._download_audio_files(sample_audios)
 
             if not sample_files:
                 return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audioss")
 
-            if elevenlabs_voice_id:
-                voice = audio_gen_tool.get_voice(voice_id=elevenlabs_voice_id)
+            if cloned_voice_id:
+                self.output_message.actions.append(
+                    f"Using previously generated cloned voice"
+                )
+                self.output_message.push_update()
+                voice = audio_gen_tool.get_voice(voice_id=cloned_voice_id)
             else:
-                voice = audio_gen_tool.clone_audio(audio_urls=sample_files, name_of_voice=name_of_voice, description=description)
+                self.output_message.actions.append(
+                    f"Cloning the voice"
+                )
+                self.output_message.push_update()
+                voice = audio_gen_tool.clone_audio(audio_files=sample_files, name_of_voice=name_of_voice, description=description)
 
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
@@ -190,7 +191,7 @@ class CloneVoiceAgent(BaseAgent):
                 status=AgentStatus.SUCCESS,
                 message=f"Agent {self.name} completed successfully.",
                 data={
-                    "elevenlabs_voice_id": voice.voice_id,
+                    "cloned_voice_id": voice.voice_id,
                     "audio_id": media["id"]
                 }
             )
