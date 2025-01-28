@@ -1,4 +1,0 @@
-[tool.ruff]
-select = ["E", "F", "W", "C90"]  # Select rules (e.g., PEP8 violations, common issues)
-ignore = ["E501"]  # Ignore specific rules (e.g., line length)
-line-length = 88   # Set line length limit

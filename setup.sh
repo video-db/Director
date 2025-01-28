@@ -246,36 +246,15 @@ echo "
 echo "🔑 VideoDB API Key (https://console.videodb.io/) (Press Enter to skip)"
 read VIDEO_DB_API_KEY
 
-echo "🔧 Choose your database type (postgres/sqlite) (Press Enter to skip, default is sqlite)"
-read DB_TYPE
-
-# Set default DB_TYPE if not provided
-if [ -z "$DB_TYPE" ]; then
-    DB_TYPE="sqlite"
-fi
-
 # Create a .env file and add the content
-echo "📝 Creating .env file with provided API keys and database type..."
+echo "📝 Creating .env file with provided API keys..."
 cat <<EOT > .env
 VIDEO_DB_API_KEY=$VIDEO_DB_API_KEY
-DB_TYPE=$DB_TYPE
 EOT
 cd ..
 
 make install-be
-# Initialize the database based on DB_TYPE in .env
-if [ -f .env ]; then
-    DB_TYPE=$(grep DB_TYPE .env | cut -d '=' -f2)
-    if [ "$DB_TYPE" == "postgres" ]; then
-        make init-postgres-db
-    elif [ "$DB_TYPE" == "sqlite" ]; then
-        make init-sqlite-db
-    else
-        echo "❌ Unsupported DB_TYPE: $DB_TYPE. Please set DB_TYPE to either 'postgres' or 'sqlite' in .env."
-    fi
-else
-    echo "❌ .env file not found. Please create a .env file with DB_TYPE set to either 'postgres' or 'sqlite'."
-fi
+make init-sqlite-db
 
 # Frontend setup
 cd frontend
