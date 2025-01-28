@@ -16,7 +16,7 @@ CLONE_VOICE_AGENT_PARAMETERS = {
     "properties": {
         "sample_audios": {
             "type": "array",
-            "description": "List of audio file URLs to given by the urser to clone",
+            "description": "List of audio file URLs provided by the user to clone",
             "items": {
                 "type": "string",
                 "description": "The URL of the audio file"
@@ -68,7 +68,7 @@ class CloneVoiceAgent(BaseAgent):
                 response = requests.get(audio_url, stream=True)
                 response.raise_for_status()
 
-                if 'audio/mpeg' not in response.headers.get('Content-Type', ''):
+                if not response.headers.get('Content-Type', '').startswith('audio'):
                     raise ValueError(f"The URL does not point to an MP3 file: {audio_url}")
 
                 download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
@@ -89,7 +89,7 @@ class CloneVoiceAgent(BaseAgent):
             sample_audios: list[str],
             text_to_synthesis: str,
             name_of_voice: str,
-            is_authorized_to_clone_voice: str,
+            is_authorized_to_clone_voice: bool,
             collection_id: str,
             description="",
             cloned_voice_id=None,
@@ -124,27 +124,21 @@ class CloneVoiceAgent(BaseAgent):
             sample_files = self._download_audio_files(sample_audios)
 
             if not sample_files:
-                return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audioss")
+                return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audios")
 
             if cloned_voice_id:
-                self.output_message.actions.append(
-                    f"Using previously generated cloned voice"
-                )
+                self.output_message.actions.append("Using previously generated cloned voice")
                 self.output_message.push_update()
                 voice = audio_gen_tool.get_voice(voice_id=cloned_voice_id)
             else:
-                self.output_message.actions.append(
-                    f"Cloning the voice"
-                )
+                self.output_message.actions.append("Cloning the voice")
                 self.output_message.push_update()
                 voice = audio_gen_tool.clone_audio(audio_files=sample_files, name_of_voice=name_of_voice, description=description)
 
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
             
-            self.output_message.actions.append(
-                    f"Synthesising the given text"
-                )
+            self.output_message.actions.append("Synthesising the given text")
             self.output_message.push_update()
 
             synthesised_audio = audio_gen_tool.synthesis_text(voice=voice, text_to_synthesis=text_to_synthesis)
