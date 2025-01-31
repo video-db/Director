@@ -87,32 +87,8 @@ SALES_ASSISTANT_PROMPT = """
         Mention when they need the product, when they want to test the product etc. Important details about the timelines must be added here.
 
 """
-DUMMY_TRANSCRIPT = """
 
-[Sales Rep]: Hi John, thanks for taking the time today. I understand you're looking for a new CRM solution for Becket and Stones.  
 
-[Client]: Yeah, our team is expanding, and we need something scalable. We want a system that integrates well with Salesforce.  
-
-[Sales Rep]: That makes sense. Do you have a budget range in mind?  
-
-[Client]: We're looking at something around **$12,500 to $17,500** annually.  
-
-[Sales Rep]: Got it. Who will be making the final decision on this?  
-
-[Client]: That would be me. I'm the **VP of Sales**, so I make the final call.  
-
-[Sales Rep]: Great! Would you say this need is critical or just a nice-to-have?  
-
-[Client]: It's **important**, but we could operate without it for now.  
-
-[Sales Rep]: Understood. What's your timeline for making a decision?  
-
-[Client]: We're planning for the **next quarter**.  
-
-[Sales Rep]: Perfect! I'll schedule a presentation for next week to go over our solution in more detail.  
-
-[Client]: Sounds good!  
-"""
 class SalesAssistantAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "sales_assistant"
