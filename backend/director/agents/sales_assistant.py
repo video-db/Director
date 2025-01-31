@@ -58,7 +58,7 @@ SALES_ASSISTANT_PROMPT = """
     default: appointmentscheduled
 
     Field: budget
-    type: Multi line text (Max words: 150)
+    type: Multi line text (Around 150 words description)
     description: 
         The multi line text answer for this field must consist of a detailed analysis of the budget situation of the company. 
         If numbers are mentioned, do include those details aswell.
@@ -66,7 +66,7 @@ SALES_ASSISTANT_PROMPT = """
 
 
     Field: authority
-    type: Multi line text (Max words: 150)
+    type: Multi line text (Around 150 words description)
     description: 
         The multi line text answer for this field must consist of a detailed analysis of the authority the client possesses for the conclusion of the deal. 
         If decision making powers are mentioned, do include those details.
@@ -74,22 +74,45 @@ SALES_ASSISTANT_PROMPT = """
         
 
     Field: need
-    type: Multi line text (Max words: 150)
+    type: Multi line text (Around 150 words description)
     description: 
         The multi line text answer for this field must consist of a detailed analysis of how much the client wants the product. 
         Need can be found from the level or urgency, the depth or importance of problem they want to get solved or the amount of hurry they have
         
 
     Field: timeline
-    type: Multi line text (Max words: 150)
+    type: Multi line text (Around 150 words description)
     description: 
         The multi line text answer for this field must consist of a detailed analysis of how the timeline of the project looks like
         Mention when they need the product, when they want to test the product etc. Important details about the timelines must be added here.
 
-If any field is missing in the transcript, return **'Unknown'** or any suitable value for it if the "default" is not present.  
- 
 """
+DUMMY_TRANSCRIPT = """
 
+[Sales Rep]: Hi John, thanks for taking the time today. I understand you're looking for a new CRM solution for Becket and Stones.  
+
+[Client]: Yeah, our team is expanding, and we need something scalable. We want a system that integrates well with Salesforce.  
+
+[Sales Rep]: That makes sense. Do you have a budget range in mind?  
+
+[Client]: We're looking at something around **$12,500 to $17,500** annually.  
+
+[Sales Rep]: Got it. Who will be making the final decision on this?  
+
+[Client]: That would be me. I'm the **VP of Sales**, so I make the final call.  
+
+[Sales Rep]: Great! Would you say this need is critical or just a nice-to-have?  
+
+[Client]: It's **important**, but we could operate without it for now.  
+
+[Sales Rep]: Understood. What's your timeline for making a decision?  
+
+[Client]: We're planning for the **next quarter**.  
+
+[Sales Rep]: Perfect! I'll schedule a presentation for next week to go over our solution in more detail.  
+
+[Client]: Sounds good!  
+"""
 class SalesAssistantAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "sales_assistant"
@@ -159,6 +182,8 @@ class SalesAssistantAgent(BaseAgent):
                 videodb_tool.index_spoken_words(video_id)
                 transcript_text = videodb_tool.get_transcript(video_id)
 
+
+            # transcript_text = DUMMY_TRANSCRIPT
 
             self.output_message.actions.append("Processing the transcript")
             self.output_message.push_update()

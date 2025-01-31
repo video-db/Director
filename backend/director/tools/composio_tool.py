@@ -38,10 +38,10 @@ def composio_tool(task: str, auth_data: dict = None, tools_type:ToolsType=ToolsT
         )
 
     if tools_type == ToolsType.apps:
-        tools = toolset.get_tools(apps=os.getenv("COMPOSIO_APPS"))
+        tools = toolset.get_tools(apps=json.loads(os.getenv("COMPOSIO_APPS")))
 
     elif tools_type == ToolsType.actions:
-        tools = toolset.get_tools(actions=os.getenv("COMPOSIO_ACTIONS"))
+        tools = toolset.get_tools(actions=json.loads(os.getenv("COMPOSIO_ACTIONS")))
 
 
     response = openai_client.chat.completions.create(
