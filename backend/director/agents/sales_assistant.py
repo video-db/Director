@@ -58,20 +58,33 @@ SALES_ASSISTANT_PROMPT = """
     default: appointmentscheduled
 
     Field: budget
-    type: text (which signifies a budget range for eg: $1500 - $2000, $10000, etc)
-    default: undisclosed
+    type: Multi line text (Max words: 150)
+    description: 
+        The multi line text answer for this field must consist of a detailed analysis of the budget situation of the company. 
+        If numbers are mentioned, do include those details aswell.
+        If the deal is overpriced, underpriced or considered fair, should also be added if mentioned
+
 
     Field: authority
-    Possible Answers: Decision Maker, Influencer, Champion, No Authority
-    default: Influencar
+    type: Multi line text (Max words: 150)
+    description: 
+        The multi line text answer for this field must consist of a detailed analysis of the authority the client possesses for the conclusion of the deal. 
+        If decision making powers are mentioned, do include those details.
+        If the client mention that they are the final signing authority, or any other details signifying their level of power in the deal. mention them
+        
 
     Field: need
-    Possible Answers: Critical, Important, Nice to Have, Not a Fit
-    default: Important
+    type: Multi line text (Max words: 150)
+    description: 
+        The multi line text answer for this field must consist of a detailed analysis of how much the client wants the product. 
+        Need can be found from the level or urgency, the depth or importance of problem they want to get solved or the amount of hurry they have
+        
 
     Field: timeline
-    Possible Answers: This Month, This Quarter, Next Quarter, Next Year,Uncertain
-    default: This Quarter
+    type: Multi line text (Max words: 150)
+    description: 
+        The multi line text answer for this field must consist of a detailed analysis of how the timeline of the project looks like
+        Mention when they need the product, when they want to test the product etc. Important details about the timelines must be added here.
 
 If any field is missing in the transcript, return **'Unknown'** or any suitable value for it if the "default" is not present.  
  
