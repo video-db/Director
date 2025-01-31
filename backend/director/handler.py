@@ -138,7 +138,7 @@ class SessionHandler:
 
 
 class VideoDBHandler:
-    def __init__(self, collection_id):
+    def __init__(self, collection_id="default"):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
     def upload(
@@ -153,7 +153,10 @@ class VideoDBHandler:
     def get_collections(self):
         """Get all collections."""
         return self.videodb_tool.get_collections()
-    
+
+    def create_collection(self, name, description=""):
+        return self.videodb_tool.create_collection(name, description)
+
     def delete_collection(self):
         return self.videodb_tool.delete_collection()
 
