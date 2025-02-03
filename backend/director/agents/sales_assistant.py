@@ -51,7 +51,6 @@ SALES_ASSISTANT_PROMPT = """
     Field: dealname
     description: (The company or individuals name with whom we are making a deal with)
     type: text (which says the name of person we are dealing with or the company)
-    default: Deal with John Doe
 
     Field: dealstage
     Possible Answers: appointmentscheduled, qualifiedtobuy, presentationscheduled, decisionmakerboughtin, contractsent, closedwon, closedlost
@@ -210,8 +209,8 @@ class SalesAssistantAgent(BaseAgent):
                 f"{json.dumps(composio_response)}"
                 "If there are any errors or if it was not successful, do tell about that as well"
             )
-            composio_response = ContextMessage(content=llm_prompt, role=RoleTypes.user)
-            llm_response = self.llm.chat_completions([composio_response.to_llm_msg()])
+            final_message = ContextMessage(content=llm_prompt, role=RoleTypes.user)
+            llm_response = self.llm.chat_completions([final_message.to_llm_msg()])
             if llm_response.status == LLMResponseStatus.ERROR:
                 raise Exception(f"LLM Failed with error {llm_response.content}")
 
