@@ -1,6 +1,7 @@
 import os
 import requests
 import videodb
+import logging
 
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
 from videodb.timeline import Timeline
@@ -36,6 +37,36 @@ class VideoDBTool:
             for collection in collections
         ]
 
+    def create_collection(self, name, description=""):
+        """Create a new collection with the given name and description."""
+        if not name:
+            raise ValueError("Collection name is required to create a collection.")
+        
+        try:
+            new_collection = self.conn.create_collection(name, description)
+            return {
+                "success": True,
+                "message": f"Collection '{new_collection.id}' created successfully",
+                "collection": {
+                    "id": new_collection.id,
+                    "name": new_collection.name,
+                    "description": new_collection.description,
+                }
+            }
+        except Exception as e:
+            logging.error(f"Failed to create collection '{name}': {e}")
+            raise Exception(f"Failed to create collection '{name}': {str(e)}") from e
+        
+    def delete_collection(self):
+        """Delete the current collection."""
+        if not self.collection:
+            raise ValueError("Collection ID is required to delete a collection.")
+        try:
+            self.collection.delete()
+            return {"success": True, "message": f"Collection {self.collection.id} deleted successfully"}
+        except Exception as e:
+            raise Exception(f"Failed to delete collection {self.collection.id}: {str(e)}")
+
     def get_video(self, video_id):
         """Get a video by ID."""
         video = self.collection.get_video(video_id)
@@ -48,6 +79,24 @@ class VideoDBTool:
             "length": video.length,
             "thumbnail_url": video.thumbnail_url,
         }
+
+    def delete_video(self, video_id):
+        """Delete a specific video by its ID."""
+        if not video_id:
+            raise ValueError("Video ID is required to delete a video.")
+        try:
+            video = self.collection.get_video(video_id)
+            if not video:
+                raise ValueError(f"Video with ID {video_id} not found in collection {self.collection.id}.")
+            
+            video.delete()
+            return {"success": True, "message": f"Video {video.id} deleted successfully"}
+        except ValueError as ve:
+            logging.error(f"ValueError while deleting video: {ve}")
+            raise ve
+        except Exception as e:
+            logging.exception(f"Unexpected error occurred while deleting video {video_id}")
+            raise Exception("An unexpected error occurred while deleting the video. Please try again later.")
 
     def get_videos(self):
         """Get all videos in a collection."""

@@ -33,6 +33,7 @@ from director.core.reasoning import ReasoningEngine
 from director.db.base import BaseDB
 from director.db import load_db
 from director.tools.videodb_tool import VideoDBTool
+from flask import current_app as app
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ class SessionHandler:
 
 
 class VideoDBHandler:
-    def __init__(self, collection_id):
+    def __init__(self, collection_id="default"):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
     def upload(
@@ -155,9 +156,19 @@ class VideoDBHandler:
         """Get all collections."""
         return self.videodb_tool.get_collections()
 
+    def create_collection(self, name, description=""):
+        return self.videodb_tool.create_collection(name, description)
+
+    def delete_collection(self):
+        return self.videodb_tool.delete_collection()
+
     def get_video(self, video_id):
         """Get a video by ID."""
         return self.videodb_tool.get_video(video_id)
+
+    def delete_video(self, video_id):
+        """Delete a specific video by its ID."""
+        return self.videodb_tool.delete_video(video_id)
 
     def get_videos(self):
         """Get all videos in a collection."""
@@ -169,7 +180,7 @@ class ConfigHandler:
         """Check the configuration of the server."""
         videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False
 
-        db = load_db(os.getenv("SERVER_DB_TYPE", "sqlite"))
+        db = load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
         db_configured = db.health_check()
         return {
             "videodb_configured": videodb_configured,
