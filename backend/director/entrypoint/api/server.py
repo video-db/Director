@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 from director.entrypoint.api import create_app
 
+from devzery import Devzery
+
 load_dotenv()
 
 
@@ -79,6 +81,13 @@ configs = dict(local=LocalAppConfig, production=ProductionAppConfig)
 
 # By default, the server is configured to run in development mode. To run in production mode, set the `SERVER_ENV` environment variable to `production`.
 app = create_app(app_config=configs[os.getenv("SERVER_ENV", "local")])
+
+devzery = Devzery(
+    api_key=os.getenv("DEVZERY_API_KEY"),
+    source_name=os.getenv("DEVZERY_SOURCE_NAME")
+)
+
+devzery.flask_middleware(app)
 
 if __name__ == "__main__":
     app.run(
