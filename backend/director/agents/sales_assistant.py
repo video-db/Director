@@ -140,8 +140,11 @@ class SalesAssistantAgent(BaseAgent):
             text_content = TextContent(
                 agent_name=self.agent_name,
                 status=MsgStatus.progress,
-                status_message="Making magic happen with VideoDB Director..",
+                status_message="Making magic happen with VideoDB Director...",
             )
+
+            self.output_message.content.append(text_content)
+            self.output_message.push_update()
 
             videodb_tool = VideoDBTool(collection_id=collection_id)
 
@@ -203,9 +206,9 @@ class SalesAssistantAgent(BaseAgent):
 
             llm_prompt = (
                 f"User has asked to run a task: {composio_prompt} in Composio. \n"
-                "Format the following reponse into text.\n"
-                "Give the output which can be directly send to use \n"
-                "Don't add any extra text \n"
+                "Dont mention the action name directly as is"
+                "Comment on the fact whether the composio call was sucessful or not"
+                "Make this message short and crisp"
                 f"{json.dumps(composio_response)}"
                 "If there are any errors or if it was not successful, do tell about that as well"
             )
@@ -217,7 +220,7 @@ class SalesAssistantAgent(BaseAgent):
             text_content.text = llm_response.content
             text_content.status = MsgStatus.success
             text_content.status_message = "Here is the response from Composio"
-
+            self.output_message.publish()
         except Exception as e:
             logger.exception(f"Error in {self.agent_name}")
             text_content.status = MsgStatus.error
