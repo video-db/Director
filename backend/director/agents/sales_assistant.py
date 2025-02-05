@@ -160,9 +160,6 @@ class SalesAssistantAgent(BaseAgent):
                 videodb_tool.index_spoken_words(video_id)
                 transcript_text = videodb_tool.get_transcript(video_id)
 
-
-            # transcript_text = DUMMY_TRANSCRIPT
-
             self.output_message.actions.append("Processing the transcript")
             self.output_message.push_update()
 
