@@ -217,7 +217,7 @@ class SalesAssistantAgent(BaseAgent):
 
             text_content.text = llm_response.content
             text_content.status = MsgStatus.success
-            text_content.status_message = "Here is the response from Composio"
+            text_content.status_message = "Here is the result:"
             self.output_message.publish()
         except Exception as e:
             logger.exception(f"Error in {self.agent_name}")
