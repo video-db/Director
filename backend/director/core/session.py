@@ -198,7 +198,7 @@ class OutputMessage(BaseMessage):
     def push_update(self):
         """Publish the message to the socket."""
         try:
-            emit("chat", self.model_dump(), namespace="/chat")
+            self._publish(self)
         except Exception as e:
             print(f"Error in emitting message: {str(e)}")
 
