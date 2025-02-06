@@ -85,6 +85,11 @@ SALES_ASSISTANT_PROMPT = """
         The multi line text answer for this field must consist of a detailed analysis of how the timeline of the project looks like
         Mention when they need the product, when they want to test the product etc. Important details about the timelines must be added here.
 
+    Since this is a BANT analysis. Do not forget to generate a response for these properties.
+    ALL THE ABOVE FIELDS ARE MANDATORY TO BE GENERATED AN OUTPUT FOR.
+    AN ANALYSIS FOR budget, authority, need and timeline IS COMPULSORY
+
+    Only give answers to the field. Do not give any additional texts such as introduction, conclusion etc.
 """
 
 
@@ -229,5 +234,5 @@ class SalesAssistantAgent(BaseAgent):
         return AgentResponse(
             status=AgentStatus.SUCCESS,
             message=f"Agent {self.name} completed successfully.",
-            data={final_message: llm_response.content},
+            data={},
         )
