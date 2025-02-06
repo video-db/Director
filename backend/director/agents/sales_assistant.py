@@ -222,7 +222,7 @@ class SalesAssistantAgent(BaseAgent):
 
             text_content.text = llm_response.content
             text_content.status = MsgStatus.success
-            text_content.status_message = "Here is the result:"
+            text_content.status_message = "Here's the response from your sales assistant"
             self.output_message.publish()
         except Exception as e:
             logger.exception(f"Error in {self.agent_name}")
