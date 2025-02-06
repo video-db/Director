@@ -37,11 +37,11 @@ PARAMS_CONFIG = {
             "description": "The model name to use for image-to-video generation",
             "default": "fal-ai/fast-svd-lcm",
             "enum": [
-                "fal-ai/haiper-video-v2/image-to-video",
+                "fal-ai/haiper-video/v2/image-to-video",
                 "fal-ai/luma-dream-machine/image-to-video",
-                "fal-ai/kling-video/v1/standard/image-to-video",
-                "fal-ai/kling-video/v1/pro/image-to-video",
-                "fal-ai/kling-video/v1.5/pro/image-to-video",
+                # "fal-ai/kling-video/v1/standard/image-to-video",
+                # "fal-ai/kling-video/v1/pro/image-to-video",
+                # "fal-ai/kling-video/v1.5/pro/image-to-video",
                 "fal-ai/cogvideox-5b/image-to-video",
                 "fal-ai/ltx-video/image-to-video",
                 "fal-ai/stable-video",
@@ -144,12 +144,12 @@ class FalVideoGenerationTool:
             model_name = config.get("model_name", "fal-ai/fast-svd-lcm")
             arguments = {"image_url": image_url, "duration": duration}
 
-            if model_name == "fal-ai/haiper-video-v2/image-to-video":
+            if model_name == "fal-ai/haiper-video/v2/image-to-video":
                 arguments["duration"] = 6
 
             if prompt:
                 arguments["prompt"] = prompt
-
+            
             res = fal_client.run(
                 model_name,
                 arguments=arguments,

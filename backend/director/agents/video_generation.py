@@ -43,7 +43,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
             The type of video generation to perform
             Possible values:
                 - text_to_video: generates a video from a text prompt
-                - image_to_video: generates a video using an image as a base
+                - image_to_video: generates a video using an image as a base. The feature is only available in fal engine. Stability AI does not support this feature.
             """,
         },
         "text_to_video": {
@@ -80,7 +80,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
             "properties": {
                 "image_id": {
                     "type": "string",
-                     "description": "The ID of the image in VideoDB to use for video generation",
+                    "description": "The ID of the image in VideoDB to use for video generation",
                 },
                 "name": {
                     "type": "string",
@@ -88,7 +88,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                 },
                 "prompt": {
                     "type": "string",
-                    "description": "Optional text prompt to guide the video generation",
+                    "description": "Text prompt to guide the video generation",
                 },
                 "duration": {
                     "type": "number",
@@ -100,13 +100,8 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
                     "properties": FAL_VIDEO_GEN_PARAMS_CONFIG["image_to_video"],
                     "description": "Config to use when fal engine is used",
                 },
-                "stabilityai_config": {
-                    "type": "object",
-                    "properties": STABILITYAI_PARAMS_CONFIG["image_to_video"],
-                    "description": "Config to use when stabilityai engine is used",
-                },
             },
-            "required": ["image_id", "name"],
+            "required": ["prompt", "image_id", "name"],
         },
     },
     "required": ["job_type", "collection_id", "engine"],
@@ -172,6 +167,10 @@ class VideoGenerationAgent(BaseAgent):
                 raise Exception(f"{engine} not supported")
 
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+            if not os.access(DOWNLOADS_PATH, os.W_OK):
+                raise PermissionError(
+                    f"No write permission for output directory: {output_dir}"
+                )
             output_file_name = f"video_{job_type}_{str(uuid.uuid4())}.mp4"
             output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
 
@@ -198,53 +197,54 @@ class VideoGenerationAgent(BaseAgent):
                 duration = image_to_video.get("duration", 5)
                 config = image_to_video.get(config_key, {})
                 prompt = image_to_video.get("prompt")
-            
+
                 # Validate duration bounds
-                if not isinstance(duration, (int, float)) or duration <= 0 or duration > 60:
-                    raise ValueError("Duration must be a positive number between 1 and 60 seconds")
-
-                # Validate output path early to fail fast
-                output_dir = os.path.dirname(output_path)
-                if not os.access(output_dir, os.W_OK):
-                    raise PermissionError(f"No write permission for output directory: {output_dir}")
-
-                # Use temporary file for atomic operations
-                temp_output_path = f"{output_path}.tmp"
+                if (
+                    not isinstance(duration, (int, float))
+                    or duration <= 0
+                    or duration > 60
+                ):
+                    raise ValueError(
+                        "Duration must be a positive number between 1 and 60 seconds"
+                    )
 
                 if not image_id:
-                    raise ValueError("Missing required parameter: 'image_id' for image-to-video generation")
-
-                try:
-                    image_data = self.videodb_tool.get_image(image_id)
-                    if not image_data:
-                        raise ValueError(f"Image with ID '{image_id}' not found in collection '{collection_id}'. Please verify the image ID.")
-                    
-                    image_url = image_data.get("url")
-                    if not image_url:
-                        raise ValueError(f"Image with ID '{image_id}' exists but has no associated URL. This might indicate data corruption.")
-                    
-                    self.output_message.actions.append(
-                        f"Generating video using <b>{engine}</b> for image URL <i>{image_url}</i>"
+                    raise ValueError(
+                        "Missing required parameter: 'image_id' for image-to-video generation"
                     )
-                    if not stealth_mode:
-                        self.output_message.push_update()
 
-                    video_gen_tool.image_to_video(
-                        image_url=image_url,
-                        save_at=temp_output_path,
-                        duration=duration,
-                        config=config,
-                        prompt=prompt,
+                image_data = self.videodb_tool.get_image(image_id)
+                if not image_data:
+                    raise ValueError(
+                        f"Image with ID '{image_id}' not found in collection "
+                        f"'{collection_id}'. Please verify the image ID."
                     )
-                    
-                    # Atomic move to final location
-                    os.replace(temp_output_path, output_path)
 
-                finally:
-                    # Cleanup temporary file if it exists
-                    if os.path.exists(temp_output_path):
-                        os.unlink(temp_output_path)
+                image_url = None
+                if isinstance(image_data.get("url"), str) and image_data.get("url"):
+                    image_url = image_data["url"]
+                else:
+                    image_url = self.videodb_tool.generate_image_url(image_id)
 
+                if not image_url:
+                    raise ValueError(
+                        f"Image with ID '{image_id}' exists but has no "
+                        f"associated URL. This might indicate data corruption."
+                    )
+
+                self.output_message.actions.append(
+                    f"Generating video using <b>{engine}</b> for <a href='{image_url}'>url</a>"
+                )
+                if not stealth_mode:
+                    self.output_message.push_update()
+
+                video_gen_tool.image_to_video(
+                    image_url=image_url,
+                    save_at=output_path,
+                    duration=duration,
+                    config=config,
+                    prompt=prompt,
+                )
             else:
                 raise Exception(f"{job_type} not supported")
 
