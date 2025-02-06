@@ -208,6 +208,7 @@ class SalesAssistantAgent(BaseAgent):
                 "Make this message short and crisp"
                 f"{json.dumps(composio_response)}"
                 "If there are any errors or if it was not successful, do tell about that as well"
+                "If the response is successful, Show the details given to create a new deal in a markdown table format"
             )
             final_message = ContextMessage(content=llm_prompt, role=RoleTypes.user)
             llm_response = self.llm.chat_completions([final_message.to_llm_msg()])
@@ -228,5 +229,5 @@ class SalesAssistantAgent(BaseAgent):
         return AgentResponse(
             status=AgentStatus.SUCCESS,
             message=f"Agent {self.name} completed successfully.",
-            data={},
+            data={final_message: llm_response.content},
         )
