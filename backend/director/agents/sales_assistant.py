@@ -96,7 +96,7 @@ SALES_ASSISTANT_PROMPT = """
 class SalesAssistantAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "sales_assistant"
-        self.description = "This agent will transcribe sales calls, automatically create deal summaries & update CRM software like Salesforce & Hubspot"
+        self.description = "This agent will transcribe, study and analyse sales calls, automatically create deal summaries & update CRM software like Salesforce & Hubspot"
         self.parameters = SALES_ASSISTANT_PARAMETER
         self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
