@@ -36,6 +36,40 @@ class VideoDBTool:
             }
             for collection in collections
         ]
+    def get_image(self, image_id: str = None, image_url: str = None):
+        """
+        Fetch image details by ID or validate an image URL.
+        """
+        if image_id:
+            try:
+                image = self.collection.get_image(image_id)
+                if not getattr(image, "url", None):
+                    raise Exception(f"Image with ID {image_id} has no associated URL.")
+                return {
+                    "id": image.id,
+                    "url": image.url,
+                    "name": image.name,
+                    "description": getattr(image, "description", None),
+                    "collection_id": image.collection_id,
+                }
+            except Exception as e:
+                raise Exception(f"Failed to fetch image with ID {image_id}: {e}")
+
+        elif image_url:
+            try:
+                response = requests.head(image_url)
+                response.raise_for_status()
+                return {
+                    "url": image_url,
+                    "status": "Image URL is valid and accessible",
+                    "content_type": response.headers.get("Content-Type"),
+                    "content_length": response.headers.get("Content-Length"),
+                }
+            except Exception as e:
+                raise Exception(f"Failed to validate image URL {image_url}: {e}")
+
+        else:
+            raise ValueError("Either 'image_id' or 'image_url' must be provided.")
 
     def create_collection(self, name, description=""):
         """Create a new collection with the given name and description."""

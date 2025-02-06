@@ -38,11 +38,12 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
         },
         "job_type": {
             "type": "string",
-            "enum": ["text_to_video"],
+            "enum": ["text_to_video", "image_to_video"],
             "description": """
             The type of video generation to perform
             Possible values:
                 - text_to_video: generates a video from a text prompt
+                - image_to_video: generates a video using an image as a base
             """,
         },
         "text_to_video": {
@@ -74,6 +75,39 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
             },
             "required": ["prompt", "name"],
         },
+        "image_to_video": {
+            "type": "object",
+            "properties": {
+                "image_id": {
+                    "type": "string",
+                     "description": "The ID of the image in VideoDB to use for video generation",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Description of the video generation run",
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "Optional text prompt to guide the video generation",
+                },
+                "duration": {
+                    "type": "number",
+                    "description": "The duration of the video in seconds",
+                    "default": 5,
+                },
+                "fal_config": {
+                    "type": "object",
+                    "properties": FAL_VIDEO_GEN_PARAMS_CONFIG["image_to_video"],
+                    "description": "Config to use when fal engine is used",
+                },
+                "stabilityai_config": {
+                    "type": "object",
+                    "properties": STABILITYAI_PARAMS_CONFIG["image_to_video"],
+                    "description": "Config to use when stabilityai engine is used",
+                },
+            },
+            "required": ["image_id", "name"],
+        },
     },
     "required": ["job_type", "collection_id", "engine"],
 }
@@ -92,6 +126,7 @@ class VideoGenerationAgent(BaseAgent):
         job_type: str,
         engine: str,
         text_to_video: Optional[dict] = None,
+        image_to_video: Optional[dict] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -101,6 +136,7 @@ class VideoGenerationAgent(BaseAgent):
         :param job_type: The type of video generation job to perform
         :param engine: The engine to use for video generation
         :param text_to_video: The text to convert to video
+        :param image_to_video: The image to convert to video
         :param args: Additional positional arguments
         :param kwargs: Additional keyword arguments
         :return: Response containing the generated video ID
@@ -156,6 +192,59 @@ class VideoGenerationAgent(BaseAgent):
                     duration=duration,
                     config=config,
                 )
+            elif job_type == "image_to_video":
+                image_id = image_to_video.get("image_id")
+                video_name = image_to_video.get("name")
+                duration = image_to_video.get("duration", 5)
+                config = image_to_video.get(config_key, {})
+                prompt = image_to_video.get("prompt")
+            
+                # Validate duration bounds
+                if not isinstance(duration, (int, float)) or duration <= 0 or duration > 60:
+                    raise ValueError("Duration must be a positive number between 1 and 60 seconds")
+
+                # Validate output path early to fail fast
+                output_dir = os.path.dirname(output_path)
+                if not os.access(output_dir, os.W_OK):
+                    raise PermissionError(f"No write permission for output directory: {output_dir}")
+
+                # Use temporary file for atomic operations
+                temp_output_path = f"{output_path}.tmp"
+
+                if not image_id:
+                    raise ValueError("Missing required parameter: 'image_id' for image-to-video generation")
+
+                try:
+                    image_data = self.videodb_tool.get_image(image_id)
+                    if not image_data:
+                        raise ValueError(f"Image with ID '{image_id}' not found in collection '{collection_id}'. Please verify the image ID.")
+                    
+                    image_url = image_data.get("url")
+                    if not image_url:
+                        raise ValueError(f"Image with ID '{image_id}' exists but has no associated URL. This might indicate data corruption.")
+                    
+                    self.output_message.actions.append(
+                        f"Generating video using <b>{engine}</b> for image URL <i>{image_url}</i>"
+                    )
+                    if not stealth_mode:
+                        self.output_message.push_update()
+
+                    video_gen_tool.image_to_video(
+                        image_url=image_url,
+                        save_at=temp_output_path,
+                        duration=duration,
+                        config=config,
+                        prompt=prompt,
+                    )
+                    
+                    # Atomic move to final location
+                    os.replace(temp_output_path, output_path)
+
+                finally:
+                    # Cleanup temporary file if it exists
+                    if os.path.exists(temp_output_path):
+                        os.unlink(temp_output_path)
+
             else:
                 raise Exception(f"{job_type} not supported")
 
