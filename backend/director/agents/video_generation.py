@@ -169,7 +169,7 @@ class VideoGenerationAgent(BaseAgent):
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
             if not os.access(DOWNLOADS_PATH, os.W_OK):
                 raise PermissionError(
-                    f"No write permission for output directory: {output_dir}"
+                    f"No write permission for output directory: {DOWNLOADS_PATH}"
                 )
             output_file_name = f"video_{job_type}_{str(uuid.uuid4())}.mp4"
             output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
