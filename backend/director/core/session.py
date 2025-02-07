@@ -217,20 +217,24 @@ class OutputMessage(BaseMessage):
 
 
 def format_user_message(message: dict) -> dict:
-    content_parts = message["content"]
-    sanitized_content_parts = []
+    message_content = message.get("content")
+    if isinstance(message_content, str):
+        return message
+    else:
+        content_parts = message["content"]
+        sanitized_content_parts = []
 
-    for content_part in content_parts:
-        sanitized_part = content_part
-        if content_part["type"] == "image":
-            sanitized_part = {
-                "type": "text",
-                "text": f"User has upload image with following details : {json.dumps(content_part)}",
-            }
-        sanitized_content_parts.append(sanitized_part)
+        for content_part in content_parts:
+            sanitized_part = content_part
+            if content_part["type"] == "image":
+                sanitized_part = {
+                    "type": "text",
+                    "text": f"User has upload image with following details : {json.dumps(content_part)}",
+                }
+            sanitized_content_parts.append(sanitized_part)
 
-    message["content"] = sanitized_content_parts
-    return message
+        message["content"] = sanitized_content_parts
+        return message
 
 
 class ContextMessage(BaseModel):
