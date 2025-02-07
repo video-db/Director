@@ -14,7 +14,6 @@ from director.core.session import (
 from director.tools.videodb_tool import VideoDBTool
 from director.llm import get_default_llm
 
-
 from videodb.asset import VideoAsset, TextAsset, TextStyle
 
 logger = logging.getLogger(__name__)
@@ -42,9 +41,22 @@ SUBTITLE_AGENT_PARAMETERS = {
     "required": ["video_id", "collection_id"],
 }
 
+language_detection_prompt = """
+Task Description:
+---
+You are provided with a sample of transcript text. Your task is to identify the language of this text.
+
+Guidelines:
+- Analyze the provided text carefully
+- Consider language patterns, common words, and grammatical structures
+- Return your response in JSON format with a single field "detected_language"
+- Use the full English name of the language (e.g., "English", "Spanish", "French", etc.)
+
+Please return your response in this format:
+{"detected_language": "name of detected language"}
+"""
 
 translater_prompt = """
-
 Task Description:
 ---
 You are provided with a transcript of a video in a compact format called compact_list to optimize context size. The transcript is presented as a single string where each word block is formatted as:
@@ -73,7 +85,6 @@ Adjust Timing for Each Phrase/Block.
 Start Time: Use the start time of the first word in the group.
 End Time: Use the end time of the last word in the group.
 
-
 4.Produce the Final Output:
 Provide a list of subtitle blocks in the following format:
 [    {"start": 0, "end": 30, "text": "Translated block of text here"},    {"start": 31, "end": 55, "text": "Another translated block of text"},    ...]
@@ -81,12 +92,10 @@ Ensure the translated text is coherent and appropriately grouped for subtitles.
 
 Guidelines:
 ---
-
 Coherence: The translated phrases should be grammatically correct and natural in [TARGET LANGUAGE].
 Subtitle Length: Each subtitle block should follow standard subtitle length guidelines (e.g., no more than two lines of text, appropriate reading speed).
 Timing Accuracy: Maintain accurate synchronization with the video's audio by correctly calculating start and end times.
 Don't add any quotes, or %, that makes escaping the characters difficult.
-
 
 Example Output:
 ---
@@ -101,9 +110,7 @@ Notes:
 ---
 Be mindful of linguistic differences that may affect how words are grouped in [TARGET LANGUAGE].
 Ensure that cultural nuances and idiomatic expressions are appropriately translated.
-
 """
-
 
 class SubtitleAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
@@ -133,6 +140,25 @@ class SubtitleAgent(BaseAgent):
             compact_word = f"{word}|{start}|{end}"
             compact_list.append(compact_word)
         return compact_list
+
+    def detect_language(self, transcript_sample):
+        logger.info("Detecting language...")
+        sample_text = " ".join([item.split("|")[0] for item in transcript_sample[:10]])
+        
+        detection_prompt = f"{language_detection_prompt} Sample text for analysis: {sample_text}"
+        detection_message = ContextMessage(
+            content=detection_prompt,
+            role=RoleTypes.user,
+        )
+        
+        detection_response = self.llm.chat_completions(
+            [detection_message.to_llm_msg()],
+            response_format={"type": "json_object"},
+        )
+        
+        result = json.loads(detection_response.content)
+        logger.info(f"Detected language: {result['detected_language'].lower()}")
+        return result["detected_language"].lower()
 
     def add_subtitles_using_timeline(self, subtitles):
         video_width = 1920
@@ -186,6 +212,7 @@ class SubtitleAgent(BaseAgent):
         try:
             self.video_id = video_id
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
+            target_language = language.lower()
 
             self.output_message.actions.append(
                 "Retrieving the subtitles in the video's original language"
@@ -201,20 +228,63 @@ class SubtitleAgent(BaseAgent):
             transcript = self.videodb_tool.get_transcript(video_id, text=False)
             compact_transcript = self.get_compact_transcript(transcript=transcript)
 
-            self.output_message.actions.append(
-                f"Translating the subtitles to {language}"
-            )
+            self.output_message.actions.append("Detecting source language of the video")
             self.output_message.push_update()
-            translation_llm_prompt = f"{translater_prompt} Translate to {language}, additional notes : {notes} compact_list: {compact_transcript}"
-            translation_llm_message = ContextMessage(
-                content=translation_llm_prompt,
-                role=RoleTypes.user,
-            )
-            llm_response = self.llm.chat_completions(
-                [translation_llm_message.to_llm_msg()],
-                response_format={"type": "json_object"},
-            )
-            translated_subtitles = json.loads(llm_response.content)
+            source_language = self.detect_language(compact_transcript)
+            logger.info(f"Detected source language: {source_language}")
+
+            # Check if translation is needed
+            if source_language == target_language:
+                logger.info("Source language matches target language. No translation needed")
+                self.output_message.actions.append(
+                    f"Source language ({source_language}) matches target language. No translation needed."
+                )
+                self.output_message.push_update()
+                
+                # Convert transcript directly to subtitle format without translation
+                subtitles = []
+                current_subtitle = {"start": None, "end": None, "text": []}
+                
+                for item in compact_transcript:
+                    word, start, end = item.split("|")
+                    start, end = float(start), float(end)
+                    
+                    if current_subtitle["start"] is None:
+                        current_subtitle["start"] = start
+                        current_subtitle["text"].append(word)
+                    elif end - current_subtitle["start"] > 5:
+                        current_subtitle["end"] = float(end)
+                        current_subtitle["text"] = " ".join(current_subtitle["text"])
+                        subtitles.append(current_subtitle)
+                        current_subtitle = {"start": start, "end": None, "text": [word]}
+                    else:
+                        current_subtitle["text"].append(word)
+                    
+                    current_subtitle["end"] = end
+                
+                if current_subtitle["text"]:
+                    current_subtitle["text"] = " ".join(current_subtitle["text"])
+                    subtitles.append(current_subtitle)
+                
+                translated_subtitles = {"subtitles": subtitles}
+            else:
+
+                logger.info("Translating subtitles...")
+                self.output_message.actions.append(
+                    f"Translating the subtitles from {source_language} to {target_language}"
+                )
+                self.output_message.push_update()
+                
+                translation_llm_prompt = f"{translater_prompt} Translate to {target_language}, additional notes : {notes} compact_list: {compact_transcript}"
+                translation_llm_message = ContextMessage(
+                    content=translation_llm_prompt,
+                    role=RoleTypes.user,
+                )
+                llm_response = self.llm.chat_completions(
+                    [translation_llm_message.to_llm_msg()],
+                    response_format={"type": "json_object"},
+                )
+                translated_subtitles = json.loads(llm_response.content)
 
             if notes:
                 self.output_message.actions.append(
@@ -222,7 +292,7 @@ class SubtitleAgent(BaseAgent):
                 )
 
             self.output_message.actions.append(
-                "Overlaying the translated subtitles onto the video"
+                "Overlaying the subtitles onto the video"
             )
             self.output_message.push_update()
 
