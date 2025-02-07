@@ -12,6 +12,7 @@ from director.db.postgres.initialize import initialize_postgres
 
 logger = logging.getLogger(__name__)
 
+
 class PostgresDB(BaseDB):
     def __init__(self):
         """Initialize PostgreSQL connection using environment variables."""
@@ -21,13 +22,9 @@ class PostgresDB(BaseDB):
             user=os.getenv("POSTGRES_USER", "postgres"),
             password=os.getenv("POSTGRES_PASSWORD", "postgres"),
             host=os.getenv("POSTGRES_HOST", "localhost"),
-            port=os.getenv("POSTGRES_PORT", "5432")
+            port=os.getenv("POSTGRES_PORT", "5432"),
         )
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-
-        if not self.health_check():
-            logger.error("Database health check failed - unable to initialize tables")
-            raise Exception("Failed to initialize database")
 
         logger.info("Connected to PostgreSQL DB..........")
 
@@ -229,5 +226,5 @@ class PostgresDB(BaseDB):
             return False
 
     def __del__(self):
-        if hasattr(self, 'conn') and self.conn:
+        if hasattr(self, "conn") and self.conn:
             self.conn.close()
