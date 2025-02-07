@@ -141,9 +141,7 @@ class VideoDBHandler:
     def __init__(self, collection_id="default"):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
-    def upload(
-        self, source, source_type="url", media_type="video", name=None
-    ):
+    def upload(self, source, source_type="url", media_type="video", name=None):
         return self.videodb_tool.upload(source, source_type, media_type, name)
 
     def get_collection(self):
@@ -171,6 +169,9 @@ class VideoDBHandler:
     def get_videos(self):
         """Get all videos in a collection."""
         return self.videodb_tool.get_videos()
+
+    def generate_image_url(self, image_id):
+        return self.videodb_tool.generate_image_url(image_id=image_id)
 
 
 class ConfigHandler:

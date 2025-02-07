@@ -36,7 +36,7 @@ PARAMS_CONFIG = {
             "maximum": 255,
             "default": 127,
         },
-    }
+    },
 }
 
 
@@ -124,30 +124,23 @@ class StabilityAITool:
         }
 
         while True:
-            result_response = requests.request(
-                "GET", f"{self.result_endpoint}/{generation_id}", headers=result_headers
+            result_response = requests.get(
+                f"{self.result_endpoint}/{generation_id}", headers=result_headers
             )
-
-            result_response.raise_for_status()
-
-            print("StabilityAI Response", result_response)
 
             if result_response.status_code == 202:
                 # Still processing
                 await asyncio.sleep(self.polling_interval)
                 continue
             elif result_response.status_code == 200:
-                # Generation complete, save video
                 with open(save_at, "wb") as f:
                     f.write(result_response.content)
                 break
             else:
-                raise Exception(str(result_response.json()))
+                raise Exception(f"Error fetching video: {result_response.text}")
 
     def text_to_video(self, *args, **kwargs):
-        is_loop_running = is_event_loop_running()
-        if not is_loop_running:
-            return asyncio.run(self.text_to_video_async(*args, **kwargs))
-        else:
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.text_to_video_async(*args, **kwargs))
+        """
+        Synchronous wrapper for text-to-video generation.
+        """
+        return asyncio.run(self.text_to_video_async(*args, **kwargs))
