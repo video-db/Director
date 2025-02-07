@@ -3,6 +3,7 @@ aiohttp==3.11.11
 anthropic==0.37.1
 composio_openai==0.5.50
 elevenlabs==1.9.0
+fal-client===0.5.8
 Flask==3.0.3
 Flask-SocketIO==5.3.6
 Flask-Cors==4.0.1
