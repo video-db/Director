@@ -40,7 +40,7 @@ UPLOAD_AGENT_PARAMETERS = {
             "description": "Collection ID to upload the content",
         },
     },
-    "required": ["url", "media_type", "collection_id"],
+    "required": ["source", "media_type", "collection_id"],
 }
 
 
