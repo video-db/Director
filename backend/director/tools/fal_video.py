@@ -1,11 +1,8 @@
 import os
 import fal_client
 import requests
-import asyncio
-import aiohttp
 from typing import Optional
 
-from director.utils.asyncio import is_event_loop_running
 
 PARAMS_CONFIG = {
     "text_to_video": {
@@ -60,82 +57,34 @@ class FalVideoGenerationTool:
         self.queue_endpoint = "https://queue.fal.run"
         self.polling_interval = 10  # seconds
 
-    async def text_to_video_async(
+    def text_to_video(
         self, prompt: str, save_at: str, duration: float, config: dict
     ):
         """
         Generates a video asynchronously by calling the Fal text-to-video API using aiohttp.
         """
         try:
-            model_name = config.get(
-                "model_name", "fal-ai/fast-animatediff/text-to-video"
+            model_name = config.get("model_name", "fal-ai/minimax-video")
+            res = fal_client.run(
+                model_name,
+                arguments={"prompt": prompt, "duration": duration},
             )
-
-            headers = {"authorization": f"Key {self.api_key}"}
-            fal_queue_payload = {"prompt": prompt, "duration": duration}
-            fal_queue_endpoint = f"{self.queue_endpoint}/{model_name}"
-
-            async with aiohttp.ClientSession() as session:
-                # Submit job to Fal queue
-                fal_response = await session.post(
-                    fal_queue_endpoint, headers=headers, json=fal_queue_payload
-                )
-                fal_response_json = await fal_response.json()
-
-                if (
-                    "status_url" not in fal_response_json
-                    or "response_url" not in fal_response_json
-                ):
-                    raise ValueError(
-                        f"Invalid response from FAL queue: Missing 'status_url' or 'response_url'. Response: {fal_response_json}"
-                    )
-
-                status_url = fal_response_json["status_url"]
-                response_url = fal_response_json["response_url"]
-
-                # Poll for status
-                while True:
-                    status_response = await session.get(status_url, headers=headers)
-                    status_json = await status_response.json()
-
-                    if "status" not in status_json:
-                        raise ValueError(
-                            f"Invalid response from FAL queue: Missing 'status'. Response: {status_json}"
-                        )
-
-                    if status_json["status"] in ["IN_QUEUE", "IN_PROGRESS"]:
-                        await asyncio.sleep(self.polling_interval)
-                        continue
-                    elif status_json["status"] == "COMPLETED":
-                        # Fetch results
-                        response = await session.get(response_url, headers=headers)
-                        res = await response.json()
-
-                        video_url = res["video"]["url"]
-
-                        # Download the video
-                        async with session.get(video_url) as video_response:
-                            with open(save_at, "wb") as f:
-                                f.write(await video_response.read())
-                        break
-                    else:
-                        raise ValueError(
-                            f"Unknown status for FAL request: {status_json}"
-                        )
+            video_url = res["video"]["url"]
+            with open(save_at, "wb") as f:
+                f.write(requests.get(video_url).content)
 
         except Exception as e:
             raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}")
 
         return {"status": "success", "video_path": save_at}
 
-    def text_to_video(self, *args, **kwargs):
-        """
-        Blocking call to generate video (synchronous wrapper around the async method).
-        """
-        return asyncio.run(self.text_to_video_async(*args, **kwargs))
-
     def image_to_video(
-        self, image_url: str, save_at: str, duration: float, config: dict, prompt: Optional[str] = None
+        self,
+        image_url: str,
+        save_at: str,
+        duration: float,
+        config: dict,
+        prompt: Optional[str] = None,
     ):
         """
         Generate video from an image URL.
@@ -149,7 +98,7 @@ class FalVideoGenerationTool:
 
             if prompt:
                 arguments["prompt"] = prompt
-            
+
             res = fal_client.run(
                 model_name,
                 arguments=arguments,
