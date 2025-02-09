@@ -2,7 +2,7 @@ import time
 from typing import Optional
 
 from elevenlabs.client import ElevenLabs
-from elevenlabs import VoiceSettings
+from elevenlabs import VoiceSettings, Voice, play
 
 PARAMS_CONFIG = {
     "sound_effect": {
@@ -208,3 +208,19 @@ class ElevenLabsTool:
         except Exception as e:
             print(f"Error downloading dubbed file: {str(e)}")
             return None
+        
+    def clone_audio(self, audio_files: list[str], name_of_voice, description):
+        voice = self.client.clone(
+            name=name_of_voice,
+            files=audio_files,
+            description=description
+        )
+        return voice
+    
+    def get_voice(self, voice_id):
+        voice = self.client.voices.get(voice_id=voice_id)
+        return voice
+    
+    def synthesis_text(self, voice:Voice, text_to_synthesis:str):
+        audio = self.client.generate(text=text_to_synthesis, voice=voice, model="eleven_multilingual_v2")
+        return audio
