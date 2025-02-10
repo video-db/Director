@@ -105,9 +105,6 @@ class ImageGenerationAgent(BaseAgent):
                 output_image_url = flux_output[0].url
             elif job_type == "image_to_image":
                 FAL_KEY = os.getenv("FAL_KEY")
-                if not FAL_KEY:
-                    raise Exception("FAL API key not found")
-
                 image_id = image_to_image.get("image_id")
 
                 if not image_id:
