@@ -48,7 +48,7 @@ IMAGE_GENERATION_AGENT_PARAMETERS = {
                     "description": "Configuration for FAL enhancement.",
                 },
             },
-            "required": ["image_url"],
+            "required": ["image_id"],
         },
     },
     "required": ["collection_id", "job_type", "prompt"],
