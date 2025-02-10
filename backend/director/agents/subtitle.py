@@ -225,10 +225,20 @@ class SubtitleAgent(BaseAgent):
                 status=MsgStatus.progress,
                 status_message="Processing...",
             )
-            self.output_message.content.append(video_content)
+            # self.output_message.content.append(video_content)
             self.output_message.push_update()
 
-            transcript = self.videodb_tool.get_transcript(video_id, text=False)
+
+            try:
+                transcript = self.videodb_tool.get_transcript(video_id, text=False)
+                self.output_message.content.append(video_content)
+                self.output_message.push_update()
+
+            except Exception as e:
+                logger.exception(f"Error in {self.agent_name} agent: {e}")
+                self.output_message.publish()
+                return AgentResponse(status=AgentStatus.ERROR, message=str(e))
+
             compact_transcript = self.get_compact_transcript(transcript=transcript)
 
             self.output_message.actions.append("Detecting source language of the video")
@@ -242,7 +252,7 @@ class SubtitleAgent(BaseAgent):
                     "Source language matches target language. No translation needed"
                 )
                 self.output_message.actions.append(
-                    f"Source language ({source_language}) matches target language. No translation needed."
+                    f"Source language ({source_language}) matches target language.."
                 )
                 self.output_message.push_update()
 
