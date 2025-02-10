@@ -246,7 +246,6 @@ class SubtitleAgent(BaseAgent):
             source_language = self.detect_language(compact_transcript)
             logger.info(f"Detected source language: {source_language}")
 
-            # Check if translation is needed
             if source_language == target_language:
                 logger.info(
                     "Source language matches target language. No translation needed"
@@ -256,7 +255,6 @@ class SubtitleAgent(BaseAgent):
                 )
                 self.output_message.push_update()
 
-                # Convert transcript directly to subtitle format without translation
                 subtitles = []
                 current_subtitle = {"start": None, "end": None, "text": []}
 
