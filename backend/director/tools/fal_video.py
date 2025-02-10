@@ -46,6 +46,20 @@ PARAMS_CONFIG = {
             ],
         },
     },
+    "image_to_image": {
+        "model_name": {
+            "type": "string",
+            "description": "The model name to use for image-to-image transformation",
+            "default": "fal-ai/flux-lora-canny",
+            "enum": [
+                "fal-ai/flux-pro/v1.1-ultra/redux",
+                "fal-ai/flux-lora-canny",
+                "fal-ai/flux-lora-depth",
+                "fal-ai/ideogram/v2/turbo/remix",
+                "fal-ai/iclight-v2",
+            ],
+        },
+    },
 }
 
 
@@ -110,3 +124,19 @@ class FalVideoGenerationTool:
                 f.write(requests.get(video_url).content)
         except Exception as e:
             raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}")
+
+    def image_to_image(self, image_url: str, prompt: str, config: dict):
+        try:
+            model_name = config.get("model_name", "fal-ai/flux-lora-canny")
+            arguments = {"image_url": image_url, "prompt": prompt}
+
+            res = fal_client.run(
+                model_name,
+                arguments=arguments,
+            )
+
+            print("we got this response", res)
+            return res["images"]
+
+        except Exception as e:
+            raise Exception(f"Error generating image: {type(e).__name__}: {str(e)}")
