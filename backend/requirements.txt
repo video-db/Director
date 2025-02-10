@@ -1,5 +1,4 @@
 -e .
-aiohttp==3.11.11
 anthropic==0.45.2
 composio_openai==0.5.50
 elevenlabs==1.9.0

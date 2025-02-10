@@ -61,7 +61,7 @@ class FalVideoGenerationTool:
         self, prompt: str, save_at: str, duration: float, config: dict
     ):
         """
-        Generates a video asynchronously by calling the Fal text-to-video API using aiohttp.
+        Generates a video from using text-to-video models.
         """
         try:
             model_name = config.get("model_name", "fal-ai/minimax-video")
