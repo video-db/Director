@@ -55,14 +55,13 @@ class ComparisonAgent(BaseAgent):
         self.parameters = COMPARISON_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
-    async def _run_video_generation(self, index, params):
+    def _run_video_generation(self, index, params):
         """Helper method to run video generation with given params"""
         video_gen_agent = VideoGenerationAgent(session=self.session)
-        res = await video_gen_agent.run_async(**params, stealth_mode=True)
+        res = video_gen_agent.run(**params, stealth_mode=True)
         return index, res
 
-    def done_callback(self, task):
-        index, result = task.result()
+    def done_callback(self, index, result):
         if result.status == AgentStatus.SUCCESS:
             self.videos_content.videos[index] = result.data["video_content"].video
         elif result.status == AgentStatus.ERROR:
@@ -75,14 +74,10 @@ class ComparisonAgent(BaseAgent):
             )
         self.output_message.push_update()
 
-    async def run_tasks(self, tasks):
-        asyncio_tasks = []
+    def run_tasks(self, tasks):
         for index, task in enumerate(tasks):
-            asyncio_task = asyncio.create_task(self._run_video_generation(index, task))
-            asyncio_task.add_done_callback(self.done_callback)
-            asyncio_tasks.append(asyncio_task)
-        results = await asyncio.gather(*asyncio_tasks)
-        return results
+            _, task_res = self._run_video_generation(index, task)
+            self.done_callback(index, task_res)
 
     def run(
         self, job_type: str, video_generation_comparison: list, *args, **kwargs
@@ -116,12 +111,7 @@ class ComparisonAgent(BaseAgent):
                 self.output_message.content.append(self.videos_content)
                 self.output_message.push_update()
 
-                is_loop_running = is_event_loop_running()
-                if not is_loop_running:
-                    asyncio.run(self.run_tasks(video_generation_comparison))
-                else:
-                    loop = asyncio.get_event_loop()
-                    loop.run_until_complete(self.run_tasks(video_generation_comparison))
+                self.run_tasks(video_generation_comparison)
 
                 self.videos_content.status = MsgStatus.success
                 self.videos_content.status_message = "Here are your generated videos"
