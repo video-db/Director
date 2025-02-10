@@ -112,6 +112,7 @@ Be mindful of linguistic differences that may affect how words are grouped in [T
 Ensure that cultural nuances and idiomatic expressions are appropriately translated.
 """
 
+
 class SubtitleAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "subtitle"
@@ -144,18 +145,20 @@ class SubtitleAgent(BaseAgent):
     def detect_language(self, transcript_sample):
         logger.info("Detecting language...")
         sample_text = " ".join([item.split("|")[0] for item in transcript_sample[:10]])
-        
-        detection_prompt = f"{language_detection_prompt} Sample text for analysis: {sample_text}"
+
+        detection_prompt = (
+            f"{language_detection_prompt} Sample text for analysis: {sample_text}"
+        )
         detection_message = ContextMessage(
             content=detection_prompt,
             role=RoleTypes.user,
         )
-        
+
         detection_response = self.llm.chat_completions(
             [detection_message.to_llm_msg()],
             response_format={"type": "json_object"},
         )
-        
+
         result = json.loads(detection_response.content)
         logger.info(f"Detected language: {result['detected_language'].lower()}")
         return result["detected_language"].lower()
@@ -235,20 +238,22 @@ class SubtitleAgent(BaseAgent):
 
             # Check if translation is needed
             if source_language == target_language:
-                logger.info("Source language matches target language. No translation needed")
+                logger.info(
+                    "Source language matches target language. No translation needed"
+                )
                 self.output_message.actions.append(
                     f"Source language ({source_language}) matches target language. No translation needed."
                 )
                 self.output_message.push_update()
-                
+
                 # Convert transcript directly to subtitle format without translation
                 subtitles = []
                 current_subtitle = {"start": None, "end": None, "text": []}
-                
+
                 for item in compact_transcript:
                     word, start, end = item.split("|")
                     start, end = float(start), float(end)
-                    
+
                     if current_subtitle["start"] is None:
                         current_subtitle["start"] = start
                         current_subtitle["text"].append(word)
@@ -259,22 +264,21 @@ class SubtitleAgent(BaseAgent):
                         current_subtitle = {"start": start, "end": None, "text": [word]}
                     else:
                         current_subtitle["text"].append(word)
-                    
+
                     current_subtitle["end"] = end
-                
+
                 if current_subtitle["text"]:
                     current_subtitle["text"] = " ".join(current_subtitle["text"])
                     subtitles.append(current_subtitle)
-                
+
                 translated_subtitles = {"subtitles": subtitles}
             else:
-
                 logger.info("Translating subtitles...")
                 self.output_message.actions.append(
                     f"Translating the subtitles from {source_language} to {target_language}"
                 )
                 self.output_message.push_update()
-                
+
                 translation_llm_prompt = f"{translater_prompt} Translate to {target_language}, additional notes : {notes} compact_list: {compact_transcript}"
                 translation_llm_message = ContextMessage(
                     content=translation_llm_prompt,
