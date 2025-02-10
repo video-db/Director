@@ -72,6 +72,7 @@ def get_collection_or_all(collection_id):
     else:
         return videodb.get_collections()
 
+
 @videodb_bp.route("/collection", methods=["POST"])
 def create_collection():
     try:
@@ -92,9 +93,13 @@ def create_collection():
         if result.get("success"):
             return {"message": "Collection created successfully", "data": result}, 201
         else:
-            return {"message": "Failed to create collection", "error": result.get("error")}, 400
+            return {
+                "message": "Failed to create collection",
+                "error": result.get("error"),
+            }, 400
     except Exception as e:
         return {"message": str(e)}, 500
+
 
 @videodb_bp.route("/collection/<collection_id>", methods=["DELETE"])
 def delete_collection(collection_id):
@@ -121,6 +126,7 @@ def get_video_or_all(collection_id, video_id):
     else:
         return videodb.get_videos()
 
+
 @videodb_bp.route("/collection/<collection_id>/video/<video_id>", methods=["DELETE"])
 def delete_video(collection_id, video_id):
     """Delete a video by ID from a specific collection."""
@@ -132,6 +138,25 @@ def delete_video(collection_id, video_id):
         return result, 200
     except Exception as e:
         return {"message": str(e)}, 500
+
+
+@videodb_bp.route(
+    "/collection/<collection_id>/image/<image_id>/generate_url", methods=["GET"]
+)
+def generate_image_url(collection_id, image_id):
+    try:
+        if not collection_id:
+            return {"message": "Collection ID is required"}, 400
+
+        if not image_id:
+            return {"message": "Image ID is required"}, 400
+
+        videodb = VideoDBHandler(collection_id)
+        result = videodb.generate_image_url(image_id)
+        return result, 200
+    except Exception as e:
+        return {"message": str(e)}, 500
+
 
 @videodb_bp.route("/collection/<collection_id>/upload", methods=["POST"])
 def upload_video(collection_id):

@@ -32,7 +32,9 @@ from director.core.reasoning import ReasoningEngine
 from director.db.base import BaseDB
 from director.db import load_db
 from director.tools.videodb_tool import VideoDBTool
-from flask import current_app as app
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -141,9 +143,7 @@ class VideoDBHandler:
     def __init__(self, collection_id="default"):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
-    def upload(
-        self, source, source_type="url", media_type="video", name=None
-    ):
+    def upload(self, source, source_type="url", media_type="video", name=None):
         return self.videodb_tool.upload(source, source_type, media_type, name)
 
     def get_collection(self):
@@ -172,13 +172,16 @@ class VideoDBHandler:
         """Get all videos in a collection."""
         return self.videodb_tool.get_videos()
 
+    def generate_image_url(self, image_id):
+        return self.videodb_tool.generate_image_url(image_id=image_id)
+
 
 class ConfigHandler:
     def check(self):
         """Check the configuration of the server."""
         videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False
 
-        db = load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
+        db = load_db(os.getenv("SERVER_DB_TYPE",  os.getenv("DB_TYPE", "sqlite")))
         db_configured = db.health_check()
         return {
             "videodb_configured": videodb_configured,

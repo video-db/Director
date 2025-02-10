@@ -1,5 +1,9 @@
+import os
+import fal_client
+import requests
 import asyncio
 import aiohttp
+from typing import Optional
 
 from director.utils.asyncio import is_event_loop_running
 
@@ -24,6 +28,24 @@ PARAMS_CONFIG = {
                 "fal-ai/fast-animatediff/text-to-video",
                 "fal-ai/fast-animatediff/turbo/text-to-video",
                 # "fal-ai/animatediff-sparsectrl-lcm",
+            ],
+        },
+    },
+    "image_to_video": {
+        "model_name": {
+            "type": "string",
+            "description": "The model name to use for image-to-video generation",
+            "default": "fal-ai/fast-svd-lcm",
+            "enum": [
+                "fal-ai/haiper-video/v2/image-to-video",
+                "fal-ai/luma-dream-machine/image-to-video",
+                # "fal-ai/kling-video/v1/standard/image-to-video",
+                # "fal-ai/kling-video/v1/pro/image-to-video",
+                # "fal-ai/kling-video/v1.5/pro/image-to-video",
+                "fal-ai/cogvideox-5b/image-to-video",
+                "fal-ai/ltx-video/image-to-video",
+                "fal-ai/stable-video",
+                "fal-ai/fast-svd-lcm",
             ],
         },
     },
@@ -102,7 +124,7 @@ class FalVideoGenerationTool:
                         )
 
         except Exception as e:
-            raise Exception(f"Error generating video: {str(e)}")
+            raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}")
 
         return {"status": "success", "video_path": save_at}
 
@@ -110,9 +132,32 @@ class FalVideoGenerationTool:
         """
         Blocking call to generate video (synchronous wrapper around the async method).
         """
-        is_loop_running = is_event_loop_running()
-        if not is_loop_running:
-            return asyncio.run(self.text_to_video_async(*args, **kwargs))
-        else:
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.text_to_video_async(*args, **kwargs))
+        return asyncio.run(self.text_to_video_async(*args, **kwargs))
+
+    def image_to_video(
+        self, image_url: str, save_at: str, duration: float, config: dict, prompt: Optional[str] = None
+    ):
+        """
+        Generate video from an image URL.
+        """
+        try:
+            model_name = config.get("model_name", "fal-ai/fast-svd-lcm")
+            arguments = {"image_url": image_url, "duration": duration}
+
+            if model_name == "fal-ai/haiper-video/v2/image-to-video":
+                arguments["duration"] = 6
+
+            if prompt:
+                arguments["prompt"] = prompt
+            
+            res = fal_client.run(
+                model_name,
+                arguments=arguments,
+            )
+
+            video_url = res["video"]["url"]
+
+            with open(save_at, "wb") as f:
+                f.write(requests.get(video_url).content)
+        except Exception as e:
+            raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}")
