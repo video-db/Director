@@ -200,7 +200,7 @@ class OutputMessage(BaseMessage):
     def push_update(self):
         """Publish the message to the socket."""
         try:
-            self._publish(self)
+            self._publish()
         except Exception as e:
             print(f"Error in emitting message: {str(e)}")
 
