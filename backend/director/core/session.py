@@ -363,3 +363,19 @@ class Session:
     def delete(self):
         """Delete the session from the database."""
         return self.db.delete_session(self.session_id)
+
+    def notify_change(self, event_type: str, data: dict, namespace="/chat"):
+        """Emits a socket event to notify all clients about a specific update."""
+
+        valid_events = {
+            "collection_update": "collections",
+        }
+
+        event_name = valid_events.get(event_type)
+        if not event_name or not isinstance(data, dict) or not data:
+            return
+
+        try:
+            emit(event_name, data, namespace=namespace)
+        except Exception:
+            pass
