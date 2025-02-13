@@ -47,6 +47,18 @@ class ContentType(str, Enum):
     search_results = "search_results"
 
 
+class EventTypes(str, Enum):
+    """Event types for WebSocket event emission."""
+    
+    UPDATE_DATA = "update_data"
+
+
+class UpdateTypes(str, Enum):
+    """Types of updates that can be emitted as events."""
+    
+    COLLECTION = "collection"
+
+
 class BaseContent(BaseModel):
     """Base content class for the content in the message."""
 
@@ -364,18 +376,24 @@ class Session:
         """Delete the session from the database."""
         return self.db.delete_session(self.session_id)
 
-    def notify_change(self, event_type: str, data: dict, namespace="/chat"):
-        """Emits a socket event to notify all clients about a specific update."""
+    def emit_event(self, event_type: EventTypes, update: UpdateTypes, data: dict, namespace="/event"):
+        """Emits a structured WebSocket event to notify all clients about updates."""
 
-        valid_events = {
-            "collection_update": "collections",
-        }
-
-        event_name = valid_events.get(event_type)
-        if not event_name or not isinstance(data, dict) or not data:
+        if not isinstance(event_type, EventTypes) or not isinstance(update, UpdateTypes):
             return
 
+        if not isinstance(data, dict) or not data:
+            return
+
+        event_payload = {
+            "event_type": event_type.value,
+            "event_data": {
+                "update": update.value,
+                "data": data,
+            },
+        }
+
         try:
-            emit(event_name, data, namespace=namespace)
+            emit("updates", event_payload, namespace=namespace)
         except Exception:
             pass
