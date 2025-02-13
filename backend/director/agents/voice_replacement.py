@@ -129,7 +129,7 @@ class VoiceReplacementAgent(BaseAgent):
         :param str name_of_voice: The name to be given to the cloned voice
         :param str descrption: The description about how the voice sounds like
         :param str collection_id: The collection id to store generated voice
-        :param str cloned_voice_id: The voice ID generated from the previously given voice which can be used for cloning
+        :param str video_id: The ID of the video from which we retrieve the transcript.
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about voice cloning.
