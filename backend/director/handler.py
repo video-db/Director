@@ -25,6 +25,7 @@ from director.agents.composio import ComposioAgent
 from director.agents.transcription import TranscriptionAgent
 from director.agents.comparison import ComparisonAgent
 from director.agents.web_search_agent import WebSearchAgent
+from director.agents.voice_replacement import VoiceReplacementAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -69,6 +70,7 @@ class ChatHandler:
             ComposioAgent,
             ComparisonAgent,
             WebSearchAgent,
+            VoiceReplacementAgent,
         ]
 
     def add_videodb_state(self, session):
