@@ -2,6 +2,7 @@ import logging
 import os
 import requests
 import uuid
+import subprocess
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, MsgStatus, TextContent, VideoContent, VideoData
 from director.tools.elevenlabs import ElevenLabsTool
@@ -42,18 +43,21 @@ VOICE_REPLACEMENT_AGENT_PARAMETERS = {
             "type": "string",
             "description": "the ID of the collection to store the output audio file",
         },
-        "video_id": {
-            "type": "string",
-            "description": "The ID of the video on which the cloned voice will be added"
+        "video_ids": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "A list of IDs of videos which needs to be overlayed"
         }
     },
-    "required": ["sample_audios", "is_authorized_to_clone_voice", "collection_id", "video_id", "name_of_voice"],
+    "required": ["sample_audios", "is_authorized_to_clone_voice", "collection_id", "video_ids", "name_of_voice"],
 }
 
 class VoiceReplacementAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "voice_replacement"
-        self.description = "This agent is used to clone the voice of the given by the user and overlay it on top of the video given. The user must be authorised to clone the voice"
+        self.description = "This agent is used to clone the voice of the given by the user and overlay it on top of all the videos given. The user must be authorised to clone the voice. This agent can handle multiple videos at once"
         self.parameters = VOICE_REPLACEMENT_AGENT_PARAMETERS
         self.timeline: Timeline | None = None
         super().__init__(session=session, **kwargs)
@@ -112,7 +116,7 @@ class VoiceReplacementAgent(BaseAgent):
     def run(
             self,
             sample_audios: list[str],
-            video_id: str,
+            video_ids: list[str],
             name_of_voice: str,
             is_authorized_to_clone_voice: bool,
             collection_id: str,
@@ -129,7 +133,7 @@ class VoiceReplacementAgent(BaseAgent):
         :param str name_of_voice: The name to be given to the cloned voice
         :param str descrption: The description about how the voice sounds like
         :param str collection_id: The collection id to store generated voice
-        :param str video_id: The ID of the video from which we retrieve the transcript.
+        :param list[str] video_ids: The IDs of the videos from which we retrieve the transcript.
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about voice cloning.
@@ -163,47 +167,60 @@ class VoiceReplacementAgent(BaseAgent):
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
 
-            text_to_synthesis = self._get_transcript(video_id=video_id)
+            for video_id in video_ids:
+                video = self.videodb_tool.get_video(video_id=video_id)
+                text_to_synthesis = self._get_transcript(video_id=video_id)
 
-            self.output_message.actions.append("Synthesising the transcript in cloned voice")
-            self.output_message.push_update()
-            synthesised_audio = audio_gen_tool.synthesis_text(voice=voice, text_to_synthesis=text_to_synthesis)
-            
-            if not synthesised_audio:
-                return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
+                self.output_message.actions.append(f"Synthesising {video["name"]}'s transcript in cloned voice")
+                self.output_message.push_update()
+                synthesised_audio = audio_gen_tool.synthesis_text(voice=voice, text_to_synthesis=text_to_synthesis)
+                
+                if not synthesised_audio:
+                    return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
 
-            output_file_name = f"audio_clone_voice_output_{str(uuid.uuid4())}.mp3"
-            output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
+                output_file_name = f"audio_clone_voice_output_{str(uuid.uuid4())}.mp3"
+                output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
 
-            with open(output_path, "wb") as f:
-                for chunk in synthesised_audio:
-                    if chunk:
-                        f.write(chunk)
-
-
-            audio = self.videodb_tool.upload(
-                output_path, source_type="file_path", media_type="audio"
-            )
-
-            video_content = VideoContent(
-                status=MsgStatus.progress,
-                status_message="Adding cloned voice to the video",
-                agent_name=self.agent_name
-            )
-
-            self.output_message.content.append(video_content)
-            self.output_message.push_update()
+                with open(output_path, "wb") as f:
+                    for chunk in synthesised_audio:
+                        if chunk:
+                            f.write(chunk)
 
 
-            self.timeline = self.videodb_tool.get_and_set_timeline()
+                audio = self.videodb_tool.upload(
+                    output_path, source_type="file_path", media_type="audio"
+                )
 
-            stream_url = self._generate_overlay(video_id, audio_id=audio['id'])
+                if not audio:
+                    error_content = TextContent(
+                        status=MsgStatus.progress,
+                        status_message=f"Adding cloned voice to {video["name"]} failed",
+                        agent_name=self.agent_name
+                    )
+                    self.output_message.content.append(error_content)
+                    self.output_message.push_update()
+                    continue
 
-            video_content.video = VideoData(stream_url=stream_url)
-            video_content.status = MsgStatus.success
-            video_content.status_message = "Here is your video with the cloned voice"
+                video_content = VideoContent(
+                    status=MsgStatus.progress,
+                    status_message=f"Adding cloned voice to {video["name"]}",
+                    agent_name=self.agent_name
+                )
 
-            self.output_message.push_update()
+                self.output_message.content.append(video_content)
+                self.output_message.push_update()
+
+
+                self.timeline = self.videodb_tool.get_and_set_timeline()
+
+                stream_url = self._generate_overlay(video_id, audio_id=audio['id'])
+
+                video_content.video = VideoData(stream_url=stream_url)
+                video_content.status = MsgStatus.success
+                video_content.status_message = f"Here is your video {video["name"]} with the cloned voice"
+
+                self.output_message.push_update()
+
             self.output_message.publish()
 
             return AgentResponse(
