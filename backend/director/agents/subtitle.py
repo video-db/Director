@@ -15,6 +15,7 @@ from director.tools.videodb_tool import VideoDBTool
 from director.llm import get_default_llm
 
 from videodb.asset import VideoAsset, TextAsset, TextStyle
+from videodb.exceptions import InvalidRequestError
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ SUBTITLE_AGENT_PARAMETERS = {
         },
         "language": {
             "type": "string",
-            "description": "The language the user wants the subtitles in",
+            "description": 'The language the user wants the subtitles in. Use the full English name of the language (e.g., "English", "Spanish", "French", etc.)',
         },
         "notes": {
             "type": "string",
@@ -225,19 +226,20 @@ class SubtitleAgent(BaseAgent):
                 status=MsgStatus.progress,
                 status_message="Processing...",
             )
-            # self.output_message.content.append(video_content)
             self.output_message.push_update()
-
 
             try:
                 transcript = self.videodb_tool.get_transcript(video_id, text=False)
-                self.output_message.content.append(video_content)
+            except InvalidRequestError:
+                logger.info(f"Transcript not available for video {video_id}. Indexing spoken words...")
+                self.output_message.actions.append("Indexing video spoken words...")
                 self.output_message.push_update()
-
-            except Exception as e:
-                logger.exception(f"Error in {self.agent_name} agent: {e}")
-                self.output_message.publish()
-                return AgentResponse(status=AgentStatus.ERROR, message=str(e))
+                
+                self.videodb_tool.index_spoken_words(video_id)
+                transcript = self.videodb_tool.get_transcript(video_id, text=False)
+            
+            self.output_message.content.append(video_content)
+            self.output_message.push_update()
 
             compact_transcript = self.get_compact_transcript(transcript=transcript)
 
