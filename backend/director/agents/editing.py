@@ -16,7 +16,7 @@ from director.core.session import (
 from director.tools.videodb_tool import VideoDBTool
 from director.llm.openai import OpenAI, OpenaiConfig, OpenAIChatModel
 
-from videodb.asset import VideoAsset, AudioAsset
+from videodb.asset import VideoAsset, AudioAsset, ImageAsset, TextAsset
 
 from openai_function_calling import FunctionInferrer
 
@@ -56,23 +56,23 @@ In your final output, create a JSON object containing two lists: 'inline_assets'
 
    (A) Inline video_asset
        - Represents a contiguous video clip used in sequence.
+       - These parameters are Asset's configuration, pass them under asset_config
        - Required fields:
-            asset_type: "video_asset"
-            media_id: (string) the ID of the source video
-            start_time: (number) start time in the source video (seconds)
-            end_time:   (number) end time in the source video (seconds)
-       - In your final JSON, place such objects under the "inline_assets" array.
-       - The timeline length grows based on these inline video segments.
+            asset_id: (string) the ID of the source video
+            start: (number) start time in the source video (seconds)
+            end:   (number) end time in the source video (seconds)
+        - The timeline length grows based on these inline video segments.
 
    (B) Overlay assets (audio_asset, image_asset, text_asset)
        - Overlays do not extend timeline length; they appear at certain times.
+       - These parameters are Asset's configuration, pass them under asset_config
        - Two audio overlays cannot overlap each other
 
        1) audio_asset
           - Required fields:
-               media_id: (string)
-               start_time: (number) start time in the source audio (seconds)
-               end_time:   (number) end time in the source audio (segconds)
+               asset_id: (string)
+               start: (number) start time in the source audio (seconds)
+               end:   (number) end time in the source audio (seconds)
           - Optional fields:
                disable_other_tracks: (boolean) mutes other audio while this overlay plays
                fade_in_duration: (number)
@@ -80,19 +80,22 @@ In your final output, create a JSON object containing two lists: 'inline_assets'
 
        2) image_asset
           - Required fields:
-               media_id: (string)
-               x_coord: (number) horizontal position in pixels
-               y_coord: (number) vertical position in pixels
+               asset_id: (string)
+            - Optional
                duration: (number) how long the image stays visible (seconds)
+               width: (number)
+               height: (number)
+               x: (number) horizontal position in pixels
+               y: (number) vertical position in pixels
 
        3) text_asset
           - Required fields:
-               timeline_time: (number) the timeline time at which to appear
-               text_content: (string) the text to display
+               asset_id: (number) the timeline time at which to appear
+               text : (string) the text to display
           - Optional:
+               duration: (number) how long the text stays visible (seconds)
                style: (object) e.g. { "font_size": 24, "text_color": "white", "alpha": 0.8, "x_coord": 100, "y_coord": 50 }
-
-       - In your final JSON, place these objects under the "overlay_assets" array.
+        - These parameter as Asset's configuration 
 
 3. Final Editing 
 
@@ -103,8 +106,9 @@ When you have finished planning all edits, use do_editing tool
    - Overlays do not affect total timeline length but must have valid times within or at the edges of the existing timeline.
    - Do not overlay two videos at once (no picture-in-picture).
    - Avoid scheduling two identical overlay types at the exact same time unless specifically requested.
-   - All media references (media_id) must come from VideoDB. If the user only provides a name or description, retrieve the actual media_id first (see Tools below).
-   - Timestamps (start_time, end_time) for any media segment must be within that media’s duration.
+   - All media references (media_id) must come from VideoDB and use get_media tool to first fetch and verify relevant info for all selected media ids
+   - If the user only provides a name or description, retrieve all media of that type and see if media is available (see Tools below).
+   - Timestamps (start, end) for any media segment must be within that media’s duration.(also this should be verified once you have media info using get_media)
    - If a request is impossible (e.g., "overlay two videos simultaneously"), explain or propose an alternative.
 
 =============================
@@ -118,18 +122,16 @@ When you have finished planning all edits, use do_editing tool
    - Once you have your final JSON plan with "inline_assets" and "overlay_assets", call this tool and pass in that JSON.
    - Example usage:
        do_editing({
-         "inline_assets": [...],
-         "overlay_assets": [...]
+         "inline_assets": [{asset_type: "", asset_config: {}}],
+         "overlay_assets": [{asset_type: "", overlay_at: 0, asset_config: {}}]
        })
-
-3) Wherever you mentioned media_id it is always a ID of a media uploaded to VideoDB.
 
 ====================
  WORKFLOW TO FOLLOW
 ====================
 
 1. Check the user’s request and prior context. Determine which media and timestamps are needed.
-2. If needed, call get_media(...) to find or confirm from user.
+2. call get_media(...) to verify if media is present in users db and fetch relevant info. 
 3. Build a complete list of inline video segments and overlay assets, following all constraints and correct parameter naming (snake case).
 4. Output the final JSON to do_editing(...) in the format described above.
 5. If information is missing or the request is ambiguous, ask the user for clarification before finalizing.
@@ -252,6 +254,10 @@ class EditingAgent(BaseAgent):
         ]
 
     def get_media(self, media_id, media_type):
+        self.output_message.actions.append(
+            f"Fetching {media_type}(<i>{media_id}</i>) info"
+        )
+        self.output_message.push_update()
         media_data = None
         if media_type == "video":
             media_data = self.videodb_tool.get_video(media_id)
@@ -269,17 +275,37 @@ class EditingAgent(BaseAgent):
     def do_editing(self, inline_assets, overlay_assets):
         self.output_message.actions.append("Composing Timeline")
         self.output_message.push_update()
+        timeline = self.videodb_tool.get_and_set_timeline()
         for inline_asset in inline_assets:
             self.output_message.actions.append(
                 f"Adding inline asset with config {inline_asset}"
             )
             self.output_message.push_update()
+            video_asset = VideoAsset(**inline_asset.get("asset_config", {}))
+            timeline.add_inline(video_asset)
         for overlay_asset in overlay_assets:
             self.output_message.actions.append(
                 f"Adding overlay asset with config {overlay_asset}"
             )
             self.output_message.push_update()
-        data = {"inline_assets": inline_assets, "overlay_assets": overlay_assets}
+            if overlay_asset.get("asset_type") == "audio_asset":
+                audio_asset = AudioAsset(**overlay_asset.get("asset_config", {}))
+                overlay_at = overlay_asset.get("overlay_at", 0)
+                timeline.add_overlay(overlay_at, audio_asset)
+            if overlay_asset.get("asset_type") == "image_asset":
+                audio_asset = ImageAsset(**overlay_asset.get("asset_config", {}))
+                overlay_at = overlay_asset.get("overlay_at", 0)
+                timeline.add_overlay(overlay_at, audio_asset)
+            # if overlay_asset.get("asset_type") == "text_asset":
+            #     audio_asset = TextAsset(**overlay_asset.get("asset_config", {}))
+            #     overlay_at = overlay_asset.get("overlay_at", 0)
+            #     timeline.add_overlay(overlay_at, audio_asset)
+        stream_url = timeline.generate_stream()
+        data = {
+            "inline_assets": inline_assets,
+            "overlay_assets": overlay_assets,
+            "edited_stream_url": stream_url,
+        }
         return AgentResponse(
             data=data,
             message="Attached is editing timeline response",
@@ -293,33 +319,26 @@ class EditingAgent(BaseAgent):
             "\n\n",
         )
 
-        llm_response_1: LLMResponse = self.llm.chat_completions(
+        llm_response: LLMResponse = self.llm.chat_completions(
             messages=[message.to_llm_msg() for message in self.editing_context],
             tools=[tool for tool in self.tools],
         )
-        # llm_response_2: LLMResponse = self.o3mini.chat_completions(
-        #     messages=[message.to_llm_msg() for message in self.editing_context],
-        #     tools=[tool for tool in self.tools],
-        # )
 
-        print("this is llm response ", llm_response_1)
-        # print("this is tool response 2", llm_response_2)
+        print("this is llm response ", llm_response)
 
-        if llm_response_1.tool_calls:
+        if llm_response.tool_calls:
             self.editing_context.append(
                 ContextMessage(
-                    content=llm_response_1.content,
-                    tool_calls=llm_response_1.tool_calls,
+                    content=llm_response.content,
+                    tool_calls=llm_response.tool_calls,
                     role=RoleTypes.assistant,
                 )
             )
-            for tool_call in llm_response_1.tool_calls:
-                print("###### TOOL CALL #####: ", tool_call)
+            for tool_call in llm_response.tool_calls:
                 if tool_call["tool"]["name"] == "do_editing":
                     editing_response = self.do_editing(**tool_call["tool"]["arguments"])
                     if editing_response.status == AgentStatus.ERROR:
-                        print("Some error in editing agent", editing_response)
-                        # self.failed_agents.append(tool_call["tool"]["name"])
+                        print("Error in Editing Agent", editing_response)
                     self.editing_response = editing_response
                     self.editing_context.append(
                         ContextMessage(
@@ -331,8 +350,7 @@ class EditingAgent(BaseAgent):
                 elif tool_call["tool"]["name"] == "get_media":
                     media_response = self.get_media(**tool_call["tool"]["arguments"])
                     if media_response.status == AgentStatus.ERROR:
-                        print("Some error in media response", media_response)
-                        # self.failed_agents.append(tool_call["tool"]["name"])
+                        print("Error in Get Media Agent", media_response)
                     self.editing_context.append(
                         ContextMessage(
                             content=media_response.__str__(),
@@ -342,13 +360,13 @@ class EditingAgent(BaseAgent):
                     )
 
         if (
-            llm_response_1.finish_reason == "stop"
-            or llm_response_1.finish_reason == "end_turn"
+            llm_response.finish_reason == "stop"
+            or llm_response.finish_reason == "end_turn"
             or self.iterations == 0
         ):
             self.editing_context.append(
                 ContextMessage(
-                    content=llm_response_1.content,
+                    content=llm_response.content,
                     role=RoleTypes.assistant,
                 )
             )
@@ -376,6 +394,14 @@ class EditingAgent(BaseAgent):
             self.iterations = 10
             self.stop_flag = False
 
+            video_content = VideoContent(
+                agent_name=self.agent_name,
+                status=MsgStatus.progress,
+                status_message="Processing...",
+            )
+            self.output_message.content.append(video_content)
+            self.output_message.push_update()
+
             input_context = ContextMessage(
                 content=f"{EDITING_PROMPT}", role=RoleTypes.user
             )
@@ -395,39 +421,13 @@ class EditingAgent(BaseAgent):
                 it += 1
 
             print("-" * 40, "Ended Run", "-" * 40)
-            print(
-                "Editing context",
-                [message.to_llm_msg() for message in self.editing_context],
-                "\n\n",
-            )
 
-        #     self.output_message.actions.append("Starting video editing process")
-        #     video_content = VideoContent(
-        #         agent_name=self.agent_name,
-        #         status=MsgStatus.progress,
-        #         status_message="Processing...",
-        #     )
-        #     self.output_message.content.append(video_content)
-        #     self.output_message.push_update()
-
-        #     self.timeline = self.videodb_tool.get_and_set_timeline()
-
-        #     # Add videos to timeline
-        #     self.add_media_to_timeline(videos, "video")
-
-        #     # Add audio files if provided
-        #     if audios:
-        #         self.add_media_to_timeline(audios, "audio")
-
-        #     self.output_message.actions.append("Generating final video stream")
-        #     self.output_message.push_update()
-
-        #     stream_url = self.timeline.generate_stream()
-
-        #     video_content.video = VideoData(stream_url=stream_url)
-        #     video_content.status = MsgStatus.success
-        #     video_content.status_message = "Here is your stream."
-        #     self.output_message.publish()
+            stream_url = self.editing_response.data.get("edited_stream_url")
+            if stream_url:
+                video_content.video = VideoData(stream_url=stream_url)
+                video_content.status = MsgStatus.success
+                video_content.status_message = "Here is your stream."
+                self.output_message.publish()
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
