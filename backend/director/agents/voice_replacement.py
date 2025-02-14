@@ -15,12 +15,24 @@ logger = logging.getLogger(__name__)
 VOICE_REPLACEMENT_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
-        "sample_audios": {
-            "type": "array",
-            "description": "List of audio file URLs provided by the user to clone",
-            "items": {
-                "type": "string",
-                "description": "The URL of the audio file"
+        "sample_video": {
+            "type": "object",
+            "properties": {
+                "video_id": {
+                    "type": "string",
+                    "description": "The video id from which the 1 and a half minute sample audio has to be taken",
+                }, 
+                "start_time": {
+                    "type": "number",
+                    "description": "The start time from where the 1 and a half minute. start time is given in seconds that is 1 minute 37 seconds is 97",
+                    "default": 0
+                },
+                "end_time": {
+                    "type": "number",
+                    "description": "The end time is where the extracted audio sample must end. Make sure that the end time is farther than start time and should only be 1 to 2 minutes farther than start_time. end time is given in seconds. for example 1 minute 37 seconds is 97",
+                    "default": 90
+                }
+
             }
         },
         "name_of_voice" : {
@@ -51,44 +63,75 @@ VOICE_REPLACEMENT_AGENT_PARAMETERS = {
             "description": "A list of IDs of videos which needs to be overlayed"
         }
     },
-    "required": ["sample_audios", "is_authorized_to_clone_voice", "collection_id", "video_ids", "name_of_voice"],
+    "required": ["sample_video", "is_authorized_to_clone_voice", "collection_id", "video_ids", "name_of_voice"],
 }
 
 class VoiceReplacementAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "voice_replacement"
-        self.description = "This agent is used to clone the voice of the given by the user and overlay it on top of all the videos given. The user must be authorised to clone the voice. This agent can handle multiple videos at once"
+        self.description = "This agent is used to clone the voice of the given by the user and overlay it on top of all the videos given. The user must be authorised to clone the voice. This agent can handle multiple agents at once"
         self.parameters = VOICE_REPLACEMENT_AGENT_PARAMETERS
         self.timeline: Timeline | None = None
         super().__init__(session=session, **kwargs)
         
 
-    def _download_audio_files(self, audio_urls: list[str]) -> list[str]:
+    def _download_video_file(self, video_url: str) -> str:
 
         os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-        downloaded_files = []
 
-        for audio_url in audio_urls:
-            try:
-                response = requests.get(audio_url, stream=True)
-                response.raise_for_status()
+        try:
+            response = requests.get(video_url, stream=True)
+            response.raise_for_status()
 
-                if not response.headers.get('Content-Type', '').startswith('audio'):
-                    raise ValueError(f"The URL does not point to an MP3 file: {audio_url}")
+            if not response.headers.get('Content-Type', '').startswith('video'):
+                raise ValueError(f"The URL does not point to a video file: {video_url}")
 
-                download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
-                local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
+            download_file_name = f"video_download_{str(uuid.uuid4())}.mp4"
+            local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
 
-                with open(local_path, 'wb') as file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        file.write(chunk)
+            with open(local_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=65536):
+                    print("wrote chunk")
+                    file.write(chunk)
 
-                downloaded_files.append(local_path)
-            except Exception as e:
-                print(f"Failed to download {audio_url}: {e}")
+            print("finished")
 
-        return downloaded_files
-    
+            return local_path
+
+        except Exception as e:
+            print(f"Failed to download {video_url}: {e}")
+            return None
+
+    def _seconds_to_hms(self,seconds: int) -> str:
+        """Converts seconds to HH:MM:SS format."""
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        seconds = seconds % 60
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+    def _extract_audio_from_video(self, video_path: str) -> str:
+        os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+
+        try:
+            audio_file_name = f"audio_extracted_{uuid.uuid4()}.mp3"
+            audio_path = os.path.join(DOWNLOADS_PATH, audio_file_name)
+
+            command = [
+                "ffmpeg", "-i", video_path,
+                "-q:a", "0", "-map", "a",
+                audio_path,
+                "-y"
+            ]
+
+            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+            return audio_path
+
+
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to extract audio: {e}")
+            return None
+
     def _get_transcript(self, video_id):
         self.output_message.actions.append("Retrieving video transcript..")
         self.output_message.push_update()
@@ -115,7 +158,7 @@ class VoiceReplacementAgent(BaseAgent):
 
     def run(
             self,
-            sample_audios: list[str],
+            sample_video,
             video_ids: list[str],
             name_of_voice: str,
             is_authorized_to_clone_voice: bool,
@@ -127,7 +170,7 @@ class VoiceReplacementAgent(BaseAgent):
         """
         Clone the given audio file and synthesis the given text
 
-        :param list sample_audios: The urls of the video given to clone
+        :param sample_video: An boject containing video_id and strt_time for taking sample
         :param str text_to_synthesis: The given text which needs to be synthesised in the cloned voice
         :param bool is_authorized_to_clone_voice: The flag which tells whether the user is authorised to clone the audio or not
         :param str name_of_voice: The name to be given to the cloned voice
@@ -150,9 +193,29 @@ class VoiceReplacementAgent(BaseAgent):
             audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
-            sample_files = self._download_audio_files(sample_audios)
 
-            if not sample_files:
+            self.output_message.actions.append("Getting the sample video")
+            self.output_message.push_update()
+            stream_url = self.videodb_tool.generate_video_stream(sample_video["video_id"], [(sample_video["start_time"],sample_video["end_time"])]) 
+
+            self.output_message.actions.append("Getting the sample video's download URL")
+            self.output_message.push_update()
+            download_response = self.videodb_tool.download(stream_url)
+            if download_response.get("status") == "done":
+                download_url = download_response.get("download_url")
+            else:
+                raise Exception("Couldn't find the video download url")
+            
+            self.output_message.actions.append("Downloading the sample video")
+            self.output_message.push_update()
+            video_path = self._download_video_file(download_url)
+
+            if not video_path:
+                raise Exception("Couldn't fetch the video for sampling")
+            
+            sample_audio = self._extract_audio_from_video(video_path)
+
+            if not sample_audio:
                 return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audios")
 
             if cloned_voice_id:
@@ -162,7 +225,7 @@ class VoiceReplacementAgent(BaseAgent):
             else:
                 self.output_message.actions.append("Cloning the voice")
                 self.output_message.push_update()
-                voice = audio_gen_tool.clone_audio(audio_files=sample_files, name_of_voice=name_of_voice, description=description)
+                voice = audio_gen_tool.clone_audio(audio_files=[sample_audio], name_of_voice=name_of_voice, description=description)
 
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
