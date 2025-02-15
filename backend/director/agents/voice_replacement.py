@@ -194,7 +194,7 @@ class VoiceReplacementAgent(BaseAgent):
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
 
-            self.output_message.actions.append("Getting the sample video")
+            self.output_message.actions.append("Getting the sample video's stream")
             self.output_message.push_update()
             stream_url = self.videodb_tool.generate_video_stream(sample_video["video_id"], [(sample_video["start_time"],sample_video["end_time"])]) 
 
