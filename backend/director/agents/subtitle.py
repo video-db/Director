@@ -16,7 +16,7 @@ from director.llm import get_default_llm
 
 from videodb.asset import VideoAsset, TextAsset, TextStyle
 from videodb.exceptions import InvalidRequestError
-from videodb._constants import Segmenter
+from videodb import Segmenter
 
 logger = logging.getLogger(__name__)
 

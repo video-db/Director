@@ -6,7 +6,7 @@ import logging
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
 from videodb.timeline import Timeline
 from videodb.asset import VideoAsset, ImageAsset
-from videodb._constants import Segmenter
+from videodb import Segmenter
 
 
 class VideoDBTool:
