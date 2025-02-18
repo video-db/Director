@@ -156,15 +156,6 @@ class SubtitleAgent(BaseAgent):
             role=RoleTypes.user,
         )
 
-        # detection_response = self.llm.chat_completions(
-        #     [detection_message.to_llm_msg()],
-        #     response_format={"type": "json_object"},
-        # )
-
-        # result = json.loads(detection_response.content)
-        # logger.info(f"Detected language: {result['detected_language'].lower()}")
-        # return result["detected_language"].lower()
-
         try:
             detection_response = self.llm.chat_completions(
                 [detection_message.to_llm_msg()],
