@@ -6,6 +6,7 @@ import logging
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
 from videodb.timeline import Timeline
 from videodb.asset import VideoAsset, ImageAsset
+from videodb._constants import Segmenter
 
 
 class VideoDBTool:
@@ -213,12 +214,12 @@ class VideoDBTool:
             "url": image.url,
         }
 
-    def get_transcript(self, video_id: str, text=True):
+    def get_transcript(self, video_id: str, text=True, segmenter=Segmenter.word):
         video = self.collection.get_video(video_id)
         if text:
             transcript = video.get_transcript_text()
         else:
-            transcript = video.get_transcript()
+            transcript = video.get_transcript(segmenter=segmenter)
         return transcript
 
     def index_spoken_words(self, video_id: str):

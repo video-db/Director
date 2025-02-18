@@ -16,6 +16,7 @@ from director.llm import get_default_llm
 
 from videodb.asset import VideoAsset, TextAsset, TextStyle
 from videodb.exceptions import InvalidRequestError
+from videodb._constants import Segmenter
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +61,13 @@ Please return your response in this format:
 translater_prompt = """
 Task Description:
 ---
-You are provided with a transcript of a video in a compact format called compact_list to optimize context size. The transcript is presented as a single string where each word block is formatted as:
+You are provided with a transcript of a video in a compact format called compact_list to optimize context size. The transcript is presented as a single string where each sentence block is formatted as:
 
-word|start|end
+sentence|start|end
 
-word: The word itself.
-start: The start time of the word in the video.
-end: The end time of the word in the video.
+sentence: The sentence itself.
+start: The start time of the sentence in the video.
+end: The end time of the sentence in the video.
 
 Example Input (compact_list):
 
@@ -229,14 +230,14 @@ class SubtitleAgent(BaseAgent):
             self.output_message.push_update()
 
             try:
-                transcript = self.videodb_tool.get_transcript(video_id, text=False)
+                transcript = self.videodb_tool.get_transcript(video_id, text=False, segmenter=Segmenter.sentence)
             except InvalidRequestError:
                 logger.info(f"Transcript not available for video {video_id}. Indexing spoken words...")
                 self.output_message.actions.append("Indexing video spoken words...")
                 self.output_message.push_update()
                 
                 self.videodb_tool.index_spoken_words(video_id)
-                transcript = self.videodb_tool.get_transcript(video_id, text=False)
+                transcript = self.videodb_tool.get_transcript(video_id, text=False, segmenter=Segmenter.sentence)
             
             self.output_message.content.append(video_content)
             self.output_message.push_update()
@@ -257,31 +258,7 @@ class SubtitleAgent(BaseAgent):
                 )
                 self.output_message.push_update()
 
-                subtitles = []
-                current_subtitle = {"start": None, "end": None, "text": []}
-
-                for item in compact_transcript:
-                    word, start, end = item.split("|")
-                    start, end = float(start), float(end)
-
-                    if current_subtitle["start"] is None:
-                        current_subtitle["start"] = start
-                        current_subtitle["text"].append(word)
-                    elif end - current_subtitle["start"] > 5:
-                        current_subtitle["end"] = float(end)
-                        current_subtitle["text"] = " ".join(current_subtitle["text"])
-                        subtitles.append(current_subtitle)
-                        current_subtitle = {"start": start, "end": None, "text": [word]}
-                    else:
-                        current_subtitle["text"].append(word)
-
-                    current_subtitle["end"] = end
-
-                if current_subtitle["text"]:
-                    current_subtitle["text"] = " ".join(current_subtitle["text"])
-                    subtitles.append(current_subtitle)
-
-                translated_subtitles = {"subtitles": subtitles}
+                subtitles = {"subtitles": transcript}
             else:
                 logger.info("Translating subtitles...")
                 self.output_message.actions.append(
@@ -298,7 +275,7 @@ class SubtitleAgent(BaseAgent):
                     [translation_llm_message.to_llm_msg()],
                     response_format={"type": "json_object"},
                 )
-                translated_subtitles = json.loads(llm_response.content)
+                subtitles = json.loads(llm_response.content)
 
             if notes:
                 self.output_message.actions.append(
@@ -311,7 +288,7 @@ class SubtitleAgent(BaseAgent):
             self.output_message.push_update()
 
             stream_url = self.add_subtitles_using_timeline(
-                translated_subtitles["subtitles"]
+                subtitles["subtitles"]
             )
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
