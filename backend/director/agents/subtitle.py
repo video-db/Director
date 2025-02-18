@@ -156,14 +156,36 @@ class SubtitleAgent(BaseAgent):
             role=RoleTypes.user,
         )
 
-        detection_response = self.llm.chat_completions(
-            [detection_message.to_llm_msg()],
-            response_format={"type": "json_object"},
-        )
+        # detection_response = self.llm.chat_completions(
+        #     [detection_message.to_llm_msg()],
+        #     response_format={"type": "json_object"},
+        # )
 
-        result = json.loads(detection_response.content)
-        logger.info(f"Detected language: {result['detected_language'].lower()}")
-        return result["detected_language"].lower()
+        # result = json.loads(detection_response.content)
+        # logger.info(f"Detected language: {result['detected_language'].lower()}")
+        # return result["detected_language"].lower()
+
+        try:
+            detection_response = self.llm.chat_completions(
+                [detection_message.to_llm_msg()],
+                response_format={"type": "json_object"},
+            )
+            
+            result = json.loads(detection_response.content)
+            detected_language = result.get('detected_language', '').lower()
+            
+            if not detected_language:
+                raise ValueError("Language detection failed: Empty or invalid response")
+                
+            logger.info(f"Detected language: {detected_language}")
+            return detected_language
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse language detection response: {e}")
+            raise RuntimeError("Language detection failed: Invalid response format") from e
+        except Exception as e:
+            logger.error(f"Language detection failed: {e}")
+            raise RuntimeError(f"Language detection failed: {str(e)}") from e
 
     def add_subtitles_using_timeline(self, subtitles):
         video_width = 1920
@@ -271,11 +293,33 @@ class SubtitleAgent(BaseAgent):
                     content=translation_llm_prompt,
                     role=RoleTypes.user,
                 )
-                llm_response = self.llm.chat_completions(
-                    [translation_llm_message.to_llm_msg()],
-                    response_format={"type": "json_object"},
-                )
-                subtitles = json.loads(llm_response.content)
+                try:
+                    llm_response = self.llm.chat_completions(
+                        [translation_llm_message.to_llm_msg()],
+                        response_format={"type": "json_object"},
+                    )
+                    
+                    subtitles = json.loads(llm_response.content)
+
+                    if 'subtitles' not in subtitles:
+                        raise ValueError("Invalid translation response format: missing 'subtitles' key")
+                    
+                    if not isinstance(subtitles['subtitles'], list):
+                        raise ValueError("Invalid translation response format: 'subtitles' must be a list")
+                    
+                except ValueError as e:
+                    logger.error(f"Invalid translation response: {e}")
+                    video_content.status = MsgStatus.error
+                    video_content.status_message = "An error occurred during translation"
+                    self.output_message.publish()
+                    return AgentResponse(status=AgentStatus.ERROR, message=str(e))
+                    
+                except Exception as e:
+                    logger.error(f"Translation failed: {e}")
+                    video_content.status = MsgStatus.error
+                    video_content.status_message = "An error occurred during translation"
+                    self.output_message.publish()
+                    return AgentResponse(status=AgentStatus.ERROR, message=f"Translation failed: {str(e)}")
 
             if notes:
                 self.output_message.actions.append(
