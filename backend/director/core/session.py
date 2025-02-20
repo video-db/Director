@@ -47,6 +47,33 @@ class ContentType(str, Enum):
     search_results = "search_results"
 
 
+class EventType(str, Enum):
+    """Event types for WebSocket event emission."""
+
+    update_data = "update_data"
+
+
+class BaseEvent(BaseModel):
+    """Base event class for the WebSocket event."""
+
+    event_type: EventType
+
+
+class CollectionsUpdateEvent(BaseEvent):
+    """Collections update event class for the WebSocket event."""
+
+    event_type: EventType = EventType.update_data
+    update: str = "collections"
+
+
+class VideosUpdateEvent(BaseEvent):
+    """Videos update event class for the WebSocket event."""
+
+    event_type: EventType = EventType.update_data
+    update: str = "videos"
+    collection_id: str
+
+
 class BaseContent(BaseModel):
     """Base content class for the content in the message."""
 
@@ -363,3 +390,13 @@ class Session:
     def delete(self):
         """Delete the session from the database."""
         return self.db.delete_session(self.session_id)
+
+    def emit_event(self, event: BaseEvent, namespace="/chat"):
+        """Emits a structured WebSocket event to notify all clients about updates."""
+
+        event_payload = event.model_dump()
+
+        try:
+            emit("event", event_payload, namespace=namespace)
+        except Exception:
+            pass

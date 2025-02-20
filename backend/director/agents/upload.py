@@ -9,6 +9,7 @@ from director.core.session import (
     VideoContent,
     TextContent,
     VideoData,
+    VideosUpdateEvent,
 )
 from director.tools.videodb_tool import VideoDBTool
 
@@ -78,6 +79,10 @@ class UploadAgent(BaseAgent):
             content.status_message = f"{upload_data['name']} uploaded successfully"
             if media_type == "video":
                 content.video = VideoData(**upload_data)
+                # emit event to update the videos list
+                self.session.emit_event(
+                    VideosUpdateEvent(collection_id=upload_data.get("collection_id"))
+                )
             else:
                 content.text = (
                     f"\n ID: {upload_data['id']}, Title: {upload_data['name']}"
