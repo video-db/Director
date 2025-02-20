@@ -20,6 +20,8 @@ class OpenAIChatModel(str, Enum):
     GPT4_TURBO = "gpt-4-turbo"
     GPT4o = "gpt-4o-2024-11-20"
     GPT4o_MINI = "gpt-4o-mini"
+    o3_MINI = "o3-mini"
+    # o3_MINI_HIGH = "o3-mini-high"
 
 
 class OpenaiConfig(BaseLLMConfig):
@@ -146,8 +148,8 @@ class OpenAI(BaseLLM):
         params = {
             "model": self.chat_model,
             "messages": self._format_messages(messages),
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
+            # "temperature": self.temperature,
+            "max_completion_tokens": self.max_tokens,
             "top_p": self.top_p,
             "stop": stop,
             "timeout": self.timeout,
