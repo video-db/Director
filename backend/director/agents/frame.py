@@ -7,7 +7,7 @@ from director.tools.videodb_tool import VideoDBTool
 
 logger = logging.getLogger(__name__)
 
-THUMBNAIL_AGENT_PARAMETERS = {
+FRAME_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "collection_id": {
@@ -16,55 +16,55 @@ THUMBNAIL_AGENT_PARAMETERS = {
         },
         "video_id": {
             "type": "string",
-            "description": "Video Id to generate thumbnail",
+            "description": "Video Id to extract frame",
         },
         "timestamp": {
             "type": "integer",
-            "description": "Timestamp in seconds of the video to generate thumbnail, Optional parameter don't ask from user",
+            "description": "Timestamp in seconds of the video to extract the frame, optional parameter, don't ask from user",
         },
     },
     "required": ["collection_id", "video_id"],
 }
 
 
-class ThumbnailAgent(BaseAgent):
+class FrameAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
-        self.agent_name = "thumbnail"
-        self.description = "Generates a thumbnail image from a video file. This Agent takes a video id and a optionl timestamp as input. Use this tool when a user requests a preview, snapshot, generate or visual representation of a specific moment in a video file. The output is a static image file suitable for quick previews or thumbnails. It will not provide any other processing or editing options beyond generating the thumbnail."
-        self.parameters = THUMBNAIL_AGENT_PARAMETERS
+        self.agent_name = "frame"
+        self.description = "Generates a image frame from a video file. This Agent takes a video id and an optionl timestamp as input. Use this tool when a user requests a screenshot, frame, snapshot, generate or visual representation of a specific moment in a video file. The output is a static image file suitable for quick previews. It will not provide any other processing or editing options beyond generating the frame."
+        self.parameters = FRAME_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
     def run(
         self, collection_id: str, video_id: str, timestamp: int = 5, *args, **kwargs
     ) -> AgentResponse:
         """
-        Get the thumbnail for the video at the given timestamp
+        Get the image frame for the video at a given timestamp.
         """
         try:
-            self.output_message.actions.append("Generating thumbnail..")
+            self.output_message.actions.append("Generating frame..")
             image_content = ImageContent(agent_name=self.agent_name)
-            image_content.status_message = "Generating thumbnail.."
+            image_content.status_message = "Extracting frame.."
             self.output_message.content.append(image_content)
             self.output_message.push_update()
 
             videodb_tool = VideoDBTool(collection_id=collection_id)
-            thumbnail_data = videodb_tool.generate_thumbnail(
+            frame_data = videodb_tool.extract_frame(
                 video_id=video_id, timestamp=timestamp
             )
-            image_content.image = ImageData(**thumbnail_data)
+            image_content.image = ImageData(**frame_data)
             image_content.status = MsgStatus.success
-            image_content.status_message = "Here is your thumbnail."
+            image_content.status_message = "Here is your frane."
             self.output_message.publish()
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent.")
             image_content.status = MsgStatus.error
-            image_content.status_message = "Error in generating thumbnail."
+            image_content.status_message = "Error in extracting frame."
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message="Thumbnail generated and displayed to user.",
-            data=thumbnail_data,
+            message="Frame extracted and displayed to user.",
+            data=frame_data,
         )
