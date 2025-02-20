@@ -16,7 +16,6 @@ from director.llm import get_default_llm
 
 from videodb.asset import VideoAsset, TextAsset, TextStyle
 from videodb.exceptions import InvalidRequestError
-from videodb import Segmenter
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +120,7 @@ class SubtitleAgent(BaseAgent):
         self.description = "An agent designed to add different languages subtitles to a specified video within VideoDB."
         self.llm = get_default_llm()
         self.parameters = SUBTITLE_AGENT_PARAMETERS
+        self.batch_size = 50  # Configurable batch size
         super().__init__(session=session, **kwargs)
 
     def wrap_text(self, text, video_width, max_width_percent=0.60, avg_char_width=20):
@@ -161,22 +161,73 @@ class SubtitleAgent(BaseAgent):
                 [detection_message.to_llm_msg()],
                 response_format={"type": "json_object"},
             )
-            
+
             result = json.loads(detection_response.content)
-            detected_language = result.get('detected_language', '').lower()
-            
+            detected_language = result.get("detected_language", "").lower()
+
             if not detected_language:
                 raise ValueError("Language detection failed: Empty or invalid response")
-                
+
             logger.info(f"Detected language: {detected_language}")
             return detected_language
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse language detection response: {e}")
-            raise RuntimeError("Language detection failed: Invalid response format") from e
+            raise RuntimeError(
+                "Language detection failed: Invalid response format"
+            ) from e
         except Exception as e:
             logger.error(f"Language detection failed: {e}")
             raise RuntimeError(f"Language detection failed: {str(e)}") from e
+
+    def translate_transcript_in_batches(
+        self, compact_transcript, target_language, notes=""
+    ):
+        all_subtitles = []
+        total_segments = len(compact_transcript)
+
+        progress_message = f"Translated segments: 0 of {total_segments}"
+        self.output_message.actions.append(progress_message)
+        progress_index = len(self.output_message.actions) - 1
+        self.output_message.push_update()
+
+        # Split transcript into smaller batches
+        for i in range(0, total_segments, self.batch_size):
+            batch = compact_transcript[i : i + self.batch_size]
+
+            translation_llm_prompt = f"{translater_prompt} Translate to {target_language}, additional notes : {notes} compact_list: {batch}"
+            translation_llm_message = ContextMessage(
+                content=translation_llm_prompt,
+                role=RoleTypes.user,
+            )
+
+            llm_response = self.llm.chat_completions(
+                [translation_llm_message.to_llm_msg()],
+                response_format={"type": "json_object"},
+            )
+
+            batch_subtitles = json.loads(llm_response.content)
+
+            if "subtitles" not in batch_subtitles or not isinstance(
+                batch_subtitles["subtitles"], list
+            ):
+                raise ValueError("Invalid translation response format")
+
+            all_subtitles.extend(batch_subtitles["subtitles"])
+
+            # Update the existing progress message
+            segments_done = min(i + self.batch_size, total_segments)
+            self.output_message.actions[progress_index] = (
+                f"Translated segments: {segments_done} of {total_segments}"
+            )
+            self.output_message.push_update()
+
+        self.output_message.actions[progress_index] = (
+            f"Translation completed: {total_segments} segments processed"
+        )
+        self.output_message.push_update()
+
+        return {"subtitles": all_subtitles}
 
     def add_subtitles_using_timeline(self, subtitles):
         video_width = 1920
@@ -243,15 +294,21 @@ class SubtitleAgent(BaseAgent):
             self.output_message.push_update()
 
             try:
-                transcript = self.videodb_tool.get_transcript(video_id, text=False, segmenter=Segmenter.sentence)
+                transcript = self.videodb_tool.get_transcript(
+                    video_id, text=False, length=5
+                )
             except InvalidRequestError:
-                logger.info(f"Transcript not available for video {video_id}. Indexing spoken words...")
+                logger.info(
+                    f"Transcript not available for video {video_id}. Indexing spoken words..."
+                )
                 self.output_message.actions.append("Indexing video spoken words...")
                 self.output_message.push_update()
-                
+
                 self.videodb_tool.index_spoken_words(video_id)
-                transcript = self.videodb_tool.get_transcript(video_id, text=False, segmenter=Segmenter.sentence)
-            
+                transcript = self.videodb_tool.get_transcript(
+                    video_id, text=False, length=5
+                )
+
             self.output_message.content.append(video_content)
             self.output_message.push_update()
 
@@ -279,38 +336,23 @@ class SubtitleAgent(BaseAgent):
                 )
                 self.output_message.push_update()
 
-                translation_llm_prompt = f"{translater_prompt} Translate to {target_language}, additional notes : {notes} compact_list: {compact_transcript}"
-                translation_llm_message = ContextMessage(
-                    content=translation_llm_prompt,
-                    role=RoleTypes.user,
-                )
                 try:
-                    llm_response = self.llm.chat_completions(
-                        [translation_llm_message.to_llm_msg()],
-                        response_format={"type": "json_object"},
+                    subtitles = self.translate_transcript_in_batches(
+                        compact_transcript=compact_transcript,
+                        target_language=target_language,
+                        notes=notes,
                     )
-                    
-                    subtitles = json.loads(llm_response.content)
-
-                    if 'subtitles' not in subtitles:
-                        raise ValueError("Invalid translation response format: missing 'subtitles' key")
-                    
-                    if not isinstance(subtitles['subtitles'], list):
-                        raise ValueError("Invalid translation response format: 'subtitles' must be a list")
-                    
-                except ValueError as e:
-                    logger.error(f"Invalid translation response: {e}")
-                    video_content.status = MsgStatus.error
-                    video_content.status_message = "An error occurred during translation"
-                    self.output_message.publish()
-                    return AgentResponse(status=AgentStatus.ERROR, message=str(e))
-                    
                 except Exception as e:
                     logger.error(f"Translation failed: {e}")
                     video_content.status = MsgStatus.error
-                    video_content.status_message = "An error occurred during translation"
+                    video_content.status_message = (
+                        "An error occurred during translation"
+                    )
                     self.output_message.publish()
-                    return AgentResponse(status=AgentStatus.ERROR, message=f"Translation failed: {str(e)}")
+                    return AgentResponse(
+                        status=AgentStatus.ERROR,
+                        message=f"Translation failed: {str(e)}",
+                    )
 
             if notes:
                 self.output_message.actions.append(
@@ -322,9 +364,7 @@ class SubtitleAgent(BaseAgent):
             )
             self.output_message.push_update()
 
-            stream_url = self.add_subtitles_using_timeline(
-                subtitles["subtitles"]
-            )
+            stream_url = self.add_subtitles_using_timeline(subtitles["subtitles"])
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
             video_content.status_message = f"Subtitles in {language} have been successfully added to your video. Here is your stream."
@@ -342,5 +382,5 @@ class SubtitleAgent(BaseAgent):
         return AgentResponse(
             status=AgentStatus.SUCCESS,
             message="Subtitles added successfully",
-            data={stream_url: stream_url},
+            data={"stream_url": stream_url},
         )
