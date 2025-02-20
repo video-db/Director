@@ -17,4 +17,4 @@ replicate==1.0.1
 yt-dlp==2024.10.7
 videodb==0.2.10
 slack_sdk==3.33.2
-psycopg2-binary==2.9.10
+
