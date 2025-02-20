@@ -1,6 +1,10 @@
 import logging
 import textwrap
 import json
+import concurrent.futures
+from typing import List, Dict
+from dataclasses import dataclass
+from collections import OrderedDict
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import (
@@ -113,6 +117,12 @@ Be mindful of linguistic differences that may affect how words are grouped in [T
 Ensure that cultural nuances and idiomatic expressions are appropriately translated.
 """
 
+@dataclass
+class BatchTranslationResult:
+    batch_index: int
+    subtitles: List[Dict]
+    success: bool
+    error: str = ""
 
 class SubtitleAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
@@ -120,7 +130,9 @@ class SubtitleAgent(BaseAgent):
         self.description = "An agent designed to add different languages subtitles to a specified video within VideoDB."
         self.llm = get_default_llm()
         self.parameters = SUBTITLE_AGENT_PARAMETERS
-        self.batch_size = 50  # Configurable batch size
+        self.batch_size = 40  # Configurable batch size
+        self.max_parallel_requests = 5  
+        self.max_retries = 3
         super().__init__(session=session, **kwargs)
 
     def wrap_text(self, text, video_width, max_width_percent=0.60, avg_char_width=20):
@@ -180,52 +192,131 @@ class SubtitleAgent(BaseAgent):
             logger.error(f"Language detection failed: {e}")
             raise RuntimeError(f"Language detection failed: {str(e)}") from e
 
-    def translate_transcript_in_batches(
-        self, compact_transcript, target_language, notes=""
-    ):
-        all_subtitles = []
-        total_segments = len(compact_transcript)
+    def _translate_batch(self, batch: List[str], batch_index: int, target_language: str, notes: str) -> BatchTranslationResult:
+        """
+        Translate a single batch of transcript segments with retry mechanism and comprehensive error handling.
+        """
+        for retry in range(self.max_retries):
+            try:
+                translation_llm_prompt = f"{translater_prompt} Translate to {target_language}, additional notes : {notes} compact_list: {batch}"
+                translation_llm_message = ContextMessage(
+                    content=translation_llm_prompt,
+                    role=RoleTypes.user,
+                )
 
-        progress_message = f"Translated segments: 0 of {total_segments}"
+                llm_response = self.llm.chat_completions(
+                    [translation_llm_message.to_llm_msg()],
+                    response_format={"type": "json_object"},
+                )
+
+                batch_subtitles = json.loads(llm_response.content)
+
+                if "subtitles" not in batch_subtitles:
+                    raise ValueError(f"Missing 'subtitles' key in response. Content: {batch_subtitles}")
+
+                if not isinstance(batch_subtitles["subtitles"], list):
+                    raise ValueError(f"'subtitles' is not a list. Received type: {type(batch_subtitles['subtitles'])}")
+
+                return BatchTranslationResult(
+                    batch_index=batch_index,
+                    subtitles=batch_subtitles["subtitles"],
+                    success=True
+                )
+
+            except (json.JSONDecodeError, ValueError) as e:
+                error_msg = f"Error in batch {batch_index} (attempt {retry + 1}/{self.max_retries}): {str(e)}"
+                logger.error(error_msg)
+                if retry < self.max_retries - 1:
+                    logger.info(f"Retrying batch {batch_index}")
+                    continue
+                return BatchTranslationResult(
+                    batch_index=batch_index,
+                    subtitles=[],
+                    success=False,
+                    error=error_msg
+                )
+            except Exception as e:
+                error_msg = f"Unexpected error in batch {batch_index} (attempt {retry + 1}/{self.max_retries}): {str(e)}"
+                logger.error(error_msg)
+                if retry < self.max_retries - 1:
+                    logger.info(f"Retrying batch {batch_index}")
+                    continue
+                return BatchTranslationResult(
+                    batch_index=batch_index,
+                    subtitles=[],
+                    success=False,
+                    error=error_msg
+                )
+
+    def translate_transcript_in_parallel(self, compact_transcript: List[str], target_language: str, notes: str = "") -> Dict:
+        """
+        Translate transcript segments in parallel while preserving order and handling failures.
+        """
+        total_segments = len(compact_transcript)
+        total_batches = (total_segments + self.batch_size - 1) // self.batch_size
+
+        # Initialize progress tracking
+        progress_message = "Translation: 0% completed"
         self.output_message.actions.append(progress_message)
         progress_index = len(self.output_message.actions) - 1
         self.output_message.push_update()
 
-        # Split transcript into smaller batches
+        batches = []
         for i in range(0, total_segments, self.batch_size):
-            batch = compact_transcript[i : i + self.batch_size]
+            batch = compact_transcript[i:i + self.batch_size]
+            batches.append((i // self.batch_size, batch))
 
-            translation_llm_prompt = f"{translater_prompt} Translate to {target_language}, additional notes : {notes} compact_list: {batch}"
-            translation_llm_message = ContextMessage(
-                content=translation_llm_prompt,
-                role=RoleTypes.user,
-            )
+        # Store results in an ordered dictionary to maintain sequence
+        results_dict = OrderedDict()
+        failed_batches = []
 
-            llm_response = self.llm.chat_completions(
-                [translation_llm_message.to_llm_msg()],
-                response_format={"type": "json_object"},
-            )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_parallel_requests) as executor:
+            # Submit translation tasks for each batch
+            future_to_batch = {
+                executor.submit(
+                    self._translate_batch,
+                    batch,
+                    batch_index,
+                    target_language,
+                    notes
+                ): (batch_index, batch)
+                for batch_index, batch in batches
+            }
 
-            batch_subtitles = json.loads(llm_response.content)
+            completed_batches = 0
+            for future in concurrent.futures.as_completed(future_to_batch):
+                batch_result = future.result()
+                results_dict[batch_result.batch_index] = batch_result
 
-            if "subtitles" not in batch_subtitles or not isinstance(
-                batch_subtitles["subtitles"], list
-            ):
-                raise ValueError("Invalid translation response format")
+                if not batch_result.success:
+                    failed_batches.append((batch_result.batch_index, batch_result.error))
 
-            all_subtitles.extend(batch_subtitles["subtitles"])
+                completed_batches += 1
+                completion_percentage = (completed_batches / total_batches) * 100
+                self.output_message.actions[progress_index] = (
+                    f"Translation progress: {int(completion_percentage)}% completed"
+                )
+                self.output_message.push_update()
 
-            # Update the existing progress message
-            segments_done = min(i + self.batch_size, total_segments)
-            self.output_message.actions[progress_index] = (
-                f"Translated segments: {segments_done} of {total_segments}"
-            )
-            self.output_message.push_update()
+        if failed_batches:
+            error_messages = "\n".join([f"Batch {idx}: {error}" for idx, error in failed_batches])
+            raise Exception(f"Translation failed for some batches:\n{error_messages}")
 
-        self.output_message.actions[progress_index] = (
-            f"Translation completed: {total_segments} segments processed"
-        )
-        self.output_message.push_update()
+        all_subtitles = []
+        for batch_index in range(total_batches):
+            batch_result = results_dict.get(batch_index)
+            if batch_result and batch_result.success:
+                all_subtitles.extend(batch_result.subtitles)
+
+        all_subtitles.sort(key=lambda x: float(x["start"]))
+
+        # Validate subtitle sequence
+        for i in range(1, len(all_subtitles)):
+            current_start = float(all_subtitles[i]["start"])
+            prev_end = float(all_subtitles[i-1]["end"])
+            if current_start < prev_end:
+                all_subtitles[i]["start"] = prev_end
+                logger.warning(f"Fixed overlapping subtitles at index {i}")
 
         return {"subtitles": all_subtitles}
 
@@ -337,7 +428,7 @@ class SubtitleAgent(BaseAgent):
                 self.output_message.push_update()
 
                 try:
-                    subtitles = self.translate_transcript_in_batches(
+                    subtitles = self.translate_transcript_in_parallel(
                         compact_transcript=compact_transcript,
                         target_language=target_language,
                         notes=notes,
@@ -345,9 +436,7 @@ class SubtitleAgent(BaseAgent):
                 except Exception as e:
                     logger.error(f"Translation failed: {e}")
                     video_content.status = MsgStatus.error
-                    video_content.status_message = (
-                        "An error occurred during translation"
-                    )
+                    video_content.status_message = "Translation failed. Please try again."
                     self.output_message.publish()
                     return AgentResponse(
                         status=AgentStatus.ERROR,
