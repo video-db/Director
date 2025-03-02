@@ -19,6 +19,7 @@ class LLMType(str, Enum):
 
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    XAI = "xai"
     VIDEODB_PROXY = "videodb_proxy"
 
 
@@ -27,5 +28,7 @@ class EnvPrefix(str, Enum):
 
     OPENAI_ = "OPENAI_"
     ANTHROPIC_ = "ANTHROPIC_"
+    XAI_ = "XAI_"
 
-DOWNLOADS_PATH="director/downloads"
+
+DOWNLOADS_PATH = "director/downloads"
