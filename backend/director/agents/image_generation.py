@@ -52,6 +52,8 @@ IMAGE_GENERATION_AGENT_PARAMETERS = {
         },
     },
     "required": ["collection_id", "job_type", "prompt"],
+    "if": {"properties": {"job_type": {"const": "image_to_image"}}},
+    "then": {"required": ["image_to_image"]},
 }
 
 

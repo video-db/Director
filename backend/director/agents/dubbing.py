@@ -35,10 +35,6 @@ DUBBING_AGENT_PARAMETERS = {
             "description": "The dubbing engine to use. Default is 'elevenlabs'. Possible values include 'elevenlabs'.",
             "default": "elevenlabs",
         },
-        "engine_params": {
-            "type": "object",
-            "description": "Optional parameters for the dubbing engine.",
-        },
     },
     "required": [
         "video_id",
@@ -66,7 +62,6 @@ class DubbingAgent(BaseAgent):
         target_language_code: str,
         collection_id: str,
         engine: str,
-        engine_params: dict = {},
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -77,7 +72,6 @@ class DubbingAgent(BaseAgent):
         :param str target_language_code: The target language code for dubbing (e.g. es).
         :param str collection_id: The ID of the collection to process.
         :param str engine: The dubbing engine to use. Default is 'elevenlabs'.
-        :param dict engine_params: Optional parameters for the dubbing engine.
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the dubbing operation.
