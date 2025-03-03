@@ -2,7 +2,6 @@ import logging
 import os
 import requests
 import uuid
-import subprocess
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, MsgStatus, TextContent, VideoContent, VideoData
 from director.tools.elevenlabs import ElevenLabsTool
@@ -10,6 +9,7 @@ from director.tools.videodb_tool import VideoDBTool
 from director.constants import DOWNLOADS_PATH
 from videodb.asset import VideoAsset, AudioAsset
 from videodb.timeline import Timeline
+
 logger = logging.getLogger(__name__)
 
 VOICE_REPLACEMENT_AGENT_PARAMETERS = {
@@ -91,45 +91,46 @@ class VoiceReplacementAgent(BaseAgent):
 
             with open(local_path, 'wb') as file:
                 for chunk in response.iter_content(chunk_size=65536):
-                    print("wrote chunk")
                     file.write(chunk)
-
-            print("finished")
 
             return local_path
 
         except Exception as e:
             print(f"Failed to download {video_url}: {e}")
             return None
+        
+    def _download_audio_file(self, audio_url: str) -> str:
 
-    def _seconds_to_hms(self,seconds: int) -> str:
-        """Converts seconds to HH:MM:SS format."""
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        seconds = seconds % 60
-        return f"{hours:02}:{minutes:02}:{seconds:02}"
-
-    def _extract_audio_from_video(self, video_path: str) -> str:
         os.makedirs(DOWNLOADS_PATH, exist_ok=True)
 
         try:
-            audio_file_name = f"audio_extracted_{uuid.uuid4()}.mp3"
-            audio_path = os.path.join(DOWNLOADS_PATH, audio_file_name)
 
-            command = [
-                "ffmpeg", "-i", video_path,
-                "-q:a", "0", "-map", "a",
-                audio_path,
-                "-y"
-            ]
+            response = requests.get(audio_url, stream=True)
+            response.raise_for_status()
 
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
+            download_file_name = f"audio_url_{str(uuid.uuid4())}.mp3"
+            local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
+
+            with open(local_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=65536):
+                    file.write(chunk)
+
+            return local_path
+
+        except Exception as e:
+            logger.error(f"Failed to download {audio_url}: {e}")
+            return None
+
+    def _extract_audio_from_video(self, video_path: str):
+        try:
+            audio_uploaded = self.videodb_tool.upload(video_path, source_type="file_path", media_type="audio")
+            audio = self.videodb_tool.get_audio(audio_id=audio_uploaded["id"])
+            audio_path = self._download_audio_file(audio["url"])
             return audio_path
-
-
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to extract audio: {e}")
+        
+        except Exception as e:
+            logger.error(f"Failed to download audio: {e}")
             return None
 
     def _get_transcript(self, video_id):
@@ -196,11 +197,11 @@ class VoiceReplacementAgent(BaseAgent):
 
             self.output_message.actions.append("Getting the sample video's stream")
             self.output_message.push_update()
-            stream_url = self.videodb_tool.generate_video_stream(sample_video["video_id"], [(sample_video["start_time"],sample_video["end_time"])]) 
+            stream_url = self.videodb_tool.generate_video_stream(sample_video["video_id"], [(sample_video.get("start_time", 0),sample_video.get("end_time", 90))]) 
 
             self.output_message.actions.append("Getting the sample video's download URL")
             self.output_message.push_update()
-            download_response = self.videodb_tool.download(stream_url)
+            download_response = self.videodb_tool.download(stream_url, name="audio_sample_video")
             if download_response.get("status") == "done":
                 download_url = download_response.get("download_url")
             else:
@@ -213,7 +214,7 @@ class VoiceReplacementAgent(BaseAgent):
             if not video_path:
                 raise Exception("Couldn't fetch the video for sampling")
             
-            sample_audio = self._extract_audio_from_video(video_path)
+            sample_audio = self._extract_audio_from_video(video_path=video_path)
 
             if not sample_audio:
                 return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audios")
