@@ -151,6 +151,7 @@ class VideoDBTool:
             "name": audio.name,
             "collection_id": audio.collection_id,
             "length": audio.length,
+            "url": audio.generate_url()
         }
 
     def generate_image_url(self, image_id):
