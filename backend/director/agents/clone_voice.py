@@ -93,6 +93,8 @@ class CloneVoiceAgent(BaseAgent):
     def _download_audio_file(self, audio_url: str) -> str | None:
         os.makedirs(DOWNLOADS_PATH, exist_ok=True)
         try:
+            self.output_message.actions.append("Downloading sample audio URL")
+            self.output_message.push_update()
             response = requests.get(audio_url, stream=True)
             response.raise_for_status()
 
@@ -144,12 +146,16 @@ class CloneVoiceAgent(BaseAgent):
         end_time =  audio_source.get("end_time", 90)
         try:
             videodb_tool = VideoDBTool(collection_id)
+            self.output_message.actions.append("Generating the video stream for the sample")
+            self.output_message.push_update()
             video_stream = videodb_tool.generate_video_stream(video_id, [(start_time, end_time)])
             download_response = videodb_tool.download(video_stream)
             download_url = download_response["download_url"]
             video_path = self._download_video_file(download_url)
             if not video_path:
                 return None
+            self.output_message.actions.append("Extracting the audio from the sample video")
+            self.output_message.push_update()
             uploaded_audio = videodb_tool.upload(source=video_path, source_type="file_path", media_type="audio")
             audio = videodb_tool.get_audio(uploaded_audio["id"])
             audio_url = audio["url"]
