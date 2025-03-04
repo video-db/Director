@@ -122,6 +122,7 @@ class VideoDBTool:
             "name": audio.name,
             "collection_id": audio.collection_id,
             "length": audio.length,
+            "url": audio.generate_url()
         }
 
     def upload(self, source, source_type="url", media_type="video", name=None):
