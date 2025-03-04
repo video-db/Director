@@ -14,25 +14,57 @@ logger = logging.getLogger(__name__)
 CLONE_VOICE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
-        "sample_audios": {
-            "type": "array",
-            "description": "List of audio file URLs provided by the user to clone",
-            "items": {
-                "type": "string",
-                "description": "The URL of the audio file"
-            }
+        "audio_source": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "audio_url": {
+                            "type": "string",
+                            "format": "uri",
+                            "description": "A direct URL to the audio file to clone the voice from."
+                        }
+                    },
+                    "required": ["audio_url"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "video_id": {
+                            "type": "string",
+                            "description": "ID of the video from which the audio should be extracted."
+                        }, 
+                        "start_time": {
+                            "type": "number",
+                            "description": "The start time from where the 1 and a half minute. start time is given in seconds that is 1 minute 37 seconds is 97",
+                            "default": 0
+                        },
+                        "end_time": {
+                            "type": "number",
+                            "description": "The end time is where the extracted audio sample must end. Make sure that the end time is farther than start time and should only be 1 to 2 minutes farther than start_time. end time is given in seconds. for example 1 minute 37 seconds is 97",
+                            "default": 90
+                        },
+                        "collection_id": {
+                            "type": "string",
+                            "description": "ID of the collection where the sample video is stored",
+                        }
+                    },
+                    "required": ["video_id", "start_time", "end_time", "collection_id"]
+                }
+            ],
+            "description": "Provide either an audio URL or a video ID, but not both."
         },
         "text_to_synthesis": {
             "type": "string",
-            "description": "The text which the user wants to convert into audio in the voice given in the sample audios",
+            "description": "The text which the user wants to convert into audio in the given voice.",
         },
-        "name_of_voice" : {
+        "name_of_voice": {
             "type": "string",
-            "description": "The name to give to the voice",
+            "description": "The name to give to the voice.",
         },
-        "description" : {
+        "description": {
             "type": "string",
-            "description": "Description about how the voice sounds like. For example: This is a sounds of an old person, the voice is child like and cute etc."
+            "description": "Description of how the voice sounds, e.g., 'old person', 'childlike and cute', etc."
         },
         "is_authorized_to_clone_voice": {
             "type": "boolean",
@@ -47,7 +79,7 @@ CLONE_VOICE_AGENT_PARAMETERS = {
             "description": "the ID of the collection to store the output audio file",
         }
     },
-    "required": ["sample_audios", "text_to_synthesis", "is_authorized_to_clone_voice", "collection_id", "name_of_voice"],
+    "required": ["audio_source", "text_to_synthesis", "is_authorized_to_clone_voice", "collection_id", "name_of_voice"],
 }
 
 class CloneVoiceAgent(BaseAgent):
@@ -58,35 +90,89 @@ class CloneVoiceAgent(BaseAgent):
         super().__init__(session=session, **kwargs)
         
 
-    def _download_audio_files(self, audio_urls: list[str]) -> list[str]:
-
+    def _download_audio_file(self, audio_url: str) -> str | None:
         os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-        downloaded_files = []
+        try:
+            response = requests.get(audio_url, stream=True)
+            response.raise_for_status()
 
-        for audio_url in audio_urls:
-            try:
-                response = requests.get(audio_url, stream=True)
-                response.raise_for_status()
+            if not response.headers.get('Content-Type', '').startswith('audio'):
+                raise ValueError(f"The URL does not point to an MP3 file: {audio_url}")
 
-                if not response.headers.get('Content-Type', '').startswith('audio'):
-                    raise ValueError(f"The URL does not point to an MP3 file: {audio_url}")
+            download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
+            local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
 
-                download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
-                local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
+            with open(local_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    file.write(chunk)
 
-                with open(local_path, 'wb') as file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        file.write(chunk)
+            return local_path
+        except Exception as e:
+            logger.error(f"Failed to download {audio_url}: {e}")
+            return None
+        
+    def _download_video_file(self, video_url: str) -> str | None:
+        os.makedirs(DOWNLOADS_PATH, exist_ok=True)
 
-                downloaded_files.append(local_path)
-            except Exception as e:
-                print(f"Failed to download {audio_url}: {e}")
+        try:
+            response = requests.get(video_url, stream=True)
+            response.raise_for_status()
 
-        return downloaded_files
+            if not response.headers.get('Content-Type', '').startswith('video'):
+                raise ValueError(f"The URL does not point to a video file: {video_url}")
+
+            download_file_name = f"video_download_{str(uuid.uuid4())}.mp4"
+            local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
+
+            with open(local_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=65536):
+                    file.write(chunk)
+
+            return local_path
+
+        except Exception as e:
+            print(f"Failed to download {video_url}: {e}")
+            return None
+        
+    def _download_audio_from_video(self, audio_source: dict) -> str | None:
+        required_keys = {"video_id", "collection_id", "start_time", "end_time"}
+        if not isinstance(audio_source, dict) or not required_keys.issubset(audio_source.keys()):
+            return None
+        video_id = audio_source["video_id"]
+        collection_id = audio_source["collection_id"]
+        start_time = audio_source.get("start_time", 0)
+        end_time =  audio_source.get("end_time", 90)
+        try:
+            videodb_tool = VideoDBTool(collection_id)
+            video_stream = videodb_tool.generate_video_stream(video_id, [(start_time, end_time)])
+            download_response = videodb_tool.download(video_stream)
+            download_url = download_response["download_url"]
+            video_path = self._download_video_file(download_url)
+            if not video_path:
+                return None
+            uploaded_audio = videodb_tool.upload(source=video_path, source_type="file_path", media_type="audio")
+            audio = videodb_tool.get_audio(uploaded_audio["id"])
+            audio_url = audio["url"]
+
+            response = requests.get(audio_url, stream=True)
+            response.raise_for_status()
+
+            download_file_name = f"audio_clone_voice_download_{str(uuid.uuid4())}.mp3"
+            local_path = os.path.join(DOWNLOADS_PATH, download_file_name)
+
+            with open(local_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    file.write(chunk)
+
+            return local_path
+        except Exception as e:
+            logger.error(f"Failed to download audio from video: {e}")
+            return None
+
 
     def run(
             self,
-            sample_audios: list[str],
+            audio_source: dict,
             text_to_synthesis: str,
             name_of_voice: str,
             is_authorized_to_clone_voice: bool,
@@ -121,9 +207,13 @@ class CloneVoiceAgent(BaseAgent):
             audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
-            sample_files = self._download_audio_files(sample_audios)
+            if "audio_url" in audio_source:
+                sample_file = self._download_audio_file(audio_source["audio_url"])
+            
+            if "video_id" in audio_source:
+                sample_file = self._download_audio_from_video(audio_source)
 
-            if not sample_files:
+            if not sample_file:
                 return AgentResponse(status=AgentStatus.ERROR, message="Could'nt process the sample audios")
 
             if cloned_voice_id:
@@ -133,7 +223,7 @@ class CloneVoiceAgent(BaseAgent):
             else:
                 self.output_message.actions.append("Cloning the voice")
                 self.output_message.push_update()
-                voice = audio_gen_tool.clone_audio(audio_files=sample_files, name_of_voice=name_of_voice, description=description)
+                voice = audio_gen_tool.clone_audio(audio_files=[sample_file], name_of_voice=name_of_voice, description=description)
 
             if not voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Failed to generate the voice clone")
