@@ -46,31 +46,16 @@ SUBTITLE_AGENT_PARAMETERS = {
     "required": ["video_id", "collection_id"],
 }
 
-language_detection_prompt = """
-Task Description:
----
-You are provided with a sample of transcript text. Your task is to identify the language of this text.
-
-Guidelines:
-- Analyze the provided text carefully
-- Consider language patterns, common words, and grammatical structures
-- Return your response in JSON format with a single field "detected_language"
-- Use the full English name of the language (e.g., "English", "Spanish", "French", etc.)
-
-Please return your response in this format:
-{"detected_language": "name of detected language"}
-"""
-
 translater_prompt = """
 Task Description:
 ---
-You are provided with a transcript of a video in a compact format called compact_list to optimize context size. The transcript is presented as a single string where each sentence block is formatted as:
+You are provided with a transcript of a video in a compact format called compact_list to optimize context size. The transcript is presented as a single string where each word block is formatted as:
 
-sentence|start|end
+word|start|end
 
-sentence: The sentence itself.
-start: The start time of the sentence in the video.
-end: The end time of the sentence in the video.
+word: The word itself.
+start: The start time of the word in the video.
+end: The end time of the word in the video.
 
 Example Input (compact_list):
 
@@ -133,7 +118,7 @@ class SubtitleAgent(BaseAgent):
         self.llm = get_default_llm()
         self.parameters = SUBTITLE_AGENT_PARAMETERS
         self.batch_size = 40  # Configurable batch size
-        self.max_retries = 3
+        self.max_retries = 4
         super().__init__(session=session, **kwargs)
 
     def wrap_text(self, text, video_width, max_width_percent=0.60, avg_char_width=20):
@@ -156,42 +141,6 @@ class SubtitleAgent(BaseAgent):
             compact_word = f"{word}|{start}|{end}"
             compact_list.append(compact_word)
         return compact_list
-
-    def detect_language(self, transcript_sample):
-        logger.info("Detecting language...")
-        sample_text = " ".join([item.split("|")[0] for item in transcript_sample[:10]])
-
-        detection_prompt = (
-            f"{language_detection_prompt} Sample text for analysis: {sample_text}"
-        )
-        detection_message = ContextMessage(
-            content=detection_prompt,
-            role=RoleTypes.user,
-        )
-
-        try:
-            detection_response = self.llm.chat_completions(
-                [detection_message.to_llm_msg()],
-                response_format={"type": "json_object"},
-            )
-
-            result = json.loads(detection_response.content)
-            detected_language = result.get("detected_language", "").lower()
-
-            if not detected_language:
-                raise ValueError("Language detection failed: Empty or invalid response")
-
-            logger.info(f"Detected language: {detected_language}")
-            return detected_language
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse language detection response: {e}")
-            raise RuntimeError(
-                "Language detection failed: Invalid response format"
-            ) from e
-        except Exception as e:
-            logger.error(f"Language detection failed: {e}")
-            raise RuntimeError(f"Language detection failed: {str(e)}") from e
 
     def _translate_batch(
         self, batch: List[str], batch_index: int, target_language: str, notes: str
@@ -395,7 +344,7 @@ class SubtitleAgent(BaseAgent):
 
             try:
                 transcript = self.videodb_tool.get_transcript(
-                    video_id, text=False, length=5
+                    video_id, text=False
                 )
             except InvalidRequestError:
                 logger.info(
@@ -406,7 +355,7 @@ class SubtitleAgent(BaseAgent):
 
                 self.videodb_tool.index_spoken_words(video_id)
                 transcript = self.videodb_tool.get_transcript(
-                    video_id, text=False, length=5
+                    video_id, text=False
                 )
 
             self.output_message.content.append(video_content)
@@ -414,45 +363,32 @@ class SubtitleAgent(BaseAgent):
 
             compact_transcript = self.get_compact_transcript(transcript=transcript)
 
-            self.output_message.actions.append("Detecting source language of the video")
             self.output_message.push_update()
-            source_language = self.detect_language(compact_transcript)
-            logger.info(f"Detected source language: {source_language}")
 
-            if source_language == target_language:
-                logger.info(
-                    "Source language matches target language. No translation needed"
-                )
-                self.output_message.actions.append(
-                    f"Source language ({source_language}) matches target language.."
-                )
-                self.output_message.push_update()
 
-                subtitles = {"subtitles": transcript}
-            else:
-                logger.info("Translating subtitles...")
-                self.output_message.actions.append(
-                    f"Translating the subtitles from {source_language} to {target_language}"
-                )
-                self.output_message.push_update()
+            logger.info("Translating subtitles...")
+            self.output_message.actions.append(
+                "Translating the subtitles into the target language"
+            )
+            self.output_message.push_update()
 
-                try:
-                    subtitles = self.translate_transcript_in_parallel(
-                        compact_transcript=compact_transcript,
-                        target_language=target_language,
-                        notes=notes,
-                    )
-                except Exception as e:
-                    logger.error(f"Translation failed: {e}")
-                    video_content.status = MsgStatus.error
-                    video_content.status_message = (
-                        "Translation failed. Please try again."
-                    )
-                    self.output_message.publish()
-                    return AgentResponse(
-                        status=AgentStatus.ERROR,
-                        message=f"Translation failed: {str(e)}",
-                    )
+            try:
+                subtitles = self.translate_transcript_in_parallel(
+                    compact_transcript=compact_transcript,
+                    target_language=target_language,
+                    notes=notes,
+                )
+            except Exception as e:
+                logger.error(f"Translation failed: {e}")
+                video_content.status = MsgStatus.error
+                video_content.status_message = (
+                    "Translation failed. Please try again."
+                )
+                self.output_message.publish()
+                return AgentResponse(
+                    status=AgentStatus.ERROR,
+                    message=f"Translation failed: {str(e)}",
+                )
 
             if notes:
                 self.output_message.actions.append(
