@@ -27,7 +27,7 @@ from director.agents.comparison import ComparisonAgent
 from director.agents.web_search_agent import WebSearchAgent
 
 
-from director.core.session import Session, InputMessage, MsgStatus
+from director.core.session import Session, InputMessage, MsgStatus, TextContent
 from director.core.reasoning import ReasoningEngine
 from director.db.base import BaseDB
 from director.db import load_db
@@ -118,6 +118,9 @@ class ChatHandler:
             res_eng.run()
 
         except Exception as e:
+            session.output_message.content.append(
+                TextContent(text=f"{e}", status=MsgStatus.error)
+            )
             session.output_message.update_status(MsgStatus.error)
             logger.exception(f"Error in chat handler: {e}")
 
