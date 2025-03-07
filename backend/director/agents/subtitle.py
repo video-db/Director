@@ -64,7 +64,8 @@ Example Input (compact_list):
 Your Task:
 ---
 1.Translate the Text into [TARGET LANGUAGE]:
-Translate all the words in the transcript from the source language to [TARGET LANGUAGE].
+If the transcript is already in [TARGET LANGUAGE], do not translate or modify the text content. Only format it according to the instructions below.
+Otherwise, translate all the words in the transcript from the source language to [TARGET LANGUAGE].
 
 2.Combine Words into Meaningful Phrases or Sentences:
 Group the translated words into logical phrases or sentences that make sense together.
