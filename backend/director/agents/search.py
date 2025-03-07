@@ -96,7 +96,9 @@ class SearchAgent(BaseAgent):
                 f"Running {search_type} search on {index_type} index."
             )
             self.output_message.push_update()
+
             videodb_tool = VideoDBTool(collection_id=collection_id)
+
             scene_index_id = None
             if index_type == "scene" and video_id:
                 scene_index_list = videodb_tool.list_scene_index(video_id)
@@ -106,42 +108,47 @@ class SearchAgent(BaseAgent):
                     self.output_message.actions.append("Scene index not found")
                     self.output_message.push_update()
                     raise ValueError("Scene index not found. Please index scene first.")
-                
-            elif index_type == "spoken_word":
 
+            elif index_type == "spoken_word":
                 try:
                     videodb_tool.get_transcript(video_id)
                 except InvalidRequestError as e:
                     logger.error(f"Transcript not found for video {video_id}. {e}")
                     search_result_content.status = MsgStatus.error
-                    search_result_content.status_message = "Spoken words index not found for video."
+                    search_result_content.status_message = (
+                        "Spoken words index not found for video."
+                    )
                     self.output_message.push_update()
-                    raise ValueError("Transcript not found. Please index spoken word first.")
-                
-                if search_type == "semantic":
-                    search_results = videodb_tool.semantic_search(
-                        query,
-                        index_type=index_type,
-                        video_id=video_id,
-                        result_threshold=result_threshold,
-                        score_threshold=score_threshold,
-                        dynamic_score_percentage=dynamic_score_percentage,
-                        scene_index_id=scene_index_id,
+                    raise ValueError(
+                        "Transcript not found. Please index spoken word first."
                     )
 
-                elif search_type == "keyword" and video_id:
-                    search_results = videodb_tool.keyword_search(
-                        query,
-                        index_type=index_type,
-                        video_id=video_id,
-                        result_threshold=result_threshold,
-                        scene_index_id=scene_index_id,
-                    )
-                else:
-                    raise ValueError(f"Invalid search type {search_type}")
-                
             else:
-                raise ValueError(f"Invalid index type {index_type}")
+                raise ValueError(
+                    f"Invalid index type {index_type}, please use supported index type."
+                )
+
+            if search_type == "semantic":
+                search_results = videodb_tool.semantic_search(
+                    query,
+                    index_type=index_type,
+                    video_id=video_id,
+                    result_threshold=result_threshold,
+                    score_threshold=score_threshold,
+                    dynamic_score_percentage=dynamic_score_percentage,
+                    scene_index_id=scene_index_id,
+                )
+
+            elif search_type == "keyword" and video_id:
+                search_results = videodb_tool.keyword_search(
+                    query,
+                    index_type=index_type,
+                    video_id=video_id,
+                    result_threshold=result_threshold,
+                    scene_index_id=scene_index_id,
+                )
+            else:
+                raise ValueError(f"Invalid search type {search_type}")
 
             compilation_content = VideoContent(
                 status=MsgStatus.progress,
@@ -159,7 +166,9 @@ class SearchAgent(BaseAgent):
             shots = search_results.get_shots()
             if not shots:
                 search_result_content.status = MsgStatus.error
-                search_result_content.status_message = f"Failed due to no search results found for query {query}"
+                search_result_content.status_message = (
+                    f"Failed due to no search results found for query {query}"
+                )
                 compilation_content.status = MsgStatus.error
                 compilation_content.status_message = (
                     "Failed to create compilation of search results."
@@ -261,11 +270,12 @@ class SearchAgent(BaseAgent):
         except ValueError as ve:
             logger.error(f"ValueError in {self.agent_name}: {ve}")
             if search_result_content.status != MsgStatus.success:
-                search_result_content.status = MsgStatus.error 
+                search_result_content.status = MsgStatus.error
+                search_result_content.status_message = "Failed to get search results."
                 
             return AgentResponse(
                 status=AgentStatus.ERROR,
-                message="Failed to get search results. Please index spoken word first.",
+                message=f"{ve}",
             )
 
         except Exception as e:
