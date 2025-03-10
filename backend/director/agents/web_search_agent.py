@@ -1,6 +1,9 @@
 import logging
 import os
 import requests
+
+from typing import Optional
+
 from dotenv import load_dotenv
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
@@ -56,14 +59,14 @@ SEARCH_AGENT_PARAMETERS = {
                     "properties": {
                         "base_url": {
                             "type": "string",
-                            "description": "Base URL for the SerpAPI service"
+                            "description": "Base URL for the SerpAPI service",
                         },
                         "timeout": {
                             "type": "integer",
                             "description": "Timeout in seconds for API requests",
-                            "default": 10
-                        }
-                    }
+                            "default": 10,
+                        },
+                    },
                 },
             },
             "required": ["query"],
@@ -74,12 +77,11 @@ SEARCH_AGENT_PARAMETERS = {
 
 SUPPORTED_ENGINES = ["serp"]
 
+
 class WebSearchAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "web_search"
-        self.description = (
-            "Performs web searches to find and retrieve relevant videos using various engines."
-        )
+        self.description = "Performs web searches to find and retrieve relevant videos using various engines."
         self.parameters = SEARCH_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
@@ -87,7 +89,7 @@ class WebSearchAgent(BaseAgent):
         self,
         engine: str,
         job_type: str,
-        search_videos: dict | None = None,
+        search_videos: Optional[str] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -116,7 +118,7 @@ class WebSearchAgent(BaseAgent):
         search_engine_tool = SerpAPI(
             api_key=self.api_key,
             base_url=serp_config.get("base_url"),
-            timeout=serp_config.get("timeout", 10)
+            timeout=serp_config.get("timeout", 10),
         )
 
         if job_type == "search_videos":
@@ -137,7 +139,9 @@ class WebSearchAgent(BaseAgent):
                 message=f"Unsupported job type: {job_type}.",
             )
 
-    def _handle_video_search(self, search_videos: dict, search_engine_tool) -> AgentResponse:
+    def _handle_video_search(
+        self, search_videos: dict, search_engine_tool
+    ) -> AgentResponse:
         """Handles video searches."""
         query = search_videos.get("query")
         count = search_videos.get("count", 5)
@@ -160,7 +164,9 @@ class WebSearchAgent(BaseAgent):
             )
 
         try:
-            results = search_engine_tool.search_videos(query=query, count=count, duration=duration)
+            results = search_engine_tool.search_videos(
+                query=query, count=count, duration=duration
+            )
             valid_videos = []
 
             for video in results:
@@ -169,9 +175,14 @@ class WebSearchAgent(BaseAgent):
                 # Skip non-video YouTube links
                 parsed_url = urlparse(external_url)
                 if parsed_url.netloc in ["youtube.com", "www.youtube.com"]:
-                    if any(parsed_url.path.startswith(prefix) for prefix in ["/channel/", "/@", "/c/", "/playlist"]):
+                    if any(
+                        parsed_url.path.startswith(prefix)
+                        for prefix in ["/channel/", "/@", "/c/", "/playlist"]
+                    ):
                         continue
-                    if not parsed_url.path.startswith("/watch") or not parse_qs(parsed_url.query).get("v"):
+                    if not parsed_url.path.startswith("/watch") or not parse_qs(
+                        parsed_url.query
+                    ).get("v"):
                         continue
 
                 # Prepare video data
@@ -207,10 +218,14 @@ class WebSearchAgent(BaseAgent):
             if isinstance(e, requests.exceptions.Timeout):
                 error_message = "The search request timed out. Please try again."
             elif isinstance(e, requests.exceptions.HTTPError):
-                if getattr(e.response, 'status_code', None) == 429:
-                    error_message = "Rate limit exceeded. Please try again in a few minutes."
-                elif getattr(e.response, 'status_code', None) == 401:
-                    error_message = "API authentication failed. Please check your API key."
+                if getattr(e.response, "status_code", None) == 429:
+                    error_message = (
+                        "Rate limit exceeded. Please try again in a few minutes."
+                    )
+                elif getattr(e.response, "status_code", None) == 401:
+                    error_message = (
+                        "API authentication failed. Please check your API key."
+                    )
             return AgentResponse(
                 status=AgentStatus.ERROR,
                 message=error_message,
