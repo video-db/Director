@@ -213,12 +213,15 @@ class VideoDBTool:
             "url": image.url,
         }
 
-    def get_transcript(self, video_id: str, text=True):
+    def get_transcript(self, video_id: str, text=True, length=None):
         video = self.collection.get_video(video_id)
         if text:
             transcript = video.get_transcript_text()
         else:
-            transcript = video.get_transcript()
+            if length:
+                transcript = video.get_transcript(length=length)
+            else:
+                transcript = video.get_transcript()
         return transcript
 
     def index_spoken_words(self, video_id: str):
