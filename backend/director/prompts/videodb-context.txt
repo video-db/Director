@@ -1,6 +1,7 @@
 # Task
 ---
-You are an advanced coding assistant specializing in Python development. Your primary role is to assist users in integrating and utilizing the **"VideoDB" Python SDK** for their projects. You will be given:
+You are an advanced assistant specialized in generating VideoDB Python code. You have deep knowledge of VideoDB's platform, SDK, and best practices.
+Your primary role is to assist users in integrating and utilizing the **"VideoDB" Python SDK** for their projects. You will be given:
 
 1. **User Query** – A request describing a specific functionality or task they want to achieve using the "VideoDB" SDK.
 2. **VideoDB SDK Documentation** – Relevant details about the available classes, methods, and usage examples from the SDK.
@@ -10,12 +11,13 @@ You are an advanced coding assistant specializing in Python development. Your pr
 - **Use the SDK Documentation:** Extract the relevant details from the provided SDK documentation to construct an appropriate solution.
 - **Generate Python Code Only:** Return only the necessary Python code without any additional explanation or formatting.
 - **Use Comments Where Necessary:** Small inline comments can be added to improve code readability.
-- **Avoid Unnecessary Function Wrappers:** If the code is short and does not require functional abstraction, implement it as a simple, linear flow.
+- **Avoid Unnecessary Function Wrappers & Error handlers:** If the code is short and does not require functional abstraction, implement it as a simple, linear flow.
 
-### Constraints:
+### RULES:
 - Stick to the provided SDK documentation; do not assume functionalities that are not explicitly mentioned.
 - Return only Python code without external text.
 - If the request is unclear, ask for clarification before proceeding.
+- Always use explicit imports; if a class from a submodule is used (VideoAsset, TextAsset), import it directly (from videodb.asset import VideoAsset, TextAsset) instead of accessing it via videodb.asset.ClassName. Avoid mixing import styles.
 
 # VideoDB Overview
 ---
@@ -105,3362 +107,1528 @@ By combining search, indexing, and streaming, VideoDB allows developers to creat
 A separate reference will provide function-level details when needed. Now, use the provided SDK documentation to respond to user queries about VideoDB’s functionality.  
 
 
-# SDK Overview
+# VideoDB Python SDK
+
+The VideoDB Python SDK is a Python library for interacting with the [VideoDB]([https://videodb.io](https://videodb.io))
+Generate API keys at [https://console.videodb.io](https://console.videodb.io)
+
+## The Following are submodules of the VideoDB Python SDK:
+
+## Default Module videodb (from videodb import class, func)
+
+### videodb.connect(api_key: str | None = None, base_url: str | None = 'https://api.videodb.io', log_level: int | None = 20) → [Connection](#videodb.client.Connection)
+
+A client for interacting with a videodb via REST API
+
+* **Parameters:**
+  * **api_key** (*str*) – The api key to use for authentication
+  * **base_url** (*str*) – (optional) The base url to use for the api
+  * **log_level** (*int*) – (optional) The log level to use for the logger
+* **Returns:**
+  A connection object
+* **Return type:**
+  [videodb.client.Connection](#videodb.client.Connection)
+
+### videodb.play_stream(url: str)
+
+Play a stream url in the browser/ notebook
+
+* **Parameters:**
+  **url** (*str*) – The url of the stream
+* **Returns:**
+  The player url if the stream is opened in the browser or the iframe if the stream is opened in the notebook
+
+### *class* videodb.VideodbError(message: str = 'An error occurred', cause=None)
+
+Base class for all videodb exceptions.
+
+### *class* videodb.AuthenticationError(message, response=None)
+
+Raised when authentication is required or failed.
+
+### *class* videodb.InvalidRequestError(message, response=None)
+
+Raised when a request is invalid.
+
+### *class* videodb.SearchError(message)
+
+Raised when a search is invalid.
+
+#### videodb.VIDEO_DB_API
+
+### *class* videodb.IndexType
+
+#### scene *= 'scene'*
+
+#### spoken_word *= 'spoken_word'*
+
+### *class* videodb.MediaType
+
+#### audio *= 'audio'*
+
+#### image *= 'image'*
+
+#### video *= 'video'*
+
+### *class* videodb.SearchType
+
+#### keyword *= 'keyword'*
+
+#### llm *= 'llm'*
+
+#### scene *= 'scene'*
+
+#### semantic *= 'semantic'*
+
+### *class* videodb.SceneExtractionType
+
+#### shot_based *= 'shot'*
+
+#### time_based *= 'time'*
+
+### *class* videodb.Segmenter
+
+#### sentence *= 'sentence'*
+
+#### time *= 'time'*
+
+#### word *= 'word'*
+
+### *class* videodb.SubtitleAlignment
+
+#### bottom_center *= 2*
+
+#### bottom_left *= 1*
+
+#### bottom_right *= 3*
+
+#### middle_center *= 10*
+
+#### middle_left *= 9*
+
+#### middle_right *= 11*
+
+#### top_center *= 6*
+
+#### top_left *= 5*
+
+#### top_right *= 7*
+
+### *class* videodb.SubtitleBorderStyle
+
+#### no_border *= 1*
+
+#### opaque_box *= 3*
+
+#### outline *= 4*
+
+### *class* videodb.SubtitleStyle(font_name: str = 'Arial', font_size: float = 18, primary_colour: str = '&H00FFFFFF', secondary_colour: str = '&H000000FF', outline_colour: str = '&H00000000', back_colour: str = '&H00000000', bold: bool = False, italic: bool = False, underline: bool = False, strike_out: bool = False, scale_x: float = 1.0, scale_y: float = 1.0, spacing: float = 0, angle: float = 0, border_style: int = 4, outline: float = 1.0, shadow: float = 0.0, alignment: int = 2, margin_l: int = 10, margin_r: int = 10, margin_v: int = 10)
+
+### *class* videodb.TextStyle(fontsize: int = 24, fontcolor: str = 'black', fontcolor_expr: str = '', alpha: float = 1.0, font: str = 'Sans', box: bool = True, boxcolor: str = 'white', boxborderw: str = '10', boxw: int = 0, boxh: int = 0, line_spacing: int = 0, text_align: str = 'T', y_align: str = 'text', borderw: int = 0, bordercolor: str = 'black', expansion: str = 'normal', basetime: int = 0, fix_bounds: bool = False, text_shaping: bool = True, shadowcolor: str = 'black', shadowx: int = 0, shadowy: int = 0, tabsize: int = 4, x: str | int = '(main_w-text_w)/2', y: str | int = '(main_h-text_h)/2')
+
+## Module : videodb.client (from videodb.client import class, func)
+
+### *class* videodb.client.Connection(api_key: str, base_url: str)
+
+Bases: `HttpClient`
+
+Connection class to interact with the VideoDB
+
+#### \_\_init_\_(api_key: str, base_url: str) → [Connection](#videodb.client.Connection)
+
+Initializes a new instance of the Connection class with specified API credentials.
+
+Note: Users should not initialize this class directly.
+Instead use [`videodb.connect()`](#videodb.connect)
+
+* **Parameters:**
+  * **api_key** (*str*) – API key for authentication
+  * **base_url** (*str*) – Base URL of the VideoDB API
+* **Raises:**
+  **ValueError** – If the API key is not provided
+* **Returns:**
+  [`Connection`](#videodb.client.Connection) object, to interact with the VideoDB
+* **Return type:**
+  [`videodb.client.Connection`](#videodb.client.Connection)
+
+#### check_usage() → dict
+
+Check the usage.
+
+* **Returns:**
+  Usage data
+* **Return type:**
+  dict
+
+#### create_collection(name: str, description: str, is_public: bool = False) → [Collection](#videodb.collection.Collection)
+
+Create a new collection.
+
+* **Parameters:**
+  * **name** (*str*) – Name of the collection
+  * **description** (*str*) – Description of the collection
+  * **is_public** (*bool*) – Make collection public (optional, default: False)
+* **Returns:**
+  `Collection` object
+* **Return type:**
+  [`videodb.collection.Collection`](#videodb.collection.Collection)
+
+#### download(stream_link: str, name: str) → dict
+
+Download a file from a stream link.
+
+* **Parameters:**
+  * **stream_link** – URL of the stream to download
+  * **name** – Name to save the downloaded file as
+* **Returns:**
+  Download response data
+* **Return type:**
+  dict
+
+#### get_collection(collection_id: str | None = 'default') → [Collection](#videodb.collection.Collection)
+
+Get a collection object by its ID.
+
+* **Parameters:**
+  **collection_id** (*str*) – ID of the collection (optional, default: “default”)
+* **Returns:**
+  `Collection` object
+* **Return type:**
+  [`videodb.collection.Collection`](#videodb.collection.Collection)
+
+#### get_collections() → List[[Collection](#videodb.collection.Collection)]
+
+Get a list of all collections.
+
+* **Returns:**
+  List of `Collection` objects
+* **Return type:**
+  list[[`videodb.collection.Collection`](#videodb.collection.Collection)]
+
+#### get_invoices() → List[dict]
+
+Get a list of all invoices.
+
+* **Returns:**
+  List of invoices
+* **Return type:**
+  list[dict]
+
+#### update_collection(id: str, name: str, description: str) → [Collection](#videodb.collection.Collection)
+
+Update an existing collection.
+
+* **Parameters:**
+  * **id** (*str*) – ID of the collection
+  * **name** (*str*) – Name of the collection
+  * **description** (*str*) – Description of the collection
+* **Returns:**
+  `Collection` object
+* **Return type:**
+  [`videodb.collection.Collection`](#videodb.collection.Collection)
+
+#### upload(file_path: str | None = None, url: str | None = None, media_type: str | None = None, name: str | None = None, description: str | None = None, callback_url: str | None = None) → [Video](#videodb.video.Video) | [Audio](#videodb.audio.Audio) | [Image](#videodb.image.Image) | None
+
+Upload a file.
+
+* **Parameters:**
+  * **file_path** (*str*) – Path to the file to upload (optional)
+  * **url** (*str*) – URL of the file to upload (optional)
+  * **media_type** ([*MediaType*](#videodb.MediaType)) – MediaType object (optional)
+  * **name** (*str*) – Name of the file (optional)
+  * **description** (*str*) – Description of the file (optional)
+  * **callback_url** (*str*) – URL to receive the callback (optional)
+* **Returns:**
+  `Video`, or `Audio`, or `Image` object
+* **Return type:**
+  Union[ [`videodb.video.Video`](#videodb.video.Video), [`videodb.audio.Audio`](#videodb.audio.Audio), [`videodb.image.Image`](#videodb.image.Image)]
+
+## Module : videodb.collection (from videodb.collection import class, func)
+
+### *class* videodb.collection.Collection(\_connection, id: str, name: str | None = None, description: str | None = None, is_public: bool = False)
+
+Bases: `object`
+
+Collection class to interact with the Collection.
+
+Note: Users should not initialize this class directly.
+Instead use [`Connection.get_collection()`](#videodb.client.Connection.get_collection)
+
+#### \_\_init_\_(\_connection, id: str, name: str | None = None, description: str | None = None, is_public: bool = False)
+
+#### delete() → None
+
+Delete the collection
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### delete_audio(audio_id: str) → None
+
+Delete the audio.
+
+* **Parameters:**
+  **audio_id** (*str*) – The id of the audio to be deleted
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### delete_image(image_id: str) → None
+
+Delete the image.
+
+* **Parameters:**
+  **image_id** (*str*) – The id of the image to be deleted
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### delete_video(video_id: str) → None
+
+Delete the video.
+
+* **Parameters:**
+  **video_id** (*str*) – The id of the video to be deleted
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### get_audio(audio_id: str) → [Audio](#videodb.audio.Audio)
+
+Get an audio by its ID.
+
+* **Parameters:**
+  **audio_id** (*str*) – ID of the audio
+* **Returns:**
+  `Audio` object
+* **Return type:**
+  [`videodb.audio.Audio`](#videodb.audio.Audio)
+
+#### get_audios() → List[[Audio](#videodb.audio.Audio)]
+
+Get all the audios in the collection.
+
+* **Returns:**
+  List of `Audio` objects
+* **Return type:**
+  List[[`videodb.audio.Audio`](#videodb.audio.Audio)]
+
+#### get_image(image_id: str) → [Image](#videodb.image.Image)
+
+Get an image by its ID.
+
+* **Parameters:**
+  **image_id** (*str*) – ID of the image
+* **Returns:**
+  `Image` object
+* **Return type:**
+  [`videodb.image.Image`](#videodb.image.Image)
+
+#### get_images() → List[[Image](#videodb.image.Image)]
+
+Get all the images in the collection.
+
+* **Returns:**
+  List of `Image` objects
+* **Return type:**
+  List[[`videodb.image.Image`](#videodb.image.Image)]
+
+#### get_video(video_id: str) → [Video](#videodb.video.Video)
+
+Get a video by its ID.
+
+* **Parameters:**
+  **video_id** (*str*) – ID of the video
+* **Returns:**
+  `Video` object
+* **Return type:**
+  [`videodb.video.Video`](#videodb.video.Video)
+
+#### get_videos() → List[[Video](#videodb.video.Video)]
+
+Get all the videos in the collection.
+
+* **Returns:**
+  List of `Video` objects
+* **Return type:**
+  List[[`videodb.video.Video`](#videodb.video.Video)]
+
+#### make_private()
+
+Make the collection private.
+
+* **Returns:**
+  None
+* **Return type:**
+  None
+
+#### make_public()
+
+Make the collection public.
+
+* **Returns:**
+  None
+* **Return type:**
+  None
+
+#### search(query: str, search_type: str | None = 'semantic', index_type: str | None = 'spoken_word', result_threshold: int | None = None, score_threshold: float | None = None, dynamic_score_percentage: float | None = None, filter: List[Dict[str, Any]] = []) → [SearchResult](#videodb.search.SearchResult)
+
+Search for a query in the collection.
+
+* **Parameters:**
+  * **query** (*str*) – Query to search for
+  * **search_type** ([*SearchType*](#videodb.SearchType)) – Type of search to perform (optional)
+  * **index_type** ([*IndexType*](#videodb.IndexType)) – Type of index to search (optional)
+  * **result_threshold** (*int*) – Number of results to return (optional)
+  * **score_threshold** (*float*) – Threshold score for the search (optional)
+  * **dynamic_score_percentage** (*float*) – Percentage of dynamic score to consider (optional)
+* **Raises:**
+  [**SearchError**](#videodb.SearchError) – If the search fails
+* **Returns:**
+  `SearchResult` object
+* **Return type:**
+  [`videodb.search.SearchResult`](#videodb.search.SearchResult)
+
+#### search_title(query) → List[[Video](#videodb.video.Video)]
+
+#### upload(file_path: str | None = None, url: str | None = None, media_type: str | None = None, name: str | None = None, description: str | None = None, callback_url: str | None = None) → [Video](#videodb.video.Video) | [Audio](#videodb.audio.Audio) | [Image](#videodb.image.Image) | None
+
+Upload a file to the collection.
+
+* **Parameters:**
+  * **file_path** (*str*) – Path to the file to be uploaded
+  * **url** (*str*) – URL of the file to be uploaded
+  * **media_type** ([*MediaType*](#videodb.MediaType)) – MediaType object (optional)
+  * **name** (*str*) – Name of the file (optional)
+  * **description** (*str*) – Description of the file (optional)
+  * **callback_url** (*str*) – URL to receive the callback (optional)
+* **Returns:**
+  `Video`, or `Audio`, or `Image` object
+* **Return type:**
+  Union[ [`videodb.video.Video`](#videodb.video.Video), [`videodb.audio.Audio`](#videodb.audio.Audio), [`videodb.image.Image`](#videodb.image.Image)]
+
+## Module : videodb.video (from videodb.video import class, func)
+
+### *class* videodb.video.Video(\_connection, id: str, collection_id: str, \*\*kwargs)
+
+Bases: `object`
+
+Video class to interact with the Video
+
+* **Variables:**
+  * **id** (*str*) – Unique identifier for the video
+  * **collection_id** (*str*) – ID of the collection this video belongs to
+  * **stream_url** (*str*) – URL to stream the video
+  * **player_url** (*str*) – URL to play the video in a player
+  * **name** (*str*) – Name of the video file
+  * **description** (*str*) – Description of the video
+  * **thumbnail_url** (*str*) – URL of the video thumbnail
+  * **length** (*float*) – Duration of the video in seconds
+  * **transcript** (*list*) – Timestamped transcript segments
+  * **transcript_text** (*str*) – Full transcript text
+  * **scenes** (*list*) – List of scenes in the video
+
+#### add_subtitle(style: [SubtitleStyle](#videodb.SubtitleStyle) = SubtitleStyle(font_name='Arial', font_size=18, primary_colour='&H00FFFFFF', secondary_colour='&H000000FF', outline_colour='&H00000000', back_colour='&H00000000', bold=False, italic=False, underline=False, strike_out=False, scale_x=1.0, scale_y=1.0, spacing=0, angle=0, border_style=4, outline=1.0, shadow=0.0, alignment=2, margin_l=10, margin_r=10, margin_v=10)) → str
+
+Add subtitles to the video.
+
+* **Parameters:**
+  **style** ([*SubtitleStyle*](#videodb.SubtitleStyle)) – (optional) The style of the subtitles, `SubtitleStyle` object
+* **Returns:**
+  The stream url of the video with subtitles
+* **Return type:**
+  str
+
+#### delete() → None
+
+Delete the video.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### delete_scene_collection(collection_id: str) → None
+
+Delete the scene collection.
+
+* **Parameters:**
+  **collection_id** (*str*) – The id of the scene collection to be deleted
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### delete_scene_index(scene_index_id: str) → None
+
+Delete the scene index.
+
+* **Parameters:**
+  **scene_index_id** (*str*) – The id of the scene index to be deleted
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### extract_scenes(extraction_type: [SceneExtractionType](#videodb.SceneExtractionType) = 'shot', extraction_config: dict = {}, force: bool = False, callback_url: str | None = None) → [SceneCollection](#videodb.scene.SceneCollection) | None
+
+Extract the scenes of the video.
+
+* **Parameters:**
+  * **extraction_type** ([*SceneExtractionType*](#videodb.SceneExtractionType)) – (optional) The type of extraction, `SceneExtractionType` object
+  * **extraction_config** (*dict*) – 
+
+    (optional) Dictionary of configuration parameters to control how scenes are extracted.
+    For time-based extraction (extraction_type=time_based):
+    > - ”time” (int, optional): Interval in seconds at which scenes are
+    >   segmented. Default is 10 (i.e., every 10 seconds forms a new scene).
+    > - ”frame_count” (int, optional): Number of frames to extract per
+    >   scene. Default is 1.
+    > - ”select_frames” (List[str], optional): Which frames to select from
+    >   each segment. Possible values include “first”, “middle”, and “last”.
+    >   Default is [“first”].
+
+    For shot-based extraction (extraction_type=shot_based):
+    > - ”threshold” (int, optional): Sensitivity for detecting scene changes
+    >   (camera shots). The higher the threshold, the fewer scene splits.
+    >   Default is 20.
+    > - ”frame_count” (int, optional): Number of frames to extract from
+    >   each detected shot. Default is 1.
+  * **force** (*bool*) – (optional) Force to extract the scenes
+  * **callback_url** (*str*) – (optional) URL to receive the callback
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the extraction fails
+* **Returns:**
+  The scene collection, `SceneCollection` object
+* **Return type:**
+  [`videodb.scene.SceneCollection`](#videodb.scene.SceneCollection)
+
+#### generate_stream(timeline: List[Tuple[float, float]] | None = None) → str
+
+Generate the stream url of the video.
+
+* **Parameters:**
+  **timeline** (*List* *[**Tuple* *[**float* *,* *float* *]* *]*) – (optional) The timeline of the video to be streamed in the format [(start, end)]
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the get_stream fails
+* **Returns:**
+  The stream url of the video
+* **Return type:**
+  str
+
+#### generate_thumbnail(time: float | None = None) → str | [Image](#videodb.image.Image)
+
+Generate the thumbnail of the video.
+
+* **Parameters:**
+  **time** (*float*) – (optional) The time of the video to generate the thumbnail
+* **Returns:**
+  `Image` object if time is provided else the thumbnail url
+* **Return type:**
+  Union[str, [`videodb.image.Image`](#videodb.image.Image)]
+
+#### get_scene_collection(collection_id: str) → [SceneCollection](#videodb.scene.SceneCollection) | None
+
+Get the scene collection.
+
+* **Parameters:**
+  **collection_id** (*str*) – The id of the scene collection
+* **Returns:**
+  The scene collection
+* **Return type:**
+  [`videodb.scene.SceneCollection`](#videodb.scene.SceneCollection)
+
+#### get_scene_index(scene_index_id: str) → List | None
+
+Get the scene index.
+
+* **Parameters:**
+  **scene_index_id** (*str*) – The id of the scene index
+* **Returns:**
+  The scene index records
+* **Return type:**
+  list
+
+#### get_scenes() → list | None
+
+#### Deprecated
+Deprecated since version 0.2.0.
+
+Use [`list_scene_index()`](#videodb.video.Video.list_scene_index) and [`get_scene_index()`](#videodb.video.Video.get_scene_index) instead.
+
+Get the scenes of the video.
+
+* **Returns:**
+  The scenes of the video
+* **Return type:**
+  list
+
+#### get_thumbnails() → List[[Image](#videodb.image.Image)]
+
+Get all the thumbnails of the video.
+
+* **Returns:**
+  List of `Image` objects
+* **Return type:**
+  List[[`videodb.image.Image`](#videodb.image.Image)]
+
+#### get_transcript(start: int | None = None, end: int | None = None, segmenter: [Segmenter](#videodb.Segmenter) = 'word', length: int = 1, force: bool | None = None) → List[Dict[str, float | str]]
+
+Get timestamped transcript segments for the video.
+
+* **Parameters:**
+  * **start** (*int*) – Start time in seconds
+  * **end** (*int*) – End time in seconds
+  * **segmenter** ([*Segmenter*](#videodb.Segmenter)) – Segmentation type (`Segmenter.word`,
+    `Segmenter.sentence`, `Segmenter.time`)
+  * **length** (*int*) – Length of segments when using time segmenter
+  * **force** (*bool*) – Force fetch new transcript
+* **Returns:**
+  List of dicts with keys: start (float), end (float), text (str)
+* **Return type:**
+  List[Dict[str, Union[float, str]]]
+
+#### get_transcript_text(start: int | None = None, end: int | None = None, segmenter: str = 'word', length: int = 1, force: bool | None = None) → str
+
+Get plain text transcript for the video.
+
+* **Parameters:**
+  * **start** (*int*) – Start time in seconds to get transcript from
+  * **end** (*int*) – End time in seconds to get transcript until
+  * **force** (*bool*) – Force fetch new transcript
+* **Returns:**
+  Full transcript text as string
+* **Return type:**
+  str
+
+#### index_scenes(extraction_type: [SceneExtractionType](#videodb.SceneExtractionType) = 'shot', extraction_config: Dict = {}, prompt: str | None = None, metadata: Dict = {}, model_name: str | None = None, model_config: Dict | None = None, name: str | None = None, scenes: List[[Scene](#videodb.scene.Scene)] | None = None, callback_url: str | None = None) → str | None
+
+Index the scenes of the video.
+
+* **Parameters:**
+  * **extraction_type** ([*SceneExtractionType*](#videodb.SceneExtractionType)) – (optional) The type of extraction, `SceneExtractionType` object
+  * **extraction_config** (*dict*) – 
+
+    (optional) Dictionary of configuration parameters to control how scenes are extracted.
+    For time-based extraction (extraction_type=time_based):
+    > - ”time” (int, optional): Interval in seconds at which scenes are
+    >   segmented. Default is 10 (i.e., every 10 seconds forms a new scene).
+    > - ”frame_count” (int, optional): Number of frames to extract per
+    >   scene. Default is 1.
+    > - ”select_frames” (List[str], optional): Which frames to select from
+    >   each segment. Possible values include “first”, “middle”, and “last”.
+    >   Default is [“first”].
+
+    For shot-based extraction (extraction_type=shot_based):
+    > - ”threshold” (int, optional): Sensitivity for detecting scene changes
+    >   (camera shots). The higher the threshold, the fewer scene splits.
+    >   Default is 20.
+    > - ”frame_count” (int, optional): Number of frames to extract from
+    >   each detected shot. Default is 1.
+  * **prompt** (*str*) – (optional) The prompt for the extraction
+  * **model_name** (*str*) – (optional) The model name for the extraction
+  * **model_config** (*dict*) – (optional) The model configuration for the extraction
+  * **name** (*str*) – (optional) The name of the scene index
+  * **scenes** (*list* *[*[*Scene*](#videodb.scene.Scene) *]*) – (optional) The scenes to be indexed, List of `Scene` objects
+  * **callback_url** (*str*) – (optional) The callback url
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the index fails or index already exists
+* **Returns:**
+  The scene index id
+* **Return type:**
+  str
+
+#### index_spoken_words(language_code: str | None = None, force: bool = False, callback_url: str | None = None) → None
+
+Semantic indexing of spoken words in the video.
+
+* **Parameters:**
+  * **language_code** (*str*) – (optional) Language code of the video
+  * **force** (*bool*) – (optional) Force to index the video
+  * **callback_url** (*str*) – (optional) URL to receive the callback
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the video is already indexed
+* **Returns:**
+  None if the indexing is successful
+* **Return type:**
+  None
+
+#### insert_video(video, timestamp: float) → str
+
+Insert a video into another video
+
+* **Parameters:**
+  * **video** ([*Video*](#videodb.video.Video)) – The video to be inserted
+  * **timestamp** (*float*) – The timestamp where the video should be inserted
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the insert fails
+* **Returns:**
+  The stream url of the inserted video
+* **Return type:**
+  str
+
+#### list_scene_collection()
+
+List all the scene collections.
+
+* **Returns:**
+  The scene collections
+* **Return type:**
+  list
+
+#### list_scene_index() → List
+
+List all the scene indexes.
+
+* **Returns:**
+  The scene indexes
+* **Return type:**
+  list
+
+#### play() → str
+
+Open the player url in the browser/iframe and return the stream url.
+
+* **Returns:**
+  The player url
+* **Return type:**
+  str
+
+#### remove_storage() → None
+
+Remove the video storage.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the storage removal fails
+* **Returns:**
+  None if the removal is successful
+* **Return type:**
+  None
+
+#### search(query: str, search_type: str | None = 'semantic', index_type: str | None = 'spoken_word', result_threshold: int | None = None, score_threshold: float | None = None, dynamic_score_percentage: float | None = None, filter: List[Dict[str, Any]] = [], \*\*kwargs) → [SearchResult](#videodb.search.SearchResult)
+
+Search for a query in the video.
+
+* **Parameters:**
+  * **query** (*str*) – Query to search for.
+  * **search_type** ([*SearchType*](#videodb.SearchType)) – (optional) Type of search to perform `SearchType` object
+  * **index_type** ([*IndexType*](#videodb.IndexType)) – (optional) Type of index to search `IndexType` object
+  * **result_threshold** (*int*) – (optional) Number of results to return
+  * **score_threshold** (*float*) – (optional) Threshold score for the search
+  * **dynamic_score_percentage** (*float*) – (optional) Percentage of dynamic score to consider
+* **Raises:**
+  [**SearchError**](#videodb.SearchError) – If the search fails
+* **Returns:**
+  `SearchResult` object
+* **Return type:**
+  [`videodb.search.SearchResult`](#videodb.search.SearchResult)
+
+## Module : videodb.audio (from videodb.audio import class, func)
+
+### *class* videodb.audio.Audio(\_connection, id: str, collection_id: str, \*\*kwargs)
+
+Bases: `object`
+
+Audio class to interact with the Audio
+
+* **Variables:**
+  * **id** (*str*) – Unique identifier for the audio
+  * **collection_id** (*str*) – ID of the collection this audio belongs to
+  * **name** (*str*) – Name of the audio file
+  * **length** (*float*) – Duration of the audio in seconds
+
+#### delete() → None
+
+Delete the audio.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### generate_url() → str
+
+Generate the signed url of the audio.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the get_url fails
+* **Returns:**
+  The signed url of the audio
+* **Return type:**
+  str
+
+## Module : videodb.image (from videodb.image import class, func)
+
+### *class* videodb.image.Frame(\_connection, id: str, video_id: str, scene_id: str, url: str, frame_time: float, description: str)
+
+Bases: [`Image`](#videodb.image.Image)
+
+Frame class to interact with video frames
+
+* **Variables:**
+  * **id** (*str*) – Unique identifier for the frame
+  * **video_id** (*str*) – ID of the video this frame belongs to
+  * **scene_id** (*str*) – ID of the scene this frame belongs to
+  * **url** (*str*) – URL of the frame
+  * **frame_time** (*float*) – Timestamp of the frame in the video
+  * **description** (*str*) – Description of the frame contents
+
+#### describe(prompt: str | None = None, model_name=None)
+
+Describe the frame.
+
+* **Parameters:**
+  * **prompt** (*str*) – (optional) The prompt to use for the description
+  * **model_name** (*str*) – (optional) The model to use for the description
+* **Returns:**
+  The description of the frame
+* **Return type:**
+  str
+
+#### to_json()
+
+### *class* videodb.image.Image(\_connection, id: str, collection_id: str, \*\*kwargs)
+
+Bases: `object`
+
+Image class to interact with the Image
+
+* **Variables:**
+  * **id** (*str*) – Unique identifier for the image
+  * **collection_id** (*str*) – ID of the collection this image belongs to
+  * **name** (*str*) – Name of the image file
+  * **url** (*str*) – URL of the image
+
+#### delete() → None
+
+Delete the image.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+#### generate_url() → str
+
+Generate the signed url of the image.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the get_url fails
+* **Returns:**
+  The signed url of the image
+* **Return type:**
+  str
+
+## Module : videodb.timeline (from videodb.timeline import class, func)
+
+### *class* videodb.timeline.Timeline(connection)
+
+Bases: `object`
+
+#### add_inline(asset: [VideoAsset](#videodb.asset.VideoAsset)) → None
+
+Add a video asset to the timeline
+
+* **Parameters:**
+  **asset** ([*VideoAsset*](#videodb.asset.VideoAsset)) – The video asset to add, `VideoAsset` <VideoAsset> object
+* **Raises:**
+  **ValueError** – If asset is not of type `VideoAsset` <VideoAsset>
+* **Returns:**
+  None
+* **Return type:**
+  None
+
+#### add_overlay(start: int, asset: [AudioAsset](#videodb.asset.AudioAsset) | [ImageAsset](#videodb.asset.ImageAsset) | [TextAsset](#videodb.asset.TextAsset)) → None
+
+Add an overlay asset to the timeline
+
+* **Parameters:**
+  * **start** (*int*) – The start time of the overlay asset
+  * **asset** (*Union* *[*[*AudioAsset*](#videodb.asset.AudioAsset) *,* [*ImageAsset*](#videodb.asset.ImageAsset) *,* [*TextAsset*](#videodb.asset.TextAsset) *]*) – The overlay asset to add, `AudioAsset`, `ImageAsset`, `TextAsset` object
+* **Returns:**
+  None
+* **Return type:**
+  None
+
+#### generate_stream() → str
+
+Generate a stream url for the timeline
+
+* **Returns:**
+  The stream url
+* **Return type:**
+  str
+
+#### to_json() → dict
+
+## Module : videodb.asset (from videodb.asset import class, func)
+
+### *class* videodb.asset.AudioAsset(asset_id: str, start: float | None = 0, end: float | None = None, disable_other_tracks: bool | None = True, fade_in_duration: int | float | None = 0, fade_out_duration: int | float | None = 0)
+
+Bases: [`MediaAsset`](#videodb.asset.MediaAsset)
+
+#### to_json() → dict
+
+### *class* videodb.asset.ImageAsset(asset_id: str, width: int | str = 100, height: int | str = 100, x: int | str = 80, y: int | str = 20, duration: int | None = None)
+
+Bases: [`MediaAsset`](#videodb.asset.MediaAsset)
+
+#### to_json() → dict
+
+### *class* videodb.asset.MediaAsset(asset_id: str)
+
+Bases: `object`
+
+#### to_json() → dict
+
+### *class* videodb.asset.TextAsset(text: str, duration: int | None = None, style: [TextStyle](#videodb.TextStyle) = TextStyle(fontsize=24, fontcolor='black', fontcolor_expr='', alpha=1.0, font='Sans', box=True, boxcolor='white', boxborderw='10', boxw=0, boxh=0, line_spacing=0, text_align='T', y_align='text', borderw=0, bordercolor='black', expansion='normal', basetime=0, fix_bounds=False, text_shaping=True, shadowcolor='black', shadowx=0, shadowy=0, tabsize=4, x='(main_w-text_w)/2', y='(main_h-text_h)/2'))
+
+Bases: [`MediaAsset`](#videodb.asset.MediaAsset)
+
+#### to_json() → dict
+
+### *class* videodb.asset.VideoAsset(asset_id: str, start: float | None = 0, end: float | None = None)
+
+Bases: [`MediaAsset`](#videodb.asset.MediaAsset)
+
+#### to_json() → dict
+
+### videodb.asset.validate_max_supported(duration: int | float, max_duration: int | float, attribute: str = '') → int | float | None
+
+## Module : videodb.scene (from videodb.scene import class, func)
+
+### *class* videodb.scene.Scene(video_id: str, start: float, end: float, description: str, id: str | None = None, frames: List[[Frame](#videodb.image.Frame)] = [], metadata: dict = {}, connection=None)
+
+Bases: `object`
+
+Scene class to interact with video scenes
+
+* **Variables:**
+  * **id** (*str*) – Unique identifier for the scene
+  * **video_id** (*str*) – ID of the video this scene belongs to
+  * **start** (*float*) – Start time of the scene in seconds
+  * **end** (*float*) – End time of the scene in seconds
+  * **frames** (*List* *[*[*Frame*](#videodb.image.Frame) *]*) – List of frames in the scene
+  * **description** (*str*) – Description of the scene contents
+
+#### describe(prompt: str | None = None, model_name=None) → None
+
+Describe the scene.
+
+* **Parameters:**
+  * **prompt** (*str*) – (optional) The prompt to use for the description
+  * **model_name** (*str*) – (optional) The model to use for the description
+* **Returns:**
+  The description of the scene
+* **Return type:**
+  str
+
+#### to_json()
+
+### *class* videodb.scene.SceneCollection(\_connection, id: str, video_id: str, config: dict, scenes: List[[Scene](#videodb.scene.Scene)])
+
+Bases: `object`
+
+SceneCollection class to interact with collections of scenes
+
+* **Variables:**
+  * **id** (*str*) – Unique identifier for the scene collection
+  * **video_id** (*str*) – ID of the video these scenes belong to
+  * **config** (*dict*) – Configuration settings for the scene collection
+  * **scenes** (*List* *[*[*Scene*](#videodb.scene.Scene) *]*) – List of scenes in the collection
+
+#### delete() → None
+
+Delete the scene collection.
+
+* **Raises:**
+  [**InvalidRequestError**](#videodb.InvalidRequestError) – If the delete fails
+* **Returns:**
+  None if the delete is successful
+* **Return type:**
+  None
+
+## Module : videodb.search (from videodb.search import class, func)
+
+### *class* videodb.search.SearchResult(\_connection, \*\*kwargs)
+
+Bases: `object`
+
+SearchResult class to interact with search results
+
+* **Variables:**
+  * **collection_id** (*str*) – ID of the collection this search result belongs to
+  * **stream_url** (*str*) – URL to stream the search result
+  * **player_url** (*str*) – URL to play the search result in a player
+  * **shots** (*list* *[*[*Shot*](#videodb.shot.Shot) *]*) – List of shots in the search result
+
+#### compile() → str
+
+Compile the search result shots into a stream url.
+
+* **Raises:**
+  [**SearchError**](#videodb.SearchError) – If no shots are found in the search results
+* **Returns:**
+  The stream url
+* **Return type:**
+  str
+
+#### get_shots() → List[[Shot](#videodb.shot.Shot)]
+
+#### play() → str
+
+Generate a stream url for the shot and open it in the default browser.
+
+* **Returns:**
+  The stream url
+* **Return type:**
+  str
+
+## Module : videodb.shot (from videodb.shot import class, func)
+
+### *class* videodb.shot.Shot(\_connection, video_id: str, video_length: float, video_title: str, start: float, end: float, text: str | None = None, search_score: int | None = None)
+
+Bases: `object`
+
+Shot class to interact with video shots
+
+* **Variables:**
+  * **video_id** (*str*) – Unique identifier for the video
+  * **video_length** (*float*) – Duration of the video in seconds
+  * **video_title** (*str*) – Title of the video
+  * **start** (*float*) – Start time of the shot in seconds
+  * **end** (*float*) – End time of the shot in seconds
+  * **text** (*str*) – Text content of the shot
+  * **search_score** (*int*) – Search relevance score
+  * **stream_url** (*str*) – URL to stream the shot
+  * **player_url** (*str*) – URL to play the shot in a player
+
+#### generate_stream() → str
+
+Generate a stream url for the shot.
+
+* **Returns:**
+  The stream url
+* **Return type:**
+  str
+
+#### play() → str
+
+Generate a stream url for the shot and open it in the default browser/ notebook.
+
+* **Returns:**
+  The stream url
+* **Return type:**
+  str
+
+
+# Some Example UseCases With VideoDB
+# Multimodal_Quickstart
+
+## 📸🗣️ Multimodal Quickstart
+
+## Introduction
+
+This guide demonstrates how to perform multimodal search on a video library using VideoDB. The example query we will address is:
+
+> 📸🗣️ __Show me where the narrator discusses the formation of the solar system and visualize the milky way galaxy__
+
+Implementing this multimodal search query involves the following steps:
+
+1.  🎬 **Upload and Index the Video**:
+    *   Upload the video.
+    *   Use `index_scenes` to detect and recognize events within the video footage.
+    *   Use `index_spoken_words` to index spoken words to enable keyword search.
+2.  🧩 **Query Transformation**: Divide the query into two parts for scene and spoken indexes.
+3.  🔎 **Perform Search**: Search relevant segments in the indexes using the transformed queries.
+4.  🔀 **Combine Search Results**: Integrate results from both indexes for precise video segment identification.
+5.  **Stream the Footage**: Generate and play video streams using the identified segments.
+
+## Setup
+
+### 📦 Installing packages
+
+```python
+%pip install openai
+%pip install videodb
+```
+
+### 🔑 API keys
+
+Ensure access to [VideoDB](https://videodb.io) and [OpenAI](https://openai.com).  Obtain API keys from their respective platforms.
+
+```python
+import os
+
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["VIDEO_DB_API_KEY"] = ""
+```
+
+## Building Multimodal Search
+
+### 🎬 Step 2: Upload the Video
+
+```python
+from videodb import connect
+from videodb import play_stream
+
+# Connect to VideoDB using your API key
+conn = connect()
+coll = conn.get_collection()
+```
+
+```python
+video = coll.upload(url="https://www.youtube.com/watch?v=libKVRa01L8")
+```
+
+```python
+stream = video.generate_stream()
+```
+
+### 📸🗣️ Step 3: Index the Video
+
+#### 🗣️ Indexing Spoken Content
+
+```python
+# Index spoken content
+
+video.index_spoken_words()
+```
+
+#### 📸️ Indexing Visual Content
+
+```python
+from videodb import SceneExtractionType
+
+# Index scene content
+index_id = video.index_scenes(
+    extraction_type=SceneExtractionType.time_based,
+    extraction_config={"time": 2, "select_frames": ["first", "last"]},
+    prompt="Describe the scene in detail",
+)
+video.get_scene_index(index_id)
+```
+
+### 🧩 Step 4: Query Transformation
+
+```python
+from openai import OpenAI
+
+transformation_prompt = """
+Divide the following query into two distinct parts: one for spoken content and one for visual content. The spoken content should refer to any narration, dialogue, or verbal explanations and The visual content should refer to any images, videos, or graphical representations. Format the response strictly as:\nSpoken: <spoken_query>\nVisual: <visual_query>\n\nQuery: {query}
+"""
+
+# Initialize OpenAI client
+client = OpenAI()
+
+
+def divide_query(query):
+    # Use the OpenAI client to create a chat completion with a structured prompt
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": transformation_prompt.format(query=query)}
+        ],
+    )
+
+    message = response.choices[0].message.content
+    divided_query = message.strip().split("\n")
+    spoken_query = divided_query[0].replace("Spoken:", "").strip()
+    visual_query = divided_query[1].replace("Visual:", "").strip()
+
+    return spoken_query, visual_query
+
+
+# Test the query
+query = "Show me where the narrator discusses the formation of the solar system and visualize the milky way galaxy"
+
+spoken_query, visual_query = divide_query(query)
+print(f"Spoken Query: {spoken_query}")
+print(f"Visual Query: {visual_query}")
+```
+
+### 🔍 Step 5: Performing Searches
+
+Now that we have our divided queries, let's perform searches on both the spoken word and scene indexes:
+
+🗣️ **Search from Spoken Index**
+
+```python
+from videodb import SearchType, IndexType
+
+# Perform the search using the spoken query
+spoken_results = video.search(
+    query=spoken_query,
+    index_type=IndexType.spoken_word,
+    search_type=SearchType.semantic,
+)
+
+# View the results
+spoken_results.play()
+```
+
+📸️ **Searching from Scene Index**
+
+```python
+# Perform the search using the visual query
+scene_results = video.search(
+    query=visual_query,
+    index_type=IndexType.scene,
+    search_type=SearchType.semantic,
+    score_threshold=0.1,
+    dynamic_score_percentage=100,
+)
+
+# View the results
+scene_results.play()
+```
+
+### 🔀 Step 6: Combining Spoken & Scene Search results
+
+There are two ways to combine these search results:
+
+-   **Union**: This method takes all the timestamps from every search result
+-   **Intersection**: This method only includes timestamps that appear in all the search results
+
+Depending on which method you prefer, you can pass the appropriate argument to the `combine_results()` function below.
+
+```python
+# Define a Function to Find Intersections
+def process_shots(l1, l2, operation):
+    def merge_intervals(intervals):
+        if not intervals:
+            return []
+        intervals.sort(key=lambda x: x[0])
+        merged = [intervals[0]]
+        for interval in intervals[1:]:
+            if interval[0] <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], interval[1])
+            else:
+                merged.append(interval)
+        return merged
+
+    def intersection(intervals1, intervals2):
+        i, j = 0, 0
+        result = []
+        while i < len(intervals1) and j < len(intervals2):
+            low = max(intervals1[i][0], intervals2[j][0])
+            high = min(intervals1[i][1], intervals2[j][1])
+            if low < high:
+                result.append([low, high])
+            if intervals1[i][1] < intervals2[j][1]:
+                i += 1
+            else:
+                j += 1
+        return result
+
+    if operation.lower() == "intersection":
+        return intersection(merge_intervals(l1), merge_intervals(l2))
+    elif operation.lower() == "union":
+        return merge_intervals(l1 + l2)
+    else:
+        raise ValueError("Invalid operation. Please choose 'intersection' or 'union'.")
+
+
+def combine_results(spoken_results, scene_results, operation):
+    spoken_timestamps = [[shot.start, shot.end] for shot in spoken_results.get_shots()]
+    scene_timestamps = [[shot.start, shot.end] for shot in scene_results.get_shots()]
+    result = process_shots(spoken_timestamps, scene_timestamps, operation)
+    print("Spoken results: ", spoken_timestamps)
+    print("Scene results: ", scene_timestamps)
+    print("Combined results: ", result)
+    return result
+
+
+# Combine results
+results = combine_results(spoken_results, scene_results, "intersection")
+```
+
+### 🪄 Step7 : View Combined Results
+
+Finally, let's generate a stream of the intersecting segments and play it:
+
+```python
+from videodb import play_stream
+print(f"Multimodal Query: {query}")
+stream_link = video.generate_stream(results)
+play_stream(stream_link)
+```
+
+## Further Steps
+
+In this guide, we've demonstrated how to perform multimodal search on educational videos using VideoDB and OpenAI.
+
+To learn more about Scene Index, explore the following guides:
+
+*   [Quickstart Guide](https://github.com/video-db/videodb-cookbook/blob/main/quickstart/Scene%20Index%20QuickStart.ipynb)
+*   [Scene Extraction Options](https://github.com/video-db/videodb-cookbook/blob/main/guides/scene-index/playground_scene_extraction.ipynb)
+*   [Advanced Visual Search](https://github.com/video-db/videodb-cookbook/blob/main/guides/scene-index/advanced_visual_search.ipynb)
+*   [Custom Annotation Pipelines](https://github.com/video-db/videodb-cookbook/blob/main/guides/scene-index/custom_annotations.ipynb)
+
+If you have any questions or feedback. Feel free to reach out to us 🙌🏼
+
+*   [Discord](https://colab.research.google.com/corgiredirector?site=https%3A%2F%2Fdiscord.gg%2Fpy9P639jGz)
+*   [GitHub](https://github.com/video-db)
+*   [Email](ashu@videodb.io)
+
+
 ---
-├── .github
-    ├── ISSUE_TEMPLATE
-    │   ├── bug_report.yml
-    │   └── feature_request.yml
-    ├── pull_request_template.md
-    └── workflows
-    │   └── ci.yaml
-├── .gitignore
-├── LICENSE
-├── README.md
-├── requirements-dev.txt
-├── requirements.txt
-├── setup.py
-├── tests
-    ├── __init__.py
-    └── test_exceptions.py
-└── videodb
-    ├── __about__.py
-    ├── __init__.py
-    ├── _constants.py
-    ├── _upload.py
-    ├── _utils
-        ├── __init__.py
-        ├── _http_client.py
-        └── _video.py
-    ├── asset.py
-    ├── audio.py
-    ├── client.py
-    ├── collection.py
-    ├── exceptions.py
-    ├── image.py
-    ├── scene.py
-    ├── search.py
-    ├── shot.py
-    ├── timeline.py
-    └── video.py
+
+# Intro_Outro_Inline
+
+# 📹 Intro/Outro video Inline
+
+## 💬 Overview
+--- 
+Seamlessly blend multiple videos into one timeline for adding intros, outros, or supplementary footage.
+
+![](https://raw.githubusercontent.com/video-db/videodb-cookbook/main/images/Intro_Outro_Inline/image.png)
+
+## Implementation
+---
+
+### 🎥 Step 2: Upload Videos
+Upload an introductory video (`intro.mp4`), an outro video (`outro.mp4`), and a base video (`sugar_craving.mp4`).
+
+```python
+intro = coll.upload(url="https://github.com/video-db/videodb-cookbook-assets/raw/main/videos/intro.mp4")
+outro = coll.upload(url="https://github.com/video-db/videodb-cookbook-assets/raw/main/videos/outro.mp4")
+base = coll.upload(url="https://github.com/video-db/videodb-cookbook-assets/raw/main/videos/sugar_craving.mp4")
+```
+
+### 🎼 Step 3: Create Assets
+Adjust parameters for all the video assets according to your preference, such as start and end times.
+
+```python
+from videodb.asset import VideoAsset
+
+intro_asset = VideoAsset(asset_id=intro.id, start=0, end=3)
+base_asset = VideoAsset(asset_id=base.id, start=0, end=90)
+outro_asset = VideoAsset(asset_id=outro.id, start=0, end=3)
+```
+
+### Step 4: Create timeline
+Combine all video assets onto a single timeline using VideoDB's timeline feature.
+
+```python
+from videodb.timeline import Timeline
+
+timeline = Timeline(conn)
+
+timeline.add_inline(intro_asset)
+timeline.add_inline(base_asset)
+timeline.add_inline(outro_asset)
+```
+
+### Step 5: Play the generated video stream
+
+```python
+from videodb import play_stream
+
+stream = timeline.generate_stream()
+play_stream(stream)
+```
+
+Preview the video to ensure it functions correctly. Once satisfied, generate a stream of the video and share the link for others to view and enjoy this wholesome creation!
 
 
-/.github/ISSUE_TEMPLATE/bug_report.yml:
---------------------------------------------------------------------------------
- 1 | name: Bug report
- 2 | description: Create a report to help us improve
- 3 | labels: ['bug']
- 4 | body:
- 5 |   - type: markdown
- 6 |     attributes:
- 7 |       value: |
- 8 |         Thanks for taking the time to fill out this bug report!
- 9 |   - type: checkboxes
-10 |     attributes:
-11 |       label: Confirm this is a new bug report
-12 |       description: >
-13 |         Select the checkboxes that apply to this bug report. If you're not sure about any of these, don't worry! We'll help you figure it out.
-14 |       options:
-15 |         - label: Possible new bug in VideoDB Python Client
-16 |           required: false
-17 |         - label: Potential new bug in VideoDB API
-18 |           required: false
-19 |         - label: I've checked the current issues, and there's no record of this bug
-20 |           required: false
-21 |   - type: textarea
-22 |     attributes:
-23 |       label: Current Behavior
-24 |       description: >
-25 |         A clear and concise description of what the bug is.
-26 |       placeholder: >
-27 |         I intended to perform action X, but unexpectedly encountered outcome Y.
-28 |     validations:
-29 |       required: true
-30 |   - type: textarea
-31 |     attributes:
-32 |       label: Expected Behavior
-33 |       description: >
-34 |         A clear and concise description of what you expected to happen.
-35 |       placeholder: >
-36 |         I expected outcome Y to occur.
-37 |     validations:
-38 |       required: true
-39 |   - type: textarea
-40 |     attributes:
-41 |       label: Steps to Reproduce
-42 |       description: >
-43 |         Steps to reproduce the behavior:
-44 |       placeholder: |
-45 |         1. Fetch a '...'
-46 |         2. Update the '....'
-47 |         3. See error
-48 |     validations:
-49 |       required: true
-50 |   - type: textarea
-51 |     attributes:
-52 |       label: Relevant Logs and/or Screenshots
-53 |       description: >
-54 |         If applicable, add logs and/or screenshots to help explain your problem.
-55 |     validations:
-56 |       required: false
-57 |   - type: textarea
-58 |     attributes:
-59 |       label: Environment
-60 |       description: |
-61 |         Please complete the following information:
-62 |         eg:
-63 |         - OS: Ubuntu 20.04
-64 |         - Python: 3.9.1
-65 |         - Videodb: 0.0.1
-66 |       value: |
-67 |         - OS: 
-68 |         - Python: 
-69 |         - Videodb: 
-70 |     validations:
-71 |       required: false
-72 |   - type: textarea
-73 |     attributes:
-74 |       label: Additional Context
-75 |       description: >
-76 |         Add any other context about the problem here.
-77 |     validations:
-78 |       required: false
-79 |   
+---
+
+# Elevenlabs_Voiceover_1
+
+## Adding AI Generated voiceovers to silent footage
+
+## Overview
+[VideoDB](https://videodb.io) helps you generate intelligent AI content and combine outputs from various tools quickly and automatically.
+
+Let’s add an automatically generated voiceover to [this silent footage](https://youtu.be/RcRjY5kzia8) in the style and voice of Sir David Attenborough using `Open AI`, `ElevenLabs` and `VideoDB`.
+
+![](https://raw.githubusercontent.com/video-db/videodb-cookbook/main/images/Elevenlabs_Voiceover_1/image.png)
+
+---
+
+## Setup
+
+### 📦  Installing packages 
+
+```python
+%pip install openai
+%pip install videodb
+```
+
+### 🔑 API Keys
+Ensure access to [VideoDB](https://videodb.io), [OpenAI](https://openai.com), and [ElevenLabs](https://elevenlabs.io) API key. If not, sign up for API access on the respective platforms.
+
+> Get your API key from [VideoDB Console](https://console.videodb.io). ( Free for first 50 uploads, **No credit card required** ) 🎉
+
+```python
+import os
+
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["ELEVEN_LABS_API_KEY"] = ""
+os.environ["VIDEO_DB_API_KEY"] = ""
+```
+
+### 🎙️  ElevenLab's Voice ID  
+You will also need ElevenLab's VoiceID of a Voice that you want to use.
+
+For this demo, we will be using [David Attenborough's Voice](https://elevenlabs.io/app/voice-lab/share/2ee40b08feb5b536baa392b1efc25f1cbbf432099b40982407990f4aa0dfe8a7/iJVpwDOsPQAptMKoj1ea). ElevenLabs has a large variety of voices to choose from (browse them [here](https://elevenlabs.io/voice-library)). Once finalized, copy the Voice ID from ElevenLabs and link it here.
+
+```python
+voiceover_artist_id = "VOICEOVER_ARTIST_ID"
+```
+
+---
+
+## Implementation
+
+### 🔍 Step 3: Analyze Scenes and Generate Scene Descriptions
+
+Start by analyzing the scenes within your Video using VideoDB's scene indexing capabilities. This will provide context for generating the script prompt.
+
+```python
+video.index_scenes()
+```
+
+Let's view the description of first scene of the video
+
+```python
+scenes = video.get_scenes()
+print(f"{scenes[0]['start']} - {scenes[0]['end']}")
+print(scenes[0]["response"])
+```
+
+```
+0 - 9.033333333333333
+The image displays an abstract array of blue shades forming a textured pattern resembling overlapping petals or scales. The hues range from deep cobalt to turquoise, intimating a fluid or organic essence reminiscent of natural elements like water or foliage. The amalgamation of shapes and colors creates a vibrant mosaic, without any discernible figures or familiar forms. It conveys a sense of calmness and depth, akin to peering into a cerulean sea or a cluster of exotic flowers. This image could be interpreted as a close-up of scales, artistic rendering, or a digitally altered photograph, with its focus on the interplay of color and form.
+```
+
+### Step 4: Generate Voiceover Script with LLM
+Combine scene descriptions with the script prompt, instructing LLM to create a voiceover script in David Attenborough's style.
+
+This script prompt can be refined and tweaked to generate the most suitable output. Check out [these examples](https://www.youtube.com/playlist?list=PLhxAMFLSSK03rsPTjRv1LbAXHQpNN6BS0) to explore more use cases.
+
+```python
+import openai
+
+client = openai.OpenAI()
+
+script_prompt = "Here's the data from a scene index for a video about the underwater world. Study this and then generate a synced script based on the description below. Make sure the script is in the language, voice and style of Sir David Attenborough"
+
+full_prompt = script_prompt + "\n\n"
+for scene in scenes:
+  full_prompt += f"- {scene}\n"
+
+openai_res = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "system", "content": full_prompt}],
+)
+voiceover_script = openai_res.choices[0].message.content
+
+# If you have ElevenLab's paid plan remove this
+voiceover_script = voiceover_script[:2500]
+```
+
+### 🎤 Step 5: Generate Voiceover Audio with ElevenLabs
+Utilize the generated script to synthesize AI-generated voiceover narration in David Attenborough's voice using ElevenLabs API.
+
+```python
+import requests
+
+# Call ElevenLabs API to generate voiceover
+url = f"https://api.elevenlabs.io/v1/text-to-speech/{voiceover_artist_id}"
+headers = {
+    "xi-api-key": os.environ.get("ELEVEN_LABS_API_KEY"),
+    "Content-Type": "application/json"
+}
+payload = {
+    "model_id": "eleven_monolingual_v1",
+    "text": voiceover_script,
+    "voice_settings": {
+        "stability": 0.5,
+        "similarity_boost": 0.5
+    }
+}
+elevenlabs_res = requests.request("POST", url, json=payload, headers=headers)
+
+# Save the audio file
+audio_file = "audio.mp3"
+CHUNK_SIZE = 1024
+with open(audio_file, 'wb') as f:
+    for chunk in elevenlabs_res.iter_content(chunk_size=CHUNK_SIZE):
+        if chunk:
+            f.write(chunk)
+```
+
+### 🎬 Step 6: Add Voiceover to Video with VideoDB
+
+In order to use the voiceover generated above, let's upload the audio file (voiceover) to VideoDB first
+
+```python
+audio = conn.upload(file_path=audio_file)
+```
+
+Finally, add the AI-generated voiceover to the original footage using VideoDB's [timeline feature](https://docs.videodb.io/version-0-0-3-timeline-and-assets-44)
+
+```python
+from videodb.timeline import Timeline
+from videodb.asset import VideoAsset, AudioAsset
+
+# Create a timeline object
+timeline = Timeline(conn)
+
+# Add the video asset to the timeline for playback
+video_asset = VideoAsset(asset_id=video.id)
+timeline.add_inline(asset=video_asset)
+
+# Add the audio asset to the timeline for playback
+audio_asset = AudioAsset(asset_id=audio.id)
+timeline.add_overlay(start=0, asset=audio_asset)
+```
+
+### 🪄 Step 7: Review and Share
+Preview the video with the integrated voiceover to ensure it functions correctly.   
+Once satisfied, generate a stream of the video and share the link for others to view and enjoy this wholesome creation!
+
+```python
+from videodb import play_stream
+
+stream_url = timeline.generate_stream()
+play_stream(stream_url)
+```
+
+---
+
+### 🎉 Conclusion:
+You have successfully automated the process of creating custom and personalized voiceovers based on a simple prompt and raw video footage using VideoDB, OpenAI, and ElevenLabs.
+
+Experiment with different prompts and scene analysis techniques to further improve the quality and accuracy of the voiceovers. Enjoy creating captivating narratives with AI-powered voiceovers using VideoDB! 
+
+For more such explorations, refer to the [documentation of VideoDB](https://docs.videodb.io/) and join the VideoDB community on [GitHub](https://github.com/video-db) or [Discord](https://discord.com/invite/py9P639jGz) for support and collaboration.
 
 
---------------------------------------------------------------------------------
-/.github/ISSUE_TEMPLATE/feature_request.yml:
---------------------------------------------------------------------------------
- 1 | name: Feature
- 2 | description: Submit a proposal/request for a new feature
- 3 | labels: ['enhancement']
- 4 | body:
- 5 |   - type: markdown
- 6 |     attributes:
- 7 |       value: |
- 8 |         Thanks for taking the time to fill out this feature request!
- 9 |   - type: checkboxes
-10 |     attributes:
-11 |       label: Confirm this is a new feature request
-12 |       description: >
-13 |         Select the checkboxes that apply to this feature request. If you're not sure about any of these, don't worry! We'll help you figure it out.
-14 |       options:
-15 |         - label: Possible new feature in VideoDB Python Client
-16 |           required: false
-17 |         - label: Potential new feature in VideoDB API
-18 |           required: false
-19 |         - label: I've checked the current issues, and there's no record of this feature request
-20 |           required: false
-21 |   - type: textarea
-22 |     attributes:
-23 |       label: Describe the feature
-24 |       description: >
-25 |         A clear and concise description of what the feature is and why it's needed. 
-26 |     validations:
-27 |       required: true
-28 |   - type: textarea
-29 |     attributes:
-30 |       label: Describe the solution you'd like
-31 |       description: |
-32 |         A clear and concise description of what you want to happen.
-33 |     validations:
-34 |       required: true
-35 |   - type: textarea
-36 |     attributes:
-37 |       label: Describe alternatives you've considered
-38 |       description: >
-39 |         A clear and concise description of any alternative solutions or features you've considered.
-40 |     validations:
-41 |       required: false
-42 |   - type: textarea
-43 |     attributes:
-44 |       label: Additional Context
-45 |       description: >
-46 |         Add any other context about the feature request here.
-47 |     validations:
-48 |       required: false
-49 | 
+---
 
-
---------------------------------------------------------------------------------
-/.github/pull_request_template.md:
---------------------------------------------------------------------------------
- 1 | ## Pull Request
- 2 | 
- 3 | **Description:**
- 4 | Describe the purpose of this pull request.
- 5 | 
- 6 | **Changes:**
- 7 | - [ ] Feature A
- 8 | - [ ] Bugfix B
- 9 | 
-10 | **Related Issues:**
-11 | - Closes #123
-12 | - Addresses #456
-13 | 
-14 | **Testing:**
-15 | Describe any testing steps that have been taken or are necessary.
-16 | Make sure to take in account any existing code change that require some feature to be re-tested.
-17 | 
-18 | 
-
-
---------------------------------------------------------------------------------
-/.github/workflows/ci.yaml:
---------------------------------------------------------------------------------
- 1 | name: Continuous Integration Workflow
- 2 | # Trigger the workflow on push or pull request, on main branch
- 3 | 
- 4 | on:
- 5 |   push:
- 6 |     branches: [ main ]
- 7 |   pull_request:
- 8 |     branches: [ main ]
- 9 | 
-10 | # Define environment variables
-11 | env: 
-12 |   PYTHON_VERSION: 3.9
-13 |   APP_DIR: ./
-14 | 
-15 | jobs:
-16 |   lint:
-17 |     runs-on: ubuntu-latest
-18 |     steps:
-19 |       - uses: actions/checkout@v2
-20 |       - name: Set up Python 3
-21 |         uses: actions/setup-python@v2
-22 |         with:
-23 |           python-version: ${{ env.PYTHON_VERSION }}
-24 |       
-25 |       - name: Install dependencies
-26 |         run: | 
-27 |           python -m pip install --upgrade pip
-28 |           pip install -r requirements-dev.txt
-29 |       
-30 |       - name: Run linter
-31 |         run: | 
-32 |           ruff check ${{ env.APP_DIR }}
-33 | 
-34 |   test:
-35 |     runs-on: ubuntu-latest
-36 |     steps:
-37 |       - uses: actions/checkout@v2
-38 |       - name: Set up Python 3
-39 |         uses: actions/setup-python@v2
-40 |         with:
-41 |           python-version: ${{ env.PYTHON_VERSION }}
-42 |       
-43 |       - name: Install dependencies
-44 |         run: | 
-45 |           python -m pip install --upgrade pip
-46 |           pip install -r requirements.txt
-47 |           pip install -r requirements-dev.txt
-48 | 
-49 |       - name: Run tests
-50 |         run: | 
-51 |           python -m pytest tests/
-52 | 
-53 |   build:
-54 |     runs-on: ubuntu-latest
-55 |     steps:
-56 |       - uses: actions/checkout@v2
-57 |       - name: Set up Python 3
-58 |         uses: actions/setup-python@v2
-59 |         with:
-60 |           python-version: ${{ env.PYTHON_VERSION }}
-61 |       
-62 |       - name: Install dependencies
-63 |         run: | 
-64 |           python -m pip install --upgrade pip
-65 |           pip install -r requirements.txt
-66 |           pip install -r requirements-dev.txt
-67 | 
-68 |       - name: Build
-69 |         run: | 
-70 |           python setup.py sdist bdist_wheel
-71 |           twine check dist/*
-72 | 
-
-
---------------------------------------------------------------------------------
-/.gitignore:
---------------------------------------------------------------------------------
- 1 | __pycache__
- 2 | __pycache__/*
- 3 | */__pycache__
- 4 | *.pyc
- 5 | *.log
- 6 | .DS_Store
- 7 | log/
- 8 | *.out
- 9 | *.zip
-10 | .idea/*
-11 | .env
-12 | build/*
-13 | dist/*
-14 | *.egg-info/*
-15 | venv/
-16 | .vscode/*
-17 | example.ipynb
-18 | example.py
-19 | 
-
-
---------------------------------------------------------------------------------
-/LICENSE:
---------------------------------------------------------------------------------
-  1 |                                  Apache License
-  2 |                            Version 2.0, January 2004
-  3 |                         http://www.apache.org/licenses/
-  4 | 
-  5 |    TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-  6 | 
-  7 |    1. Definitions.
-  8 | 
-  9 |       "License" shall mean the terms and conditions for use, reproduction,
- 10 |       and distribution as defined by Sections 1 through 9 of this document.
- 11 | 
- 12 |       "Licensor" shall mean the copyright owner or entity authorized by
- 13 |       the copyright owner that is granting the License.
- 14 | 
- 15 |       "Legal Entity" shall mean the union of the acting entity and all
- 16 |       other entities that control, are controlled by, or are under common
- 17 |       control with that entity. For the purposes of this definition,
- 18 |       "control" means (i) the power, direct or indirect, to cause the
- 19 |       direction or management of such entity, whether by contract or
- 20 |       otherwise, or (ii) ownership of fifty percent (50%) or more of the
- 21 |       outstanding shares, or (iii) beneficial ownership of such entity.
- 22 | 
- 23 |       "You" (or "Your") shall mean an individual or Legal Entity
- 24 |       exercising permissions granted by this License.
- 25 | 
- 26 |       "Source" form shall mean the preferred form for making modifications,
- 27 |       including but not limited to software source code, documentation
- 28 |       source, and configuration files.
- 29 | 
- 30 |       "Object" form shall mean any form resulting from mechanical
- 31 |       transformation or translation of a Source form, including but
- 32 |       not limited to compiled object code, generated documentation,
- 33 |       and conversions to other media types.
- 34 | 
- 35 |       "Work" shall mean the work of authorship, whether in Source or
- 36 |       Object form, made available under the License, as indicated by a
- 37 |       copyright notice that is included in or attached to the work
- 38 |       (an example is provided in the Appendix below).
- 39 | 
- 40 |       "Derivative Works" shall mean any work, whether in Source or Object
- 41 |       form, that is based on (or derived from) the Work and for which the
- 42 |       editorial revisions, annotations, elaborations, or other modifications
- 43 |       represent, as a whole, an original work of authorship. For the purposes
- 44 |       of this License, Derivative Works shall not include works that remain
- 45 |       separable from, or merely link (or bind by name) to the interfaces of,
- 46 |       the Work and Derivative Works thereof.
- 47 | 
- 48 |       "Contribution" shall mean any work of authorship, including
- 49 |       the original version of the Work and any modifications or additions
- 50 |       to that Work or Derivative Works thereof, that is intentionally
- 51 |       submitted to Licensor for inclusion in the Work by the copyright owner
- 52 |       or by an individual or Legal Entity authorized to submit on behalf of
- 53 |       the copyright owner. For the purposes of this definition, "submitted"
- 54 |       means any form of electronic, verbal, or written communication sent
- 55 |       to the Licensor or its representatives, including but not limited to
- 56 |       communication on electronic mailing lists, source code control systems,
- 57 |       and issue tracking systems that are managed by, or on behalf of, the
- 58 |       Licensor for the purpose of discussing and improving the Work, but
- 59 |       excluding communication that is conspicuously marked or otherwise
- 60 |       designated in writing by the copyright owner as "Not a Contribution."
- 61 | 
- 62 |       "Contributor" shall mean Licensor and any individual or Legal Entity
- 63 |       on behalf of whom a Contribution has been received by Licensor and
- 64 |       subsequently incorporated within the Work.
- 65 | 
- 66 |    2. Grant of Copyright License. Subject to the terms and conditions of
- 67 |       this License, each Contributor hereby grants to You a perpetual,
- 68 |       worldwide, non-exclusive, no-charge, royalty-free, irrevocable
- 69 |       copyright license to reproduce, prepare Derivative Works of,
- 70 |       publicly display, publicly perform, sublicense, and distribute the
- 71 |       Work and such Derivative Works in Source or Object form.
- 72 | 
- 73 |    3. Grant of Patent License. Subject to the terms and conditions of
- 74 |       this License, each Contributor hereby grants to You a perpetual,
- 75 |       worldwide, non-exclusive, no-charge, royalty-free, irrevocable
- 76 |       (except as stated in this section) patent license to make, have made,
- 77 |       use, offer to sell, sell, import, and otherwise transfer the Work,
- 78 |       where such license applies only to those patent claims licensable
- 79 |       by such Contributor that are necessarily infringed by their
- 80 |       Contribution(s) alone or by combination of their Contribution(s)
- 81 |       with the Work to which such Contribution(s) was submitted. If You
- 82 |       institute patent litigation against any entity (including a
- 83 |       cross-claim or counterclaim in a lawsuit) alleging that the Work
- 84 |       or a Contribution incorporated within the Work constitutes direct
- 85 |       or contributory patent infringement, then any patent licenses
- 86 |       granted to You under this License for that Work shall terminate
- 87 |       as of the date such litigation is filed.
- 88 | 
- 89 |    4. Redistribution. You may reproduce and distribute copies of the
- 90 |       Work or Derivative Works thereof in any medium, with or without
- 91 |       modifications, and in Source or Object form, provided that You
- 92 |       meet the following conditions:
- 93 | 
- 94 |       (a) You must give any other recipients of the Work or
- 95 |           Derivative Works a copy of this License; and
- 96 | 
- 97 |       (b) You must cause any modified files to carry prominent notices
- 98 |           stating that You changed the files; and
- 99 | 
-100 |       (c) You must retain, in the Source form of any Derivative Works
-101 |           that You distribute, all copyright, patent, trademark, and
-102 |           attribution notices from the Source form of the Work,
-103 |           excluding those notices that do not pertain to any part of
-104 |           the Derivative Works; and
-105 | 
-106 |       (d) If the Work includes a "NOTICE" text file as part of its
-107 |           distribution, then any Derivative Works that You distribute must
-108 |           include a readable copy of the attribution notices contained
-109 |           within such NOTICE file, excluding those notices that do not
-110 |           pertain to any part of the Derivative Works, in at least one
-111 |           of the following places: within a NOTICE text file distributed
-112 |           as part of the Derivative Works; within the Source form or
-113 |           documentation, if provided along with the Derivative Works; or,
-114 |           within a display generated by the Derivative Works, if and
-115 |           wherever such third-party notices normally appear. The contents
-116 |           of the NOTICE file are for informational purposes only and
-117 |           do not modify the License. You may add Your own attribution
-118 |           notices within Derivative Works that You distribute, alongside
-119 |           or as an addendum to the NOTICE text from the Work, provided
-120 |           that such additional attribution notices cannot be construed
-121 |           as modifying the License.
-122 | 
-123 |       You may add Your own copyright statement to Your modifications and
-124 |       may provide additional or different license terms and conditions
-125 |       for use, reproduction, or distribution of Your modifications, or
-126 |       for any such Derivative Works as a whole, provided Your use,
-127 |       reproduction, and distribution of the Work otherwise complies with
-128 |       the conditions stated in this License.
-129 | 
-130 |    5. Submission of Contributions. Unless You explicitly state otherwise,
-131 |       any Contribution intentionally submitted for inclusion in the Work
-132 |       by You to the Licensor shall be under the terms and conditions of
-133 |       this License, without any additional terms or conditions.
-134 |       Notwithstanding the above, nothing herein shall supersede or modify
-135 |       the terms of any separate license agreement you may have executed
-136 |       with Licensor regarding such Contributions.
-137 | 
-138 |    6. Trademarks. This License does not grant permission to use the trade
-139 |       names, trademarks, service marks, or product names of the Licensor,
-140 |       except as required for reasonable and customary use in describing the
-141 |       origin of the Work and reproducing the content of the NOTICE file.
-142 | 
-143 |    7. Disclaimer of Warranty. Unless required by applicable law or
-144 |       agreed to in writing, Licensor provides the Work (and each
-145 |       Contributor provides its Contributions) on an "AS IS" BASIS,
-146 |       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-147 |       implied, including, without limitation, any warranties or conditions
-148 |       of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-149 |       PARTICULAR PURPOSE. You are solely responsible for determining the
-150 |       appropriateness of using or redistributing the Work and assume any
-151 |       risks associated with Your exercise of permissions under this License.
-152 | 
-153 |    8. Limitation of Liability. In no event and under no legal theory,
-154 |       whether in tort (including negligence), contract, or otherwise,
-155 |       unless required by applicable law (such as deliberate and grossly
-156 |       negligent acts) or agreed to in writing, shall any Contributor be
-157 |       liable to You for damages, including any direct, indirect, special,
-158 |       incidental, or consequential damages of any character arising as a
-159 |       result of this License or out of the use or inability to use the
-160 |       Work (including but not limited to damages for loss of goodwill,
-161 |       work stoppage, computer failure or malfunction, or any and all
-162 |       other commercial damages or losses), even if such Contributor
-163 |       has been advised of the possibility of such damages.
-164 | 
-165 |    9. Accepting Warranty or Additional Liability. While redistributing
-166 |       the Work or Derivative Works thereof, You may choose to offer,
-167 |       and charge a fee for, acceptance of support, warranty, indemnity,
-168 |       or other liability obligations and/or rights consistent with this
-169 |       License. However, in accepting such obligations, You may act only
-170 |       on Your own behalf and on Your sole responsibility, not on behalf
-171 |       of any other Contributor, and only if You agree to indemnify,
-172 |       defend, and hold each Contributor harmless for any liability
-173 |       incurred by, or claims asserted against, such Contributor by reason
-174 |       of your accepting any such warranty or additional liability.
-175 | 
-176 |    END OF TERMS AND CONDITIONS
-177 | 
-178 |    APPENDIX: How to apply the Apache License to your work.
-179 | 
-180 |       To apply the Apache License to your work, attach the following
-181 |       boilerplate notice, with the fields enclosed by brackets "[]"
-182 |       replaced with your own identifying information. (Don't include
-183 |       the brackets!)  The text should be enclosed in the appropriate
-184 |       comment syntax for the file format. We also recommend that a
-185 |       file or class name and description of purpose be included on the
-186 |       same "printed page" as the copyright notice for easier
-187 |       identification within third-party archives.
-188 | 
-189 |    Copyright [yyyy] [name of copyright owner]
-190 | 
-191 |    Licensed under the Apache License, Version 2.0 (the "License");
-192 |    you may not use this file except in compliance with the License.
-193 |    You may obtain a copy of the License at
-194 | 
-195 |        http://www.apache.org/licenses/LICENSE-2.0
-196 | 
-197 |    Unless required by applicable law or agreed to in writing, software
-198 |    distributed under the License is distributed on an "AS IS" BASIS,
-199 |    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-200 |    See the License for the specific language governing permissions and
-201 |    limitations under the License.
-202 | 
-
-
---------------------------------------------------------------------------------
-/README.md:
---------------------------------------------------------------------------------
-  1 | <!-- PROJECT SHIELDS -->
-  2 | <!--
-  3 | *** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-  4 | *** https://www.markdownguide.org/basic-syntax/#reference-style-links
-  5 | -->
-  6 | 
-  7 | [![PyPI version][pypi-shield]][pypi-url]
-  8 | [![Stargazers][stars-shield]][stars-url]
-  9 | [![Issues][issues-shield]][issues-url]
- 10 | [![Website][website-shield]][website-url]
- 11 | 
- 12 | <!-- PROJECT LOGO -->
- 13 | <br />
- 14 | <p align="center">
- 15 |   <a href="https://videodb.io/">
- 16 |     <img src="https://codaio.imgix.net/docs/_s5lUnUCIU/blobs/bl-RgjcFrrJjj/d3cbc44f8584ecd42f2a97d981a144dce6a66d83ddd5864f723b7808c7d1dfbc25034f2f25e1b2188e78f78f37bcb79d3c34ca937cbb08ca8b3da1526c29da9a897ab38eb39d084fd715028b7cc60eb595c68ecfa6fa0bb125ec2b09da65664a4f172c2f" alt="Logo" width="300" height="">
- 17 |   </a>
- 18 | 
- 19 |   <h3 align="center">VideoDB Python SDK</h3>
- 20 | 
- 21 |   <p align="center">
- 22 |     Video Database for your AI Applications
- 23 |     <br />
- 24 |     <a href="https://docs.videodb.io"><strong>Explore the docs »</strong></a>
- 25 |     <br />
- 26 |     <br />
- 27 |     <a href="https://github.com/video-db/videodb-cookbook">View Demo</a>
- 28 |     ·
- 29 |     <a href="https://github.com/video-db/videodb-python/issues">Report Bug</a>
- 30 |     ·
- 31 |     <a href="https://github.com/video-db/videodb-python/issues">Request Feature</a>
- 32 |   </p>
- 33 | </p>
- 34 | 
- 35 | <!-- ABOUT THE PROJECT -->
- 36 | 
- 37 | # VideoDB Python SDK
- 38 | 
- 39 | VideoDB Python SDK allows you to interact with the VideoDB serverless database. Manage videos as intelligent data, not files. It's scalable, cost-efficient & optimized for AI applications and LLM integration.
- 40 | 
- 41 | <!-- Documentation -->
- 42 | <!-- ## Documentation
- 43 | The documentation for the package can be found [here](https://videodb.io/) -->
- 44 | 
- 45 | <!-- Installation -->
- 46 | 
- 47 | ## Installation
- 48 | 
- 49 | To install the package, run the following command in your terminal:
- 50 | 
- 51 | ```
- 52 | pip install videodb
- 53 | ```
- 54 | 
- 55 | <!-- USAGE EXAMPLES -->
- 56 | 
- 57 | ## Quick Start
- 58 | 
- 59 | ### Creating a Connection
- 60 | 
- 61 | Get an API key from the [VideoDB console](https://console.videodb.io). Free for first 50 uploads _(No credit card required)_.
- 62 | 
- 63 | ```python
- 64 | import videodb
- 65 | conn = videodb.connect(api_key="YOUR_API_KEY")
- 66 | ```
- 67 | 
- 68 | ## Working with a Single Video
- 69 | 
- 70 | ---
- 71 | 
- 72 | ### ⬆️ Uploading a Video
- 73 | 
- 74 | Now that you have established a connection to VideoDB, you can upload your videos using `conn.upload()`.
- 75 | You can directly upload from `youtube`, `any public url`, `S3 bucket` or a `local file path`. A default collection is created when you create your first connection.
- 76 | 
- 77 | `upload` method returns a `Video` object.
- 78 | 
- 79 | ```python
- 80 | # Upload a video by url
- 81 | video = conn.upload(url="https://www.youtube.com/watch?v=WDv4AWk0J3U")
- 82 | 
- 83 | # Upload a video from file system
- 84 | video_f = conn.upload(file_path="./my_video.mp4")
- 85 | 
- 86 | ```
- 87 | 
- 88 | ### 📺 View your Video
- 89 | 
- 90 | Once uploaded, your video is immediately available for viewing in 720p resolution. ⚡️
- 91 | 
- 92 | - Generate a streamable url for the video using video.generate_stream()
- 93 | - Preview the video using video.play(). This will open the video in your default browser/notebook
- 94 | 
- 95 | ```python
- 96 | video.generate_stream()
- 97 | video.play()
- 98 | ```
- 99 | 
-100 | ### ⛓️ Stream Specific Sections of Videos
-101 | 
-102 | You can easily clip specific sections of a video by passing a timeline of the start and end timestamps (in seconds) as a parameter.
-103 | For example, this will generate and play a compilation of the first `10 seconds` and the clip between the `120th` and the `140th` second.
-104 | 
-105 | ```python
-106 | stream_link = video.generate_stream(timeline=[[0,10], [120,140]])
-107 | play_stream(stream_link)
-108 | ```
-109 | 
-110 | ### 🔍 Search Inside a Video
-111 | 
-112 | To search bits inside a video, you have to `index` the video first. This can be done by a simple command.
-113 | _P.S. Indexing may take some time for longer videos._
-114 | 
-115 | ```python
-116 | video.index_spoken_words()
-117 | result = video.search("Morning Sunlight")
-118 | result.play()
-119 | video.get_transcript()
-120 | ```
-121 | 
-122 | `Videodb` is launching more indexing options in upcoming versions. As of now you can try the `semantic` index - Index by spoken words.
-123 | 
-124 | In the future you'll be able to index videos using:
-125 | 
-126 | 1. **Scene** - Visual concepts and events.
-127 | 2. **Faces**.
-128 | 3. **Specific domain Index** like Football, Baseball, Drone footage, Cricket etc.
-129 | 
-130 | ### Viewing Search Results
-131 | 
-132 | `video.search()` returns a `SearchResults` object, which contains the sections or as we call them, `shots` of videos which semantically match your search query.
-133 | 
-134 | - `result.get_shots()` Returns a list of Shot(s) that matched the search query.
-135 | - `result.play()` Returns a playable url for the video (similar to video.play(); you can open this link in the browser, or embed it into your website using an iframe).
-136 | 
-137 | ## RAG: Search inside Multiple Videos
-138 | 
-139 | ---
-140 | 
-141 | `VideoDB` can store and search inside multiple videos with ease. By default, videos are uploaded to your default collection.
-142 | 
-143 | ### 🔄 Using Collection to Upload Multiple Videos
-144 | 
-145 | ```python
-146 | # Get the default collection
-147 | coll = conn.get_collection()
-148 | 
-149 | # Upload Videos to a collection
-150 | coll.upload(url="https://www.youtube.com/watch?v=lsODSDmY4CY")
-151 | coll.upload(url="https://www.youtube.com/watch?v=vZ4kOr38JhY")
-152 | coll.upload(url="https://www.youtube.com/watch?v=uak_dXHh6s4")
-153 | ```
-154 | 
-155 | - `conn.get_collection()` : Returns a Collection object; the default collection.
-156 | - `coll.get_videos()` : Returns a list of Video objects; all videos in the collections.
-157 | - `coll.get_video(video_id)`: Returns a Video object, corresponding video from the provided `video_id`.
-158 | - `coll.delete_video(video_id)`: Deletes the video from the Collection.
-159 | 
-160 | ### 📂 Search Inside Collection
-161 | 
-162 | You can simply Index all the videos in a collection and use the search method to find relevant results.
-163 | Here we are indexing the spoken content of a collection and performing semantic search.
-164 | 
-165 | ```python
-166 | # Index all videos in collection
-167 | for video in coll.get_videos():
-168 |     video.index_spoken_words()
-169 | 
-170 | # search in the collection of videos
-171 | results = coll.search(query = "What is Dopamine?")
-172 | results.play()
-173 | ```
-174 | 
-175 | The result here has all the matching bits in a single stream from your collection. You can use these results in your application right away.
-176 | 
-177 | ### 🌟 Explore the Video object
-178 | 
-179 | There are multiple methods available on a Video Object, that can be helpful for your use-case.
-180 | 
-181 | **Get the Transcript**
-182 | 
-183 | ```python
-184 | # words with timestamps
-185 | text_json = video.get_transcript()
-186 | text = video.get_transcript_text()
-187 | print(text)
-188 | ```
-189 | 
-190 | **Add Subtitles to a video**
-191 | 
-192 | It returns a new stream instantly with subtitles added to the video.
-193 | 
-194 | ```python
-195 | new_stream = video.add_subtitle()
-196 | play_stream(new_stream)
-197 | ```
-198 | 
-199 | **Get Thumbnail of a Video:**
-200 | 
-201 | `video.generate_thumbnail()`: Returns a thumbnail image of video.
-202 | 
-203 | **Delete a video:**
-204 | 
-205 | `video.delete()`: Deletes the video.
-206 | 
-207 | Checkout more examples and tutorials 👉 [Build with VideoDB](https://docs.videodb.io/build-with-videodb-35) to explore what you can build with `VideoDB`.
-208 | 
-209 | ---
-210 | 
-211 | <!-- ROADMAP -->
-212 | 
-213 | ## Roadmap
-214 | 
-215 | - Adding More Indexes : `Face`, `Scene`, `Security`, `Events`, and `Sports`
-216 | - Give prompt support to generate thumbnails using GenAI.
-217 | - Give prompt support to access content.
-218 | - Give prompt support to edit videos.
-219 | - See the [open issues](https://github.com/video-db/videodb-python/issues) for a list of proposed features (and known issues).
-220 | 
-221 | ---
-222 | 
-223 | <!-- CONTRIBUTING -->
-224 | 
-225 | ## Contributing
-226 | 
-227 | Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-228 | 
-229 | 1. Fork the Project
-230 | 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-231 | 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-232 | 4. Push to the Branch (`git push origin feature/AmazingFeature`)
-233 | 5. Open a Pull Request
-234 | 
-235 | ---
-236 | 
-237 | <!-- MARKDOWN LINKS & IMAGES -->
-238 | <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-239 | 
-240 | [pypi-shield]: https://img.shields.io/pypi/v/videodb?style=for-the-badge
-241 | [pypi-url]: https://pypi.org/project/videodb/
-242 | [python-shield]: https://img.shields.io/pypi/pyversions/videodb?style=for-the-badge
-243 | [stars-shield]: https://img.shields.io/github/stars/video-db/videodb-python.svg?style=for-the-badge
-244 | [stars-url]: https://github.com/video-db/videodb-python/stargazers
-245 | [issues-shield]: https://img.shields.io/github/issues/video-db/videodb-python.svg?style=for-the-badge
-246 | [issues-url]: https://github.com/video-db/videodb-python/issues
-247 | [website-shield]: https://img.shields.io/website?url=https%3A%2F%2Fvideodb.io%2F&style=for-the-badge&label=videodb.io
-248 | [website-url]: https://videodb.io/
-249 | 
-
-
---------------------------------------------------------------------------------
-/requirements-dev.txt:
---------------------------------------------------------------------------------
-1 | ruff==0.1.7
-2 | pytest==7.4.3
-3 | twine==5.1.1
-4 | wheel==0.42.0
-5 | 
-
-
---------------------------------------------------------------------------------
-/requirements.txt:
---------------------------------------------------------------------------------
-1 | requests==2.31.0
-2 | backoff==2.2.1
-3 | tqdm==4.66.1
-4 | 
-
-
---------------------------------------------------------------------------------
-/setup.py:
---------------------------------------------------------------------------------
- 1 | # package setup
- 2 | import os
- 3 | from setuptools import setup, find_packages
- 4 | 
- 5 | ROOT = os.path.dirname(os.path.abspath(__file__))
- 6 | 
- 7 | 
- 8 | # Read in the package version per recommendations from:
- 9 | # https://packaging.python.org/guides/single-sourcing-package-version/
-10 | 
-11 | about_path = os.path.join(ROOT, "videodb", "__about__.py")
-12 | about = {}
-13 | with open(about_path) as fp:
-14 |     exec(fp.read(), about)
-15 | 
-16 | 
-17 | # read the contents of README file
-18 | long_description = open(os.path.join(ROOT, "README.md"), "r", encoding="utf-8").read()
-19 | 
-20 | 
-21 | setup(
-22 |     name=about["__title__"],
-23 |     version=about["__version__"],
-24 |     author=about["__author__"],
-25 |     author_email=about["__email__"],
-26 |     license=about["__license__"],
-27 |     description="VideoDB Python SDK",
-28 |     long_description=long_description,
-29 |     long_description_content_type="text/markdown",
-30 |     url=about["__url__"],
-31 |     packages=find_packages(exclude=["tests", "tests.*"]),
-32 |     python_requires=">=3.8",
-33 |     install_requires=[
-34 |         "requests>=2.25.1",
-35 |         "backoff>=2.2.1",
-36 |         "tqdm>=4.66.1",
-37 |     ],
-38 |     classifiers=[
-39 |         "Intended Audience :: Developers",
-40 |         "Programming Language :: Python :: 3",
-41 |         "Programming Language :: Python :: 3.8",
-42 |         "Programming Language :: Python :: 3.9",
-43 |         "Programming Language :: Python :: 3.10",
-44 |         "Programming Language :: Python :: 3.11",
-45 |         "Programming Language :: Python :: 3.12",
-46 |         "License :: OSI Approved :: Apache Software License",
-47 |     ],
-48 | )
-49 | 
-
-
---------------------------------------------------------------------------------
-/tests/__init__.py:
---------------------------------------------------------------------------------
-https://raw.githubusercontent.com/0xrohitgarg/videodb-python/b7d7a66b4fd61bd9628e3e188d1bd9dd2a45127c/tests/__init__.py
-
-
---------------------------------------------------------------------------------
-/tests/test_exceptions.py:
---------------------------------------------------------------------------------
- 1 | from videodb.exceptions import (
- 2 |     VideodbError,
- 3 |     AuthenticationError,
- 4 |     InvalidRequestError,
- 5 |     SearchError,
- 6 | )
- 7 | 
- 8 | 
- 9 | def test_videodb_error():
-10 |     try:
-11 |         raise VideodbError("An error occurred", cause="Something")
-12 | 
-13 |     except VideodbError as e:
-14 |         assert str(e) == "An error occurred caused by Something"
-15 |         assert e.cause == "Something"
-16 | 
-17 | 
-18 | def test_authentication_error():
-19 |     try:
-20 |         raise AuthenticationError(
-21 |             "An error occurred with authentication", response="Something"
-22 |         )
-23 | 
-24 |     except AuthenticationError as e:
-25 |         print(e)
-26 |         assert str(e) == "An error occurred with authentication "
-27 |         assert e.response == "Something"
-28 | 
-29 | 
-30 | def test_invalid_request_error():
-31 |     try:
-32 |         raise InvalidRequestError(
-33 |             "An error occurred with request", response="Something"
-34 |         )
-35 | 
-36 |     except InvalidRequestError as e:
-37 |         assert str(e) == "An error occurred with request "
-38 |         assert e.response == "Something"
-39 | 
-40 | 
-41 | def test_search_error():
-42 |     try:
-43 |         raise SearchError("An error occurred with search")
-44 | 
-45 |     except SearchError as e:
-46 |         assert str(e) == "An error occurred with search "
-47 | 
-
-
---------------------------------------------------------------------------------
-/videodb/__about__.py:
---------------------------------------------------------------------------------
- 1 | """ About information for videodb sdk"""
- 2 | 
- 3 | 
- 4 | __version__ = "0.2.10"
- 5 | __title__ = "videodb"
- 6 | __author__ = "videodb"
- 7 | __email__ = "contact@videodb.io"
- 8 | __url__ = "https://github.com/video-db/videodb-python"
- 9 | __license__ = "Apache License 2.0"
-10 | 
-
-
---------------------------------------------------------------------------------
-/videodb/__init__.py:
---------------------------------------------------------------------------------
- 1 | """Videodb API client library"""
- 2 | 
- 3 | import os
- 4 | import logging
- 5 | 
- 6 | from typing import Optional
- 7 | from videodb._utils._video import play_stream
- 8 | from videodb._constants import (
- 9 |     VIDEO_DB_API,
-10 |     IndexType,
-11 |     SceneExtractionType,
-12 |     MediaType,
-13 |     SearchType,
-14 |     Segmenter,
-15 |     SubtitleAlignment,
-16 |     SubtitleBorderStyle,
-17 |     SubtitleStyle,
-18 |     TextStyle,
-19 | )
-20 | from videodb.client import Connection
-21 | from videodb.exceptions import (
-22 |     VideodbError,
-23 |     AuthenticationError,
-24 |     InvalidRequestError,
-25 |     SearchError,
-26 | )
-27 | 
-28 | logger: logging.Logger = logging.getLogger("videodb")
-29 | 
-30 | 
-31 | __all__ = [
-32 |     "VideodbError",
-33 |     "AuthenticationError",
-34 |     "InvalidRequestError",
-35 |     "IndexType",
-36 |     "SearchError",
-37 |     "play_stream",
-38 |     "MediaType",
-39 |     "SearchType",
-40 |     "SubtitleAlignment",
-41 |     "SubtitleBorderStyle",
-42 |     "SubtitleStyle",
-43 |     "TextStyle",
-44 |     "SceneExtractionType",
-45 |     "Segmenter",
-46 | ]
-47 | 
-48 | 
-49 | def connect(
-50 |     api_key: str = None,
-51 |     base_url: Optional[str] = VIDEO_DB_API,
-52 |     log_level: Optional[int] = logging.INFO,
-53 | ) -> Connection:
-54 |     """A client for interacting with a videodb via REST API
-55 | 
-56 |     :param str api_key: The api key to use for authentication
-57 |     :param str base_url: (optional) The base url to use for the api
-58 |     :param int log_level: (optional) The log level to use for the logger
-59 |     :return: A connection object
-60 |     :rtype: videodb.client.Connection
-61 |     """
-62 | 
-63 |     logger.setLevel(log_level)
-64 |     if api_key is None:
-65 |         api_key = os.environ.get("VIDEO_DB_API_KEY")
-66 |     if api_key is None:
-67 |         raise AuthenticationError(
-68 |             "No API key provided. Set an API key either as an environment variable (VIDEO_DB_API_KEY) or pass it as an argument."
-69 |         )
-70 | 
-71 |     return Connection(api_key, base_url)
-72 | 
-
-
---------------------------------------------------------------------------------
-/videodb/_constants.py:
---------------------------------------------------------------------------------
-  1 | """Constants used in the videodb package."""
-  2 | from typing import Union
-  3 | from dataclasses import dataclass
-  4 | 
-  5 | VIDEO_DB_API: str = "https://api.videodb.io"
-  6 | 
-  7 | 
-  8 | class MediaType:
-  9 |     video = "video"
- 10 |     audio = "audio"
- 11 |     image = "image"
- 12 | 
- 13 | 
- 14 | class SearchType:
- 15 |     semantic = "semantic"
- 16 |     keyword = "keyword"
- 17 |     scene = "scene"
- 18 |     llm = "llm"
- 19 | 
- 20 | 
- 21 | class IndexType:
- 22 |     spoken_word = "spoken_word"
- 23 |     scene = "scene"
- 24 | 
- 25 | 
- 26 | class SceneExtractionType:
- 27 |     shot_based = "shot"
- 28 |     time_based = "time"
- 29 | 
- 30 | 
- 31 | class Workflows:
- 32 |     add_subtitles = "add_subtitles"
- 33 | 
- 34 | 
- 35 | class SemanticSearchDefaultValues:
- 36 |     result_threshold = 5
- 37 |     score_threshold = 0.2
- 38 | 
- 39 | 
- 40 | class Segmenter:
- 41 |     time = "time"
- 42 |     word = "word"
- 43 |     sentence = "sentence"
- 44 | 
- 45 | 
- 46 | class ApiPath:
- 47 |     collection = "collection"
- 48 |     upload = "upload"
- 49 |     video = "video"
- 50 |     audio = "audio"
- 51 |     image = "image"
- 52 |     stream = "stream"
- 53 |     thumbnail = "thumbnail"
- 54 |     thumbnails = "thumbnails"
- 55 |     upload_url = "upload_url"
- 56 |     transcription = "transcription"
- 57 |     index = "index"
- 58 |     search = "search"
- 59 |     compile = "compile"
- 60 |     workflow = "workflow"
- 61 |     timeline = "timeline"
- 62 |     delete = "delete"
- 63 |     billing = "billing"
- 64 |     usage = "usage"
- 65 |     invoices = "invoices"
- 66 |     scenes = "scenes"
- 67 |     scene = "scene"
- 68 |     frame = "frame"
- 69 |     describe = "describe"
- 70 |     storage = "storage"
- 71 |     download = "download"
- 72 |     title = "title"
- 73 |     generate_url = "generate_url"
- 74 | 
- 75 | 
- 76 | class Status:
- 77 |     processing = "processing"
- 78 |     in_progress = "in progress"
- 79 | 
- 80 | 
- 81 | class HttpClientDefaultValues:
- 82 |     max_retries = 1
- 83 |     timeout = 30
- 84 |     backoff_factor = 0.1
- 85 |     status_forcelist = [502, 503, 504]
- 86 | 
- 87 | 
- 88 | class MaxSupported:
- 89 |     fade_duration = 5
- 90 | 
- 91 | 
- 92 | class SubtitleBorderStyle:
- 93 |     no_border = 1
- 94 |     opaque_box = 3
- 95 |     outline = 4
- 96 | 
- 97 | 
- 98 | class SubtitleAlignment:
- 99 |     bottom_left = 1
-100 |     bottom_center = 2
-101 |     bottom_right = 3
-102 |     middle_left = 9
-103 |     middle_center = 10
-104 |     middle_right = 11
-105 |     top_left = 5
-106 |     top_center = 6
-107 |     top_right = 7
-108 | 
-109 | 
-110 | @dataclass
-111 | class SubtitleStyle:
-112 |     font_name: str = "Arial"
-113 |     font_size: float = 18
-114 |     primary_colour: str = "&H00FFFFFF"  # white
-115 |     secondary_colour: str = "&H000000FF"  # blue
-116 |     outline_colour: str = "&H00000000"  # black
-117 |     back_colour: str = "&H00000000"  # black
-118 |     bold: bool = False
-119 |     italic: bool = False
-120 |     underline: bool = False
-121 |     strike_out: bool = False
-122 |     scale_x: float = 1.0
-123 |     scale_y: float = 1.0
-124 |     spacing: float = 0
-125 |     angle: float = 0
-126 |     border_style: int = SubtitleBorderStyle.outline
-127 |     outline: float = 1.0
-128 |     shadow: float = 0.0
-129 |     alignment: int = SubtitleAlignment.bottom_center
-130 |     margin_l: int = 10
-131 |     margin_r: int = 10
-132 |     margin_v: int = 10
-133 | 
-134 | 
-135 | @dataclass
-136 | class TextStyle:
-137 |     fontsize: int = 24
-138 |     fontcolor: str = "black"
-139 |     fontcolor_expr: str = ""
-140 |     alpha: float = 1.0
-141 |     font: str = "Sans"
-142 |     box: bool = True
-143 |     boxcolor: str = "white"
-144 |     boxborderw: str = "10"
-145 |     boxw: int = 0
-146 |     boxh: int = 0
-147 |     line_spacing: int = 0
-148 |     text_align: str = "T"
-149 |     y_align: str = "text"
-150 |     borderw: int = 0
-151 |     bordercolor: str = "black"
-152 |     expansion: str = "normal"
-153 |     basetime: int = 0
-154 |     fix_bounds: bool = False
-155 |     text_shaping: bool = True
-156 |     shadowcolor: str = "black"
-157 |     shadowx: int = 0
-158 |     shadowy: int = 0
-159 |     tabsize: int = 4
-160 |     x: Union[str, int] = "(main_w-text_w)/2"
-161 |     y: Union[str, int] = "(main_h-text_h)/2"
-162 | 
-
-
---------------------------------------------------------------------------------
-/videodb/_upload.py:
---------------------------------------------------------------------------------
- 1 | import requests
- 2 | 
- 3 | from typing import Optional
- 4 | from requests import HTTPError
- 5 | 
- 6 | 
- 7 | from videodb._constants import (
- 8 |     ApiPath,
- 9 | )
-10 | 
-11 | from videodb.exceptions import (
-12 |     VideodbError,
-13 | )
-14 | 
-15 | 
-16 | def upload(
-17 |     _connection,
-18 |     file_path: str = None,
-19 |     url: str = None,
-20 |     media_type: Optional[str] = None,
-21 |     name: Optional[str] = None,
-22 |     description: Optional[str] = None,
-23 |     callback_url: Optional[str] = None,
-24 | ) -> dict:
-25 |     if not file_path and not url:
-26 |         raise VideodbError("Either file_path or url is required")
-27 |     if file_path and url:
-28 |         raise VideodbError("Only one of file_path or url is allowed")
-29 | 
-30 |     if file_path:
-31 |         try:
-32 |             name = file_path.split("/")[-1].split(".")[0] if not name else name
-33 |             upload_url_data = _connection.get(
-34 |                 path=f"{ApiPath.collection}/{_connection.collection_id}/{ApiPath.upload_url}",
-35 |                 params={"name": name},
-36 |             )
-37 |             upload_url = upload_url_data.get("upload_url")
-38 |             with open(file_path, "rb") as file:
-39 |                 files = {"file": (name, file)}
-40 |                 response = requests.post(upload_url, files=files)
-41 |                 response.raise_for_status()
-42 |                 url = upload_url
-43 | 
-44 |         except FileNotFoundError as e:
-45 |             raise VideodbError("File not found", cause=e)
-46 | 
-47 |         except HTTPError as e:
-48 |             raise VideodbError("Error while uploading file", cause=e)
-49 | 
-50 |     upload_data = _connection.post(
-51 |         path=f"{ApiPath.collection}/{_connection.collection_id}/{ApiPath.upload}",
-52 |         data={
-53 |             "url": url,
-54 |             "name": name,
-55 |             "description": description,
-56 |             "callback_url": callback_url,
-57 |             "media_type": media_type,
-58 |         },
-59 |     )
-60 |     return upload_data
-61 | 
-
-
---------------------------------------------------------------------------------
-/videodb/_utils/__init__.py:
---------------------------------------------------------------------------------
-https://raw.githubusercontent.com/0xrohitgarg/videodb-python/b7d7a66b4fd61bd9628e3e188d1bd9dd2a45127c/videodb/_utils/__init__.py
-
-
---------------------------------------------------------------------------------
-/videodb/_utils/_http_client.py:
---------------------------------------------------------------------------------
-  1 | """Http client Module."""
-  2 | 
-  3 | import logging
-  4 | import requests
-  5 | import backoff
-  6 | 
-  7 | from tqdm import tqdm
-  8 | from typing import (
-  9 |     Callable,
- 10 |     Optional,
- 11 | )
- 12 | from requests.adapters import HTTPAdapter
- 13 | from requests.packages.urllib3.util.retry import Retry
- 14 | 
- 15 | from videodb._constants import (
- 16 |     HttpClientDefaultValues,
- 17 |     Status,
- 18 | )
- 19 | from videodb.exceptions import (
- 20 |     AuthenticationError,
- 21 |     InvalidRequestError,
- 22 |     RequestTimeoutError,
- 23 | )
- 24 | 
- 25 | logger = logging.getLogger(__name__)
- 26 | 
- 27 | 
- 28 | class HttpClient:
- 29 |     """Http client for making requests"""
- 30 | 
- 31 |     def __init__(
- 32 |         self,
- 33 |         api_key: str,
- 34 |         base_url: str,
- 35 |         version: str,
- 36 |         max_retries: Optional[int] = HttpClientDefaultValues.max_retries,
- 37 |     ) -> None:
- 38 |         """Create a new http client instance
- 39 | 
- 40 |         :param str api_key: The api key to use for authentication
- 41 |         :param str base_url: The base url to use for the api
- 42 |         :param int max_retries: (optional) The maximum number of retries to make for a request
- 43 |         """
- 44 |         self.session = requests.Session()
- 45 | 
- 46 |         retries = Retry(
- 47 |             total=max_retries,
- 48 |             backoff_factor=HttpClientDefaultValues.backoff_factor,
- 49 |             status_forcelist=HttpClientDefaultValues.status_forcelist,
- 50 |         )
- 51 |         adapter = HTTPAdapter(max_retries=retries)
- 52 |         self.session.mount("http://", adapter)
- 53 |         self.session.mount("https://", adapter)
- 54 |         self.version = version
- 55 |         self.session.headers.update(
- 56 |             {
- 57 |                 "x-access-token": api_key,
- 58 |                 "x-videodb-client": f"videodb-python/{self.version}",
- 59 |                 "Content-Type": "application/json",
- 60 |             }
- 61 |         )
- 62 |         self.base_url = base_url
- 63 |         self.show_progress = False
- 64 |         self.progress_bar = None
- 65 |         logger.debug(f"Initialized http client with base url: {self.base_url}")
- 66 | 
- 67 |     def _make_request(
- 68 |         self,
- 69 |         method: Callable[..., requests.Response],
- 70 |         path: str,
- 71 |         base_url: Optional[str] = None,
- 72 |         headers: Optional[dict] = None,
- 73 |         **kwargs,
- 74 |     ):
- 75 |         """Make a request to the api
- 76 | 
- 77 |         :param Callable method: The method to use for the request
- 78 |         :param str path: The path to make the request to
- 79 |         :param str base_url: (optional) The base url to use for the request
- 80 |         :param dict headers: (optional) The headers to use for the request
- 81 |         :param kwargs: The keyword arguments to pass to the request method
- 82 |         :return: json response from the request
- 83 |         """
- 84 |         try:
- 85 |             url = f"{base_url or self.base_url}/{path}"
- 86 |             timeout = kwargs.pop("timeout", HttpClientDefaultValues.timeout)
- 87 |             request_headers = {**self.session.headers, **(headers or {})}
- 88 |             response = method(url, headers=request_headers, timeout=timeout, **kwargs)
- 89 |             response.raise_for_status()
- 90 |             return self._parse_response(response)
- 91 | 
- 92 |         except requests.exceptions.RequestException as e:
- 93 |             self._handle_request_error(e)
- 94 | 
- 95 |     def _handle_request_error(self, e: requests.exceptions.RequestException) -> None:
- 96 |         """Handle request errors"""
- 97 |         self.show_progress = False
- 98 |         if isinstance(e, requests.exceptions.HTTPError):
- 99 |             try:
-100 |                 error_message = e.response.json().get("message", "Unknown error")
-101 |             except ValueError:
-102 |                 error_message = e.response.text
-103 | 
-104 |             if e.response.status_code == 401:
-105 |                 raise AuthenticationError(
-106 |                     f"Error: {error_message}", e.response
-107 |                 ) from None
-108 |             else:
-109 |                 raise InvalidRequestError(
-110 |                     f"Invalid request: {error_message}", e.response
-111 |                 ) from None
-112 | 
-113 |         elif isinstance(e, requests.exceptions.RetryError):
-114 |             raise InvalidRequestError(
-115 |                 "Invalid request: Max retries exceeded", e.response
-116 |             ) from None
-117 | 
-118 |         elif isinstance(e, requests.exceptions.Timeout):
-119 |             raise RequestTimeoutError(
-120 |                 "Timeout error: Request timed out", e.response
-121 |             ) from None
-122 | 
-123 |         elif isinstance(e, requests.exceptions.ConnectionError):
-124 |             raise InvalidRequestError(
-125 |                 "Invalid request: Connection error", e.response
-126 |             ) from None
-127 | 
-128 |         else:
-129 |             raise InvalidRequestError(
-130 |                 f"Invalid request: {str(e)}", e.response
-131 |             ) from None
-132 | 
-133 |     @backoff.on_exception(
-134 |         backoff.constant, Exception, max_time=500, interval=5, logger=None, jitter=None
-135 |     )
-136 |     def _get_output(self, url: str):
-137 |         """Get the output from an async request"""
-138 |         response_json = self.session.get(url).json()
-139 |         if (
-140 |             response_json.get("status") == Status.in_progress
-141 |             or response_json.get("status") == Status.processing
-142 |         ):
-143 |             percentage = response_json.get("data", {}).get("percentage")
-144 |             if percentage and self.show_progress and self.progress_bar:
-145 |                 self.progress_bar.n = int(percentage)
-146 |                 self.progress_bar.update(0)
-147 | 
-148 |             logger.debug("Waiting for processing to complete")
-149 |             raise Exception("Stuck on processing status") from None
-150 |         if self.show_progress and self.progress_bar:
-151 |             self.progress_bar.n = 100
-152 |             self.progress_bar.update(0)
-153 |             self.progress_bar.close()
-154 |             self.progress_bar = None
-155 |             self.show_progress = False
-156 |         return response_json.get("response") or response_json
-157 | 
-158 |     def _parse_response(self, response: requests.Response):
-159 |         """Parse the response from the api"""
-160 |         try:
-161 |             response_json = response.json()
-162 |             if (
-163 |                 response_json.get("status") == Status.processing
-164 |                 and response_json.get("request_type", "sync") == "async"
-165 |             ):
-166 |                 return None
-167 |             elif (
-168 |                 response_json.get("status") == Status.processing
-169 |                 and response_json.get("request_type", "sync") == "sync"
-170 |             ):
-171 |                 if self.show_progress:
-172 |                     self.progress_bar = tqdm(
-173 |                         total=100,
-174 |                         position=0,
-175 |                         leave=True,
-176 |                         bar_format="{l_bar}{bar:100}{r_bar}{bar:-100b}",
-177 |                     )
-178 |                 response_json = self._get_output(
-179 |                     response_json.get("data", {}).get("output_url")
-180 |                 )
-181 |                 if response_json.get("success"):
-182 |                     return response_json.get("data")
-183 |                 else:
-184 |                     raise InvalidRequestError(
-185 |                         f"Invalid request: {response_json.get('message')}", response
-186 |                     ) from None
-187 | 
-188 |             elif response_json.get("success"):
-189 |                 return response_json.get("data")
-190 | 
-191 |             else:
-192 |                 raise InvalidRequestError(
-193 |                     f"Invalid request: {response_json.get('message')}", response
-194 |                 ) from None
-195 | 
-196 |         except ValueError:
-197 |             raise InvalidRequestError(
-198 |                 f"Invalid request: {response.text}", response
-199 |             ) from None
-200 | 
-201 |     def get(
-202 |         self, path: str, show_progress: Optional[bool] = False, **kwargs
-203 |     ) -> requests.Response:
-204 |         """Make a get request"""
-205 |         self.show_progress = show_progress
-206 |         return self._make_request(method=self.session.get, path=path, **kwargs)
-207 | 
-208 |     def post(
-209 |         self, path: str, data=None, show_progress: Optional[bool] = False, **kwargs
-210 |     ) -> requests.Response:
-211 |         """Make a post request"""
-212 |         self.show_progress = show_progress
-213 |         return self._make_request(self.session.post, path, json=data, **kwargs)
-214 | 
-215 |     def put(self, path: str, data=None, **kwargs) -> requests.Response:
-216 |         """Make a put request"""
-217 |         return self._make_request(self.session.put, path, json=data, **kwargs)
-218 | 
-219 |     def delete(self, path: str, **kwargs) -> requests.Response:
-220 |         """Make a delete request"""
-221 |         return self._make_request(self.session.delete, path, **kwargs)
-222 | 
-223 |     def patch(self, path: str, data=None, **kwargs) -> requests.Response:
-224 |         """Make a patch request"""
-225 |         return self._make_request(self.session.patch, path, json=data, **kwargs)
-226 | 
-
-
---------------------------------------------------------------------------------
-/videodb/_utils/_video.py:
---------------------------------------------------------------------------------
- 1 | import webbrowser as web
- 2 | PLAYER_URL: str = "https://console.videodb.io/player"
- 3 | 
- 4 | 
- 5 | def play_stream(url: str):
- 6 |     """Play a stream url in the browser/ notebook
- 7 | 
- 8 |     :param str url: The url of the stream
- 9 |     :return: The player url if the stream is opened in the browser or the iframe if the stream is opened in the notebook
-10 |     """
-11 |     player = f"{PLAYER_URL}?url={url}"
-12 |     opend = web.open(player)
-13 |     if not opend:
-14 |         try:
-15 |             from IPython.display import IFrame
-16 | 
-17 |             player_width = 800
-18 |             player_height = 400
-19 |             return IFrame(player, player_width, player_height)
-20 |         except ImportError:
-21 |             return player
-22 |     return player
-23 | 
-
-
---------------------------------------------------------------------------------
-/videodb/asset.py:
---------------------------------------------------------------------------------
-  1 | import copy
-  2 | import logging
-  3 | import uuid
-  4 | 
-  5 | from typing import Optional, Union
-  6 | 
-  7 | from videodb._constants import MaxSupported, TextStyle
-  8 | 
-  9 | logger = logging.getLogger(__name__)
- 10 | 
- 11 | 
- 12 | def validate_max_supported(
- 13 |     duration: Union[int, float], max_duration: Union[int, float], attribute: str = ""
- 14 | ) -> Union[int, float, None]:
- 15 |     if duration is None:
- 16 |         return 0
- 17 |     if duration is not None and max_duration is not None and duration > max_duration:
- 18 |         logger.warning(
- 19 |             f"{attribute}: {duration} is greater than max supported: {max_duration}"
- 20 |         )
- 21 |     return duration
- 22 | 
- 23 | 
- 24 | class MediaAsset:
- 25 |     def __init__(self, asset_id: str) -> None:
- 26 |         self.asset_id: str = asset_id
- 27 | 
- 28 |     def to_json(self) -> dict:
- 29 |         return self.__dict__
- 30 | 
- 31 | 
- 32 | class VideoAsset(MediaAsset):
- 33 |     def __init__(
- 34 |         self,
- 35 |         asset_id: str,
- 36 |         start: Optional[float] = 0,
- 37 |         end: Optional[float] = None,
- 38 |     ) -> None:
- 39 |         super().__init__(asset_id)
- 40 |         self.start: int = start
- 41 |         self.end: Union[int, None] = end
- 42 | 
- 43 |     def to_json(self) -> dict:
- 44 |         return copy.deepcopy(self.__dict__)
- 45 | 
- 46 |     def __repr__(self) -> str:
- 47 |         return (
- 48 |             f"VideoAsset("
- 49 |             f"asset_id={self.asset_id}, "
- 50 |             f"start={self.start}, "
- 51 |             f"end={self.end})"
- 52 |         )
- 53 | 
- 54 | 
- 55 | class AudioAsset(MediaAsset):
- 56 |     def __init__(
- 57 |         self,
- 58 |         asset_id: str,
- 59 |         start: Optional[float] = 0,
- 60 |         end: Optional[float] = None,
- 61 |         disable_other_tracks: Optional[bool] = True,
- 62 |         fade_in_duration: Optional[Union[int, float]] = 0,
- 63 |         fade_out_duration: Optional[Union[int, float]] = 0,
- 64 |     ):
- 65 |         super().__init__(asset_id)
- 66 |         self.start: int = start
- 67 |         self.end: Union[int, None] = end
- 68 |         self.disable_other_tracks: bool = disable_other_tracks
- 69 |         self.fade_in_duration: Union[int, float] = validate_max_supported(
- 70 |             fade_in_duration, MaxSupported.fade_duration, "fade_in_duration"
- 71 |         )
- 72 |         self.fade_out_duration: Union[int, float] = validate_max_supported(
- 73 |             fade_out_duration, MaxSupported.fade_duration, "fade_out_duration"
- 74 |         )
- 75 | 
- 76 |     def to_json(self) -> dict:
- 77 |         return copy.deepcopy(self.__dict__)
- 78 | 
- 79 |     def __repr__(self) -> str:
- 80 |         return (
- 81 |             f"AudioAsset("
- 82 |             f"asset_id={self.asset_id}, "
- 83 |             f"start={self.start}, "
- 84 |             f"end={self.end}, "
- 85 |             f"disable_other_tracks={self.disable_other_tracks}, "
- 86 |             f"fade_in_duration={self.fade_in_duration}, "
- 87 |             f"fade_out_duration={self.fade_out_duration})"
- 88 |         )
- 89 | 
- 90 | 
- 91 | class ImageAsset(MediaAsset):
- 92 |     def __init__(
- 93 |         self,
- 94 |         asset_id: str,
- 95 |         width: Union[int, str] = 100,
- 96 |         height: Union[int, str] = 100,
- 97 |         x: Union[int, str] = 80,
- 98 |         y: Union[int, str] = 20,
- 99 |         duration: Optional[int] = None,
-100 |     ) -> None:
-101 |         super().__init__(asset_id)
-102 |         self.width = width
-103 |         self.height = height
-104 |         self.x = x
-105 |         self.y = y
-106 |         self.duration = duration
-107 | 
-108 |     def to_json(self) -> dict:
-109 |         return copy.deepcopy(self.__dict__)
-110 | 
-111 |     def __repr__(self) -> str:
-112 |         return (
-113 |             f"ImageAsset("
-114 |             f"asset_id={self.asset_id}, "
-115 |             f"width={self.width}, "
-116 |             f"height={self.height}, "
-117 |             f"x={self.x}, "
-118 |             f"y={self.y}, "
-119 |             f"duration={self.duration})"
-120 |         )
-121 | 
-122 | 
-123 | class TextAsset(MediaAsset):
-124 |     def __init__(
-125 |         self,
-126 |         text: str,
-127 |         duration: Optional[int] = None,
-128 |         style: TextStyle = TextStyle(),
-129 |     ) -> None:
-130 |         super().__init__(f"txt-{str(uuid.uuid4())}")
-131 |         self.text = text
-132 |         self.duration = duration
-133 |         self.style: TextStyle = style
-134 | 
-135 |     def to_json(self) -> dict:
-136 |         return {
-137 |             "text": copy.deepcopy(self.text),
-138 |             "asset_id": copy.deepcopy(self.asset_id),
-139 |             "duration": copy.deepcopy(self.duration),
-140 |             "style": copy.deepcopy(self.style.__dict__),
-141 |         }
-142 | 
-143 |     def __repr__(self) -> str:
-144 |         return (
-145 |             f"TextAsset("
-146 |             f"text={self.text}, "
-147 |             f"asset_id={self.asset_id}, "
-148 |             f"duration={self.duration}, "
-149 |             f"style={self.style})"
-150 |         )
-151 | 
-
-
---------------------------------------------------------------------------------
-/videodb/audio.py:
---------------------------------------------------------------------------------
- 1 | from videodb._constants import (
- 2 |     ApiPath,
- 3 | )
- 4 | 
- 5 | 
- 6 | class Audio:
- 7 |     def __init__(self, _connection, id: str, collection_id: str, **kwargs) -> None:
- 8 |         self._connection = _connection
- 9 |         self.id = id
-10 |         self.collection_id = collection_id
-11 |         self.name = kwargs.get("name", None)
-12 |         self.length = kwargs.get("length", None)
-13 | 
-14 |     def __repr__(self) -> str:
-15 |         return (
-16 |             f"Audio("
-17 |             f"id={self.id}, "
-18 |             f"collection_id={self.collection_id}, "
-19 |             f"name={self.name}, "
-20 |             f"length={self.length})"
-21 |         )
-22 | 
-23 |     def generate_url(self) -> str:
-24 |         url_data = self._connection.post(
-25 |             path=f"{ApiPath.audio}/{self.id}/{ApiPath.generate_url}",
-26 |             params={"collection_id": self.collection_id},
-27 |         )
-28 |         return url_data.get("signed_url", None)
-29 | 
-30 |     def delete(self) -> None:
-31 |         """Delete the audio.
-32 | 
-33 |         :raises InvalidRequestError: If the delete fails
-34 |         :return: None if the delete is successful
-35 |         :rtype: None
-36 |         """
-37 |         self._connection.delete(f"{ApiPath.audio}/{self.id}")
-38 | 
-
-
---------------------------------------------------------------------------------
-/videodb/client.py:
---------------------------------------------------------------------------------
-  1 | import logging
-  2 | 
-  3 | from typing import (
-  4 |     Optional,
-  5 |     Union,
-  6 |     List,
-  7 | )
-  8 | from videodb.__about__ import __version__
-  9 | from videodb._constants import (
- 10 |     ApiPath,
- 11 | )
- 12 | 
- 13 | from videodb.collection import Collection
- 14 | from videodb._utils._http_client import HttpClient
- 15 | from videodb.video import Video
- 16 | from videodb.audio import Audio
- 17 | from videodb.image import Image
- 18 | 
- 19 | from videodb._upload import (
- 20 |     upload,
- 21 | )
- 22 | 
- 23 | logger = logging.getLogger(__name__)
- 24 | 
- 25 | 
- 26 | class Connection(HttpClient):
- 27 |     """Connection class to interact with the VideoDB"""
- 28 | 
- 29 |     def __init__(self, api_key: str, base_url: str) -> None:
- 30 |         """Initializes a new instance of the Connection class with specified API credentials.
- 31 | 
- 32 |         :param api_key: API key for authentication
- 33 |         :param str base_url: (optional) Base URL of the VideoDB API
- 34 |         :raise ValueError: If the API key is not provided
- 35 |         :return: :class:`Connection <Connection>` object, to interact with the VideoDB
- 36 |         :rtype: :class:`videodb.client.Connection`
- 37 |         """
- 38 |         self.api_key = api_key
- 39 |         self.base_url = base_url
- 40 |         self.collection_id = "default"
- 41 |         super().__init__(api_key=api_key, base_url=base_url, version=__version__)
- 42 | 
- 43 |     def get_collection(self, collection_id: Optional[str] = "default") -> Collection:
- 44 |         """Get a collection object by its ID.
- 45 | 
- 46 |         :param collection_id: ID of the collection
- 47 |         :return: :class:`Collection <Collection>` object
- 48 |         :rtype: :class:`videodb.collection.Collection`
- 49 |         """
- 50 |         collection_data = self.get(path=f"{ApiPath.collection}/{collection_id}")
- 51 |         self.collection_id = collection_data.get("id", "default")
- 52 |         return Collection(
- 53 |             self,
- 54 |             self.collection_id,
- 55 |             collection_data.get("name"),
- 56 |             collection_data.get("description"),
- 57 |             collection_data.get("is_public", False),
- 58 |         )
- 59 | 
- 60 |     def get_collections(self) -> List[Collection]:
- 61 |         """Get a list of all collections.
- 62 | 
- 63 |         :return: List of :class:`Collection <Collection>` objects
- 64 |         :rtype: list[:class:`videodb.collection.Collection`]
- 65 |         """
- 66 |         collections_data = self.get(path=ApiPath.collection)
- 67 |         return [
- 68 |             Collection(
- 69 |                 self,
- 70 |                 collection.get("id"),
- 71 |                 collection.get("name"),
- 72 |                 collection.get("description"),
- 73 |                 collection.get("is_public", False),
- 74 |             )
- 75 |             for collection in collections_data.get("collections")
- 76 |         ]
- 77 | 
- 78 |     def create_collection(
- 79 |         self, name: str, description: str, is_public: bool = False
- 80 |     ) -> Collection:
- 81 |         """Create a new collection.
- 82 | 
- 83 |         :param name: Name of the collection
- 84 |         :param description: Description of the collection
- 85 |         :param is_public: Make collection public
- 86 |         :return: :class:`Collection <Collection>` object
- 87 |         :rtype: :class:`videodb.collection.Collection`
- 88 |         """
- 89 |         collection_data = self.post(
- 90 |             path=ApiPath.collection,
- 91 |             data={
- 92 |                 "name": name,
- 93 |                 "description": description,
- 94 |                 "is_public": is_public,
- 95 |             },
- 96 |         )
- 97 |         self.collection_id = collection_data.get("id", "default")
- 98 |         return Collection(
- 99 |             self,
-100 |             collection_data.get("id"),
-101 |             collection_data.get("name"),
-102 |             collection_data.get("description"),
-103 |             collection_data.get("is_public", False),
-104 |         )
-105 | 
-106 |     def update_collection(self, id: str, name: str, description: str) -> Collection:
-107 |         """Update an existing collection.
-108 | 
-109 |         :param str id: ID of the collection
-110 |         :param name: Name of the collection
-111 |         :param description: Description of the collection
-112 |         :return: :class:`Collection <Collection>` object
-113 |         :rtype: :class:`videodb.collection.Collection`
-114 |         """
-115 |         collection_data = self.patch(
-116 |             path=f"{ApiPath.collection}/{id}",
-117 |             data={
-118 |                 "name": name,
-119 |                 "description": description,
-120 |             },
-121 |         )
-122 |         self.collection_id = collection_data.get("id", "default")
-123 |         return Collection(
-124 |             self,
-125 |             collection_data.get("id"),
-126 |             collection_data.get("name"),
-127 |             collection_data.get("description"),
-128 |             collection_data.get("is_public", False),
-129 |         )
-130 | 
-131 |     def check_usage(self) -> dict:
-132 |         """Check the usage.
-133 | 
-134 |         :return: Usage data
-135 |         :rtype: dict
-136 |         """
-137 |         return self.get(path=f"{ApiPath.billing}/{ApiPath.usage}")
-138 | 
-139 |     def get_invoices(self) -> List[dict]:
-140 |         """Get a list of all invoices.
-141 | 
-142 |         :return: List of invoices
-143 |         :rtype: list of dict
-144 |         """
-145 |         return self.get(path=f"{ApiPath.billing}/{ApiPath.invoices}")
-146 | 
-147 |     def download(self, stream_link: str, name: str) -> dict:
-148 |         return self.post(
-149 |             path=f"{ApiPath.download}",
-150 |             data={
-151 |                 "stream_link": stream_link,
-152 |                 "name": name,
-153 |             },
-154 |         )
-155 | 
-156 |     def upload(
-157 |         self,
-158 |         file_path: str = None,
-159 |         url: str = None,
-160 |         media_type: Optional[str] = None,
-161 |         name: Optional[str] = None,
-162 |         description: Optional[str] = None,
-163 |         callback_url: Optional[str] = None,
-164 |     ) -> Union[Video, Audio, Image, None]:
-165 |         """Upload a file.
-166 | 
-167 |         :param file_path: Path to the file to upload
-168 |         :param url: URL of the file to upload
-169 |         :param MediaType media_type:(optional):class:`MediaType <MediaType>` object
-170 |         :param name:(optional) Name of the file
-171 |         :param description:(optional) Description of the file
-172 |         :param callback_url:(optional) URL to receive the callback
-173 |         :return: :class:`Video <Video>`, or :class:`Audio <Audio>`, or :class:`Image <Image>` object
-174 |         :rtype: Union[ :class:`videodb.video.Video`, :class:`videodb.audio.Audio`, :class:`videodb.image.Image`]
-175 |         """
-176 |         upload_data = upload(
-177 |             self,
-178 |             file_path,
-179 |             url,
-180 |             media_type,
-181 |             name,
-182 |             description,
-183 |             callback_url,
-184 |         )
-185 |         media_id = upload_data.get("id", "")
-186 |         if media_id.startswith("m-"):
-187 |             return Video(self, **upload_data)
-188 |         elif media_id.startswith("a-"):
-189 |             return Audio(self, **upload_data)
-190 |         elif media_id.startswith("img-"):
-191 |             return Image(self, **upload_data)
-192 | 
-
-
---------------------------------------------------------------------------------
-/videodb/collection.py:
---------------------------------------------------------------------------------
-  1 | import logging
-  2 | 
-  3 | from typing import (
-  4 |     Optional,
-  5 |     Union,
-  6 |     List,
-  7 |     Dict,
-  8 |     Any,
-  9 | )
- 10 | from videodb._upload import (
- 11 |     upload,
- 12 | )
- 13 | from videodb._constants import (
- 14 |     ApiPath,
- 15 |     IndexType,
- 16 |     SearchType,
- 17 | )
- 18 | from videodb.video import Video
- 19 | from videodb.audio import Audio
- 20 | from videodb.image import Image
- 21 | from videodb.search import SearchFactory, SearchResult
- 22 | 
- 23 | logger = logging.getLogger(__name__)
- 24 | 
- 25 | 
- 26 | class Collection:
- 27 |     """Collection class to interact with the Collection"""
- 28 | 
- 29 |     def __init__(
- 30 |         self,
- 31 |         _connection,
- 32 |         id: str,
- 33 |         name: str = None,
- 34 |         description: str = None,
- 35 |         is_public: bool = False,
- 36 |     ):
- 37 |         self._connection = _connection
- 38 |         self.id = id
- 39 |         self.name = name
- 40 |         self.description = description
- 41 |         self.is_public = is_public
- 42 | 
- 43 |     def __repr__(self) -> str:
- 44 |         return (
- 45 |             f"Collection("
- 46 |             f"id={self.id}, "
- 47 |             f"name={self.name}, "
- 48 |             f"description={self.description}), "
- 49 |             f"is_public={self.is_public})"
- 50 |         )
- 51 | 
- 52 |     def delete(self) -> None:
- 53 |         """Delete the collection
- 54 | 
- 55 |         :raises InvalidRequestError: If the delete fails
- 56 |         :return: None if the delete is successful
- 57 |         :rtype: None
- 58 |         """
- 59 |         self._connection.delete(path=f"{ApiPath.collection}/{self.id}")
- 60 | 
- 61 |     def get_videos(self) -> List[Video]:
- 62 |         """Get all the videos in the collection.
- 63 | 
- 64 |         :return: List of :class:`Video <Video>` objects
- 65 |         :rtype: List[:class:`videodb.video.Video`]
- 66 |         """
- 67 |         videos_data = self._connection.get(
- 68 |             path=f"{ApiPath.video}",
- 69 |             params={"collection_id": self.id},
- 70 |         )
- 71 |         return [Video(self._connection, **video) for video in videos_data.get("videos")]
- 72 | 
- 73 |     def get_video(self, video_id: str) -> Video:
- 74 |         """Get a video by its ID.
- 75 | 
- 76 |         :param str video_id: ID of the video
- 77 |         :return: :class:`Video <Video>` object
- 78 |         :rtype: :class:`videodb.video.Video`
- 79 |         """
- 80 |         video_data = self._connection.get(
- 81 |             path=f"{ApiPath.video}/{video_id}", params={"collection_id": self.id}
- 82 |         )
- 83 |         return Video(self._connection, **video_data)
- 84 | 
- 85 |     def delete_video(self, video_id: str) -> None:
- 86 |         """Delete the video.
- 87 | 
- 88 |         :param str video_id: The id of the video to be deleted
- 89 |         :raises InvalidRequestError: If the delete fails
- 90 |         :return: None if the delete is successful
- 91 |         :rtype: None
- 92 |         """
- 93 |         return self._connection.delete(
- 94 |             path=f"{ApiPath.video}/{video_id}", params={"collection_id": self.id}
- 95 |         )
- 96 | 
- 97 |     def get_audios(self) -> List[Audio]:
- 98 |         """Get all the audios in the collection.
- 99 | 
-100 |         :return: List of :class:`Audio <Audio>` objects
-101 |         :rtype: List[:class:`videodb.audio.Audio`]
-102 |         """
-103 |         audios_data = self._connection.get(
-104 |             path=f"{ApiPath.audio}",
-105 |             params={"collection_id": self.id},
-106 |         )
-107 |         return [Audio(self._connection, **audio) for audio in audios_data.get("audios")]
-108 | 
-109 |     def get_audio(self, audio_id: str) -> Audio:
-110 |         """Get an audio by its ID.
-111 | 
-112 |         :param str audio_id: ID of the audio
-113 |         :return: :class:`Audio <Audio>` object
-114 |         :rtype: :class:`videodb.audio.Audio`
-115 |         """
-116 |         audio_data = self._connection.get(
-117 |             path=f"{ApiPath.audio}/{audio_id}", params={"collection_id": self.id}
-118 |         )
-119 |         return Audio(self._connection, **audio_data)
-120 | 
-121 |     def delete_audio(self, audio_id: str) -> None:
-122 |         """Delete the audio.
-123 | 
-124 |         :param str audio_id: The id of the audio to be deleted
-125 |         :raises InvalidRequestError: If the delete fails
-126 |         :return: None if the delete is successful
-127 |         :rtype: None
-128 |         """
-129 |         return self._connection.delete(
-130 |             path=f"{ApiPath.audio}/{audio_id}", params={"collection_id": self.id}
-131 |         )
-132 | 
-133 |     def get_images(self) -> List[Image]:
-134 |         """Get all the images in the collection.
-135 | 
-136 |         :return: List of :class:`Image <Image>` objects
-137 |         :rtype: List[:class:`videodb.image.Image`]
-138 |         """
-139 |         images_data = self._connection.get(
-140 |             path=f"{ApiPath.image}",
-141 |             params={"collection_id": self.id},
-142 |         )
-143 |         return [Image(self._connection, **image) for image in images_data.get("images")]
-144 | 
-145 |     def get_image(self, image_id: str) -> Image:
-146 |         """Get an image by its ID.
-147 | 
-148 |         :param str image_id: ID of the image
-149 |         :return: :class:`Image <Image>` object
-150 |         :rtype: :class:`videodb.image.Image`
-151 |         """
-152 |         image_data = self._connection.get(
-153 |             path=f"{ApiPath.image}/{image_id}", params={"collection_id": self.id}
-154 |         )
-155 |         return Image(self._connection, **image_data)
-156 | 
-157 |     def delete_image(self, image_id: str) -> None:
-158 |         """Delete the image.
-159 | 
-160 |         :param str image_id: The id of the image to be deleted
-161 |         :raises InvalidRequestError: If the delete fails
-162 |         :return: None if the delete is successful
-163 |         :rtype: None
-164 |         """
-165 |         return self._connection.delete(
-166 |             path=f"{ApiPath.image}/{image_id}", params={"collection_id": self.id}
-167 |         )
-168 | 
-169 |     def search(
-170 |         self,
-171 |         query: str,
-172 |         search_type: Optional[str] = SearchType.semantic,
-173 |         index_type: Optional[str] = IndexType.spoken_word,
-174 |         result_threshold: Optional[int] = None,
-175 |         score_threshold: Optional[float] = None,
-176 |         dynamic_score_percentage: Optional[float] = None,
-177 |         filter: List[Dict[str, Any]] = [],
-178 |     ) -> SearchResult:
-179 |         """Search for a query in the collection.
-180 | 
-181 |         :param str query: Query to search for
-182 |         :param search_type:(optional) Type of search to perform :class:`SearchType <SearchType>` object
-183 |         :param index_type:(optional) Type of index to search :class:`IndexType <IndexType>` object
-184 |         :param int result_threshold:(optional) Number of results to return
-185 |         :param float score_threshold:(optional) Threshold score for the search
-186 |         :param float dynamic_score_percentage:(optional) Percentage of dynamic score to consider
-187 |         :raise SearchError: If the search fails
-188 |         :return: :class:`SearchResult <SearchResult>` object
-189 |         :rtype: :class:`videodb.search.SearchResult`
-190 |         """
-191 |         search = SearchFactory(self._connection).get_search(search_type)
-192 |         return search.search_inside_collection(
-193 |             collection_id=self.id,
-194 |             query=query,
-195 |             search_type=search_type,
-196 |             index_type=index_type,
-197 |             result_threshold=result_threshold,
-198 |             score_threshold=score_threshold,
-199 |             dynamic_score_percentage=dynamic_score_percentage,
-200 |             filter=filter,
-201 |         )
-202 | 
-203 |     def search_title(self, query) -> List[Video]:
-204 |         search_data = self._connection.post(
-205 |             path=f"{ApiPath.collection}/{self.id}/{ApiPath.search}/{ApiPath.title}",
-206 |             data={
-207 |                 "query": query,
-208 |                 "search_type": SearchType.llm,
-209 |             },
-210 |         )
-211 |         return [
-212 |             {"video": Video(self._connection, **result.get("video"))}
-213 |             for result in search_data
-214 |         ]
-215 | 
-216 |     def upload(
-217 |         self,
-218 |         file_path: str = None,
-219 |         url: Optional[str] = None,
-220 |         media_type: Optional[str] = None,
-221 |         name: Optional[str] = None,
-222 |         description: Optional[str] = None,
-223 |         callback_url: Optional[str] = None,
-224 |     ) -> Union[Video, Audio, Image, None]:
-225 |         """Upload a file to the collection.
-226 | 
-227 |         :param str file_path: Path to the file to be uploaded
-228 |         :param str url: URL of the file to be uploaded
-229 |         :param MediaType media_type:(optional):class:`MediaType <MediaType>` object
-230 |         :param name:(optional) Name of the file
-231 |         :param description:(optional) Description of the file
-232 |         :param callback_url:(optional) URL to receive the callback
-233 |         :return: :class:`Video <Video>`, or :class:`Audio <Audio>`, or :class:`Image <Image>` object
-234 |         Union[ :class:`videodb.video.Video`, :class:`videodb.audio.Audio`, :class:`videodb.image.Image`]
-235 |         """
-236 |         upload_data = upload(
-237 |             self._connection,
-238 |             file_path,
-239 |             url,
-240 |             media_type,
-241 |             name,
-242 |             description,
-243 |             callback_url,
-244 |         )
-245 |         media_id = upload_data.get("id", "")
-246 |         if media_id.startswith("m-"):
-247 |             return Video(self._connection, **upload_data)
-248 |         elif media_id.startswith("a-"):
-249 |             return Audio(self._connection, **upload_data)
-250 |         elif media_id.startswith("img-"):
-251 |             return Image(self._connection, **upload_data)
-252 | 
-253 |     def make_public(self):
-254 |         self._connection.patch(
-255 |             path=f"{ApiPath.collection}/{self.id}", data={"is_public": True}
-256 |         )
-257 |         self.is_public = True
-258 | 
-259 |     def make_private(self):
-260 |         self._connection.patch(
-261 |             path=f"{ApiPath.collection}/{self.id}", data={"is_public": False}
-262 |         )
-263 |         self.is_public = False
-264 | 
-
-
---------------------------------------------------------------------------------
-/videodb/exceptions.py:
---------------------------------------------------------------------------------
- 1 | """videodb.exceptions
- 2 | 
- 3 | This module contains the set of Videodb's exceptions.
- 4 | """
- 5 | 
- 6 | 
- 7 | class VideodbError(Exception):
- 8 |     """
- 9 |     Base class for all videodb exceptions.
-10 |     """
-11 | 
-12 |     def __init__(self, message: str = "An error occurred", cause=None):
-13 |         super(VideodbError, self).__init__(message)
-14 |         self.cause = cause
-15 | 
-16 |     def __str__(self):
-17 |         return f"{super(VideodbError, self).__str__()} {'caused by ' + str(self.cause) if self.cause else ''}"
-18 | 
-19 | 
-20 | class AuthenticationError(VideodbError):
-21 |     """
-22 |     Raised when authentication is required or failed.
-23 |     """
-24 | 
-25 |     def __init__(self, message, response=None):
-26 |         super(AuthenticationError, self).__init__(message)
-27 |         self.response = response
-28 | 
-29 | 
-30 | class InvalidRequestError(VideodbError):
-31 |     """
-32 |     Raised when a request is invalid.
-33 |     """
-34 | 
-35 |     def __init__(self, message, response=None):
-36 |         super(InvalidRequestError, self).__init__(message)
-37 |         self.response = response
-38 | 
-39 | 
-40 | class RequestTimeoutError(VideodbError):
-41 |     """
-42 |     Raised when a request times out.
-43 |     """
-44 | 
-45 |     def __init__(self, message, response=None):
-46 |         super(RequestTimeoutError, self).__init__(message)
-47 |         self.response = response
-48 | 
-49 | 
-50 | class SearchError(VideodbError):
-51 |     """
-52 |     Raised when a search is invalid.
-53 |     """
-54 | 
-55 |     def __init__(self, message):
-56 |         super(SearchError, self).__init__(message)
-57 | 
-
-
---------------------------------------------------------------------------------
-/videodb/image.py:
---------------------------------------------------------------------------------
- 1 | from videodb._constants import (
- 2 |     ApiPath,
- 3 | )
- 4 | 
- 5 | 
- 6 | class Image:
- 7 |     def __init__(self, _connection, id: str, collection_id: str, **kwargs) -> None:
- 8 |         self._connection = _connection
- 9 |         self.id = id
-10 |         self.collection_id = collection_id
-11 |         self.name = kwargs.get("name", None)
-12 |         self.url = kwargs.get("url", None)
-13 | 
-14 |     def __repr__(self) -> str:
-15 |         return (
-16 |             f"Image("
-17 |             f"id={self.id}, "
-18 |             f"collection_id={self.collection_id}, "
-19 |             f"name={self.name}, "
-20 |             f"url={self.url})"
-21 |         )
-22 | 
-23 |     def generate_url(self) -> str:
-24 |         url_data = self._connection.post(
-25 |             path=f"{ApiPath.image}/{self.id}/{ApiPath.generate_url}",
-26 |             params={"collection_id": self.collection_id},
-27 |         )
-28 |         return url_data.get("signed_url", None)
-29 | 
-30 |     def delete(self) -> None:
-31 |         """Delete the image.
-32 | 
-33 |         :raises InvalidRequestError: If the delete fails
-34 |         :return: None if the delete is successful
-35 |         :rtype: None
-36 |         """
-37 |         self._connection.delete(f"{ApiPath.image}/{self.id}")
-38 | 
-39 | 
-40 | class Frame(Image):
-41 |     def __init__(
-42 |         self,
-43 |         _connection,
-44 |         id: str,
-45 |         video_id: str,
-46 |         scene_id: str,
-47 |         url: str,
-48 |         frame_time: float,
-49 |         description: str,
-50 |     ):
-51 |         super().__init__(_connection=_connection, id=id, collection_id=None, url=url)
-52 |         self.scene_id = scene_id
-53 |         self.video_id = video_id
-54 |         self.frame_time = frame_time
-55 |         self.description = description
-56 | 
-57 |     def __repr__(self) -> str:
-58 |         return (
-59 |             f"Frame("
-60 |             f"id={self.id}, "
-61 |             f"video_id={self.video_id}, "
-62 |             f"scene_id={self.scene_id}, "
-63 |             f"url={self.url}, "
-64 |             f"frame_time={self.frame_time}, "
-65 |             f"description={self.description})"
-66 |         )
-67 | 
-68 |     def to_json(self):
-69 |         return {
-70 |             "id": self.id,
-71 |             "video_id": self.video_id,
-72 |             "scene_id": self.scene_id,
-73 |             "url": self.url,
-74 |             "frame_time": self.frame_time,
-75 |             "description": self.description,
-76 |         }
-77 | 
-78 |     def describe(self, prompt: str = None, model_name=None):
-79 |         """Describe the frame.
-80 | 
-81 |         :param str prompt: (optional) The prompt to use for the description
-82 |         :param str model_name: (optional) The model to use for the description
-83 |         :return: The description of the frame
-84 |         :rtype: str
-85 |         """
-86 |         description_data = self._connection.post(
-87 |             path=f"{ApiPath.video}/{self.video_id}/{ApiPath.frame}/{self.id}/{ApiPath.describe}",
-88 |             data={"prompt": prompt, "model_name": model_name},
-89 |         )
-90 |         self.description = description_data.get("description", None)
-91 |         return self.description
-92 | 
-
-
---------------------------------------------------------------------------------
-/videodb/scene.py:
---------------------------------------------------------------------------------
-  1 | from typing import List
-  2 | 
-  3 | from videodb._constants import ApiPath
-  4 | 
-  5 | from videodb.image import Frame
-  6 | 
-  7 | 
-  8 | class Scene:
-  9 |     def __init__(
- 10 |         self,
- 11 |         video_id: str,
- 12 |         start: float,
- 13 |         end: float,
- 14 |         description: str,
- 15 |         id: str = None,
- 16 |         frames: List[Frame] = [],
- 17 |         connection=None,
- 18 |     ):
- 19 |         self.id = id
- 20 |         self.video_id = video_id
- 21 |         self.start = start
- 22 |         self.end = end
- 23 |         self.frames: List[Frame] = frames
- 24 |         self.description = description
- 25 |         self._connection = connection
- 26 | 
- 27 |     def __repr__(self) -> str:
- 28 |         return (
- 29 |             f"Scene("
- 30 |             f"id={self.id}, "
- 31 |             f"video_id={self.video_id}, "
- 32 |             f"start={self.start}, "
- 33 |             f"end={self.end}, "
- 34 |             f"frames={self.frames}, "
- 35 |             f"description={self.description})"
- 36 |         )
- 37 | 
- 38 |     def to_json(self):
- 39 |         return {
- 40 |             "id": self.id,
- 41 |             "video_id": self.video_id,
- 42 |             "start": self.start,
- 43 |             "end": self.end,
- 44 |             "frames": [frame.to_json() for frame in self.frames],
- 45 |             "description": self.description,
- 46 |         }
- 47 | 
- 48 |     def describe(self, prompt: str = None, model_name=None) -> None:
- 49 |         """Describe the scene.
- 50 | 
- 51 |         :param str prompt: (optional) The prompt to use for the description
- 52 |         :param str model_name: (optional) The model to use for the description
- 53 |         :return: The description of the scene
- 54 |         :rtype: str
- 55 |         """
- 56 |         if self._connection is None:
- 57 |             raise ValueError("Connection is required to describe a scene")
- 58 |         description_data = self._connection.post(
- 59 |             path=f"{ApiPath.video}/{self.video_id}/{ApiPath.scene}/{self.id}/{ApiPath.describe}",
- 60 |             data={"prompt": prompt, "model_name": model_name},
- 61 |         )
- 62 |         self.description = description_data.get("description", None)
- 63 |         return self.description
- 64 | 
- 65 | 
- 66 | class SceneCollection:
- 67 |     def __init__(
- 68 |         self,
- 69 |         _connection,
- 70 |         id: str,
- 71 |         video_id: str,
- 72 |         config: dict,
- 73 |         scenes: List[Scene],
- 74 |     ) -> None:
- 75 |         self._connection = _connection
- 76 |         self.id = id
- 77 |         self.video_id = video_id
- 78 |         self.config: dict = config
- 79 |         self.scenes: List[Scene] = scenes
- 80 | 
- 81 |     def __repr__(self) -> str:
- 82 |         return (
- 83 |             f"SceneCollection("
- 84 |             f"id={self.id}, "
- 85 |             f"video_id={self.video_id}, "
- 86 |             f"config={self.config}, "
- 87 |             f"scenes={self.scenes})"
- 88 |         )
- 89 | 
- 90 |     def delete(self) -> None:
- 91 |         """Delete the scene collection.
- 92 | 
- 93 |         :raises InvalidRequestError: If the delete fails
- 94 |         :return: None if the delete is successful
- 95 |         :rtype: None
- 96 |         """
- 97 |         self._connection.delete(
- 98 |             path=f"{ApiPath.video}/{self.video_id}/{ApiPath.scenes}/{self.id}"
- 99 |         )
-100 | 
-
-
---------------------------------------------------------------------------------
-/videodb/search.py:
---------------------------------------------------------------------------------
-  1 | from abc import ABC, abstractmethod
-  2 | from videodb._utils._video import play_stream
-  3 | from videodb._constants import (
-  4 |     IndexType,
-  5 |     SearchType,
-  6 |     ApiPath,
-  7 |     SemanticSearchDefaultValues,
-  8 | )
-  9 | from videodb.exceptions import (
- 10 |     SearchError,
- 11 | )
- 12 | from typing import Optional, List
- 13 | from videodb.shot import Shot
- 14 | 
- 15 | 
- 16 | class SearchResult:
- 17 |     def __init__(self, _connection, **kwargs):
- 18 |         self._connection = _connection
- 19 |         self.shots = []
- 20 |         self.stream_url = None
- 21 |         self.player_url = None
- 22 |         self.collection_id = "default"
- 23 |         self._results = kwargs.get("results", [])
- 24 |         self._format_results()
- 25 | 
- 26 |     def _format_results(self):
- 27 |         for result in self._results:
- 28 |             self.collection_id = result.get("collection_id")
- 29 |             for doc in result.get("docs"):
- 30 |                 self.shots.append(
- 31 |                     Shot(
- 32 |                         self._connection,
- 33 |                         result.get("video_id"),
- 34 |                         result.get("length"),
- 35 |                         result.get("title"),
- 36 |                         doc.get("start"),
- 37 |                         doc.get("end"),
- 38 |                         doc.get("text"),
- 39 |                         doc.get("score"),
- 40 |                     )
- 41 |                 )
- 42 | 
- 43 |     def __repr__(self) -> str:
- 44 |         return (
- 45 |             f"SearchResult("
- 46 |             f"collection_id={self.collection_id}, "
- 47 |             f"stream_url={self.stream_url}, "
- 48 |             f"player_url={self.player_url}, "
- 49 |             f"shots={self.shots})"
- 50 |         )
- 51 | 
- 52 |     def get_shots(self) -> List[Shot]:
- 53 |         return self.shots
- 54 | 
- 55 |     def compile(self) -> str:
- 56 |         """Compile the search result shots into a stream url.
- 57 | 
- 58 |         :raises SearchError: If no shots are found in the search results
- 59 |         :return: The stream url
- 60 |         :rtype: str
- 61 |         """
- 62 |         if self.stream_url:
- 63 |             return self.stream_url
- 64 |         elif self.shots:
- 65 |             compile_data = self._connection.post(
- 66 |                 path=f"{ApiPath.compile}",
- 67 |                 data=[
- 68 |                     {
- 69 |                         "video_id": shot.video_id,
- 70 |                         "collection_id": self.collection_id,
- 71 |                         "shots": [(shot.start, shot.end)],
- 72 |                     }
- 73 |                     for shot in self.shots
- 74 |                 ],
- 75 |             )
- 76 |             self.stream_url = compile_data.get("stream_url")
- 77 |             self.player_url = compile_data.get("player_url")
- 78 |             return self.stream_url
- 79 | 
- 80 |         else:
- 81 |             raise SearchError("No shots found in search results to compile")
- 82 | 
- 83 |     def play(self) -> str:
- 84 |         """Generate a stream url for the shot and open it in the default browser.
- 85 | 
- 86 |         :return: The stream url
- 87 |         :rtype: str
- 88 |         """
- 89 |         self.compile()
- 90 |         return play_stream(self.stream_url)
- 91 | 
- 92 | 
- 93 | class Search(ABC):
- 94 |     """Search interface inside video or collection"""
- 95 | 
- 96 |     @abstractmethod
- 97 |     def search_inside_video(self, *args, **kwargs):
- 98 |         pass
- 99 | 
-100 |     @abstractmethod
-101 |     def search_inside_collection(self, *args, **kwargs):
-102 |         pass
-103 | 
-104 | 
-105 | class SemanticSearch(Search):
-106 |     def __init__(self, _connection):
-107 |         self._connection = _connection
-108 | 
-109 |     def search_inside_video(
-110 |         self,
-111 |         video_id: str,
-112 |         query: str,
-113 |         search_type: str,
-114 |         index_type: str,
-115 |         result_threshold: Optional[int] = None,
-116 |         score_threshold: Optional[float] = None,
-117 |         dynamic_score_percentage: Optional[float] = None,
-118 |         **kwargs,
-119 |     ):
-120 |         search_data = self._connection.post(
-121 |             path=f"{ApiPath.video}/{video_id}/{ApiPath.search}",
-122 |             data={
-123 |                 "search_type": search_type,
-124 |                 "index_type": index_type,
-125 |                 "query": query,
-126 |                 "score_threshold": score_threshold
-127 |                 or SemanticSearchDefaultValues.score_threshold,
-128 |                 "result_threshold": result_threshold
-129 |                 or SemanticSearchDefaultValues.result_threshold,
-130 |                 "dynamic_score_percentage": dynamic_score_percentage,
-131 |                 **kwargs,
-132 |             },
-133 |         )
-134 |         return SearchResult(self._connection, **search_data)
-135 | 
-136 |     def search_inside_collection(
-137 |         self,
-138 |         collection_id: str,
-139 |         query: str,
-140 |         search_type: str,
-141 |         index_type: str,
-142 |         result_threshold: Optional[int] = None,
-143 |         score_threshold: Optional[float] = None,
-144 |         dynamic_score_percentage: Optional[float] = None,
-145 |         **kwargs,
-146 |     ):
-147 |         search_data = self._connection.post(
-148 |             path=f"{ApiPath.collection}/{collection_id}/{ApiPath.search}",
-149 |             data={
-150 |                 "search_type": search_type,
-151 |                 "index_type": index_type,
-152 |                 "query": query,
-153 |                 "score_threshold": score_threshold
-154 |                 or SemanticSearchDefaultValues.score_threshold,
-155 |                 "result_threshold": result_threshold
-156 |                 or SemanticSearchDefaultValues.result_threshold,
-157 |                 "dynamic_score_percentage": dynamic_score_percentage,
-158 |                 **kwargs,
-159 |             },
-160 |         )
-161 |         return SearchResult(self._connection, **search_data)
-162 | 
-163 | 
-164 | class KeywordSearch(Search):
-165 |     def __init__(self, _connection):
-166 |         self._connection = _connection
-167 | 
-168 |     def search_inside_video(
-169 |         self,
-170 |         video_id: str,
-171 |         query: str,
-172 |         search_type: str,
-173 |         index_type: str,
-174 |         result_threshold: Optional[int] = None,
-175 |         score_threshold: Optional[float] = None,
-176 |         dynamic_score_percentage: Optional[float] = None,
-177 |         **kwargs,
-178 |     ):
-179 |         search_data = self._connection.post(
-180 |             path=f"{ApiPath.video}/{video_id}/{ApiPath.search}",
-181 |             data={
-182 |                 "search_type": search_type,
-183 |                 "index_type": index_type,
-184 |                 "query": query,
-185 |                 "score_threshold": score_threshold,
-186 |                 "result_threshold": result_threshold,
-187 |                 **kwargs,
-188 |             },
-189 |         )
-190 |         return SearchResult(self._connection, **search_data)
-191 | 
-192 |     def search_inside_collection(self, **kwargs):
-193 |         raise NotImplementedError("Keyword search will be implemented in the future")
-194 | 
-195 | 
-196 | class SceneSearch(Search):
-197 |     def __init__(self, _connection):
-198 |         self._connection = _connection
-199 | 
-200 |     def search_inside_video(
-201 |         self,
-202 |         video_id: str,
-203 |         query: str,
-204 |         search_type: str,
-205 |         index_type: str,
-206 |         result_threshold: Optional[int] = None,
-207 |         score_threshold: Optional[float] = None,
-208 |         dynamic_score_percentage: Optional[float] = None,
-209 |         **kwargs,
-210 |     ):
-211 |         search_data = self._connection.post(
-212 |             path=f"{ApiPath.video}/{video_id}/{ApiPath.search}",
-213 |             data={
-214 |                 "search_type": search_type,
-215 |                 "index_type": IndexType.scene,
-216 |                 "query": query,
-217 |                 "score_threshold": score_threshold,
-218 |                 "result_threshold": result_threshold,
-219 |                 "dynamic_score_percentage": dynamic_score_percentage,
-220 |                 **kwargs,
-221 |             },
-222 |         )
-223 |         return SearchResult(self._connection, **search_data)
-224 | 
-225 |     def search_inside_collection(self, **kwargs):
-226 |         raise NotImplementedError("Scene search will be implemented in the future")
-227 | 
-228 | 
-229 | search_type = {
-230 |     SearchType.semantic: SemanticSearch,
-231 |     SearchType.keyword: KeywordSearch,
-232 |     SearchType.scene: SceneSearch,
-233 | }
-234 | 
-235 | 
-236 | class SearchFactory:
-237 |     def __init__(self, _connection):
-238 |         self._connection = _connection
-239 | 
-240 |     def get_search(self, type: str):
-241 |         if type not in search_type:
-242 |             raise SearchError(
-243 |                 f"Invalid search type: {type}. Valid search types are: {list(search_type.keys())}"
-244 |             )
-245 |         return search_type[type](self._connection)
-246 | 
-
-
---------------------------------------------------------------------------------
-/videodb/shot.py:
---------------------------------------------------------------------------------
- 1 | """This module contains the shot class"""
- 2 | 
- 3 | 
- 4 | from typing import Optional
- 5 | from videodb._utils._video import play_stream
- 6 | from videodb._constants import (
- 7 |     ApiPath,
- 8 | )
- 9 | 
-10 | 
-11 | class Shot:
-12 |     """A shot is a part of a video that contains a specific scene"""
-13 | 
-14 |     def __init__(
-15 |         self,
-16 |         _connection,
-17 |         video_id: str,
-18 |         video_length: float,
-19 |         video_title: str,
-20 |         start: float,
-21 |         end: float,
-22 |         text: Optional[str] = None,
-23 |         search_score: Optional[int] = None,
-24 |     ) -> None:
-25 |         self._connection = _connection
-26 |         self.video_id = video_id
-27 |         self.video_length = video_length
-28 |         self.video_title = video_title
-29 |         self.start = start
-30 |         self.end = end
-31 |         self.text = text
-32 |         self.search_score = search_score
-33 |         self.stream_url = None
-34 |         self.player_url = None
-35 | 
-36 |     def __repr__(self) -> str:
-37 |         return (
-38 |             f"Shot("
-39 |             f"video_id={self.video_id}, "
-40 |             f"video_title={self.video_title}, "
-41 |             f"start={self.start}, "
-42 |             f"end={self.end}, "
-43 |             f"text={self.text}, "
-44 |             f"search_score={self.search_score}, "
-45 |             f"stream_url={self.stream_url}, "
-46 |             f"player_url={self.player_url})"
-47 |         )
-48 | 
-49 |     def __getitem__(self, key):
-50 |         """Get an item from the shot object"""
-51 |         return self.__dict__[key]
-52 | 
-53 |     def generate_stream(self) -> str:
-54 |         """Generate a stream url for the shot.
-55 | 
-56 |         :return: The stream url
-57 |         :rtype: str
-58 |         """
-59 | 
-60 |         if self.stream_url:
-61 |             return self.stream_url
-62 |         else:
-63 |             stream_data = self._connection.post(
-64 |                 path=f"{ApiPath.video}/{self.video_id}/{ApiPath.stream}",
-65 |                 data={
-66 |                     "timeline": [(self.start, self.end)],
-67 |                     "length": self.video_length,
-68 |                 },
-69 |             )
-70 |             self.stream_url = stream_data.get("stream_url")
-71 |             self.player_url = stream_data.get("player_url")
-72 |             return self.stream_url
-73 | 
-74 |     def play(self) -> str:
-75 |         """Generate a stream url for the shot and open it in the default browser/ notebook.
-76 | 
-77 |         :return: The stream url
-78 |         :rtype: str
-79 |         """
-80 |         self.generate_stream()
-81 |         return play_stream(self.stream_url)
-82 | 
-
-
---------------------------------------------------------------------------------
-/videodb/timeline.py:
---------------------------------------------------------------------------------
- 1 | from typing import Union
- 2 | 
- 3 | from videodb._constants import ApiPath
- 4 | from videodb.asset import VideoAsset, AudioAsset, ImageAsset, TextAsset
- 5 | 
- 6 | 
- 7 | class Timeline(object):
- 8 |     def __init__(self, connection) -> None:
- 9 |         self._connection = connection
-10 |         self._timeline = []
-11 |         self.stream_url = None
-12 |         self.player_url = None
-13 | 
-14 |     def to_json(self) -> dict:
-15 |         timeline_json = []
-16 |         for asset in self._timeline:
-17 |             if isinstance(asset, tuple):
-18 |                 overlay_start, audio_asset = asset
-19 |                 asset_json = audio_asset.to_json()
-20 |                 asset_json["overlay_start"] = overlay_start
-21 |                 timeline_json.append(asset_json)
-22 |             else:
-23 |                 timeline_json.append(asset.to_json())
-24 |         return {"timeline": timeline_json}
-25 | 
-26 |     def add_inline(self, asset: VideoAsset) -> None:
-27 |         """Add a video asset to the timeline
-28 | 
-29 |         :param VideoAsset asset: The video asset to add, :class:`VideoAsset` <VideoAsset> object
-30 |         :raises ValueError: If asset is not of type :class:`VideoAsset` <VideoAsset>
-31 |         :return: None
-32 |         :rtype: None
-33 |         """
-34 |         if not isinstance(asset, VideoAsset):
-35 |             raise ValueError("asset must be of type VideoAsset")
-36 |         self._timeline.append(asset)
-37 | 
-38 |     def add_overlay(
-39 |         self, start: int, asset: Union[AudioAsset, ImageAsset, TextAsset]
-40 |     ) -> None:
-41 |         """Add an overlay asset to the timeline
-42 | 
-43 |         :param int start: The start time of the overlay asset
-44 |         :param Union[AudioAsset, ImageAsset, TextAsset] asset: The overlay asset to add, :class:`AudioAsset <AudioAsset>`, :class:`ImageAsset <ImageAsset>`, :class:`TextAsset <TextAsset>` object
-45 |         :return: None
-46 |         :rtype: None
-47 |         """
-48 |         if (
-49 |             not isinstance(asset, AudioAsset)
-50 |             and not isinstance(asset, ImageAsset)
-51 |             and not isinstance(asset, TextAsset)
-52 |         ):
-53 |             raise ValueError(
-54 |                 "asset must be of type AudioAsset, ImageAsset or TextAsset"
-55 |             )
-56 |         self._timeline.append((start, asset))
-57 | 
-58 |     def generate_stream(self) -> str:
-59 |         """Generate a stream url for the timeline
-60 | 
-61 |         :return: The stream url
-62 |         :rtype: str
-63 |         """
-64 |         stream_data = self._connection.post(
-65 |             path=f"{ApiPath.timeline}",
-66 |             data={
-67 |                 "request_type": "compile",
-68 |                 "timeline": self.to_json().get("timeline"),
-69 |             },
-70 |         )
-71 |         self.stream_url = stream_data.get("stream_url")
-72 |         self.player_url = stream_data.get("player_url")
-73 |         return stream_data.get("stream_url", None)
-74 | 
-
-
---------------------------------------------------------------------------------
-/videodb/video.py:
---------------------------------------------------------------------------------
-  1 | from typing import Optional, Union, List, Dict, Tuple, Any
-  2 | from videodb._utils._video import play_stream
-  3 | from videodb._constants import (
-  4 |     ApiPath,
-  5 |     IndexType,
-  6 |     SceneExtractionType,
-  7 |     SearchType,
-  8 |     Segmenter,
-  9 |     SubtitleStyle,
- 10 |     Workflows,
- 11 | )
- 12 | from videodb.image import Image, Frame
- 13 | from videodb.scene import Scene, SceneCollection
- 14 | from videodb.search import SearchFactory, SearchResult
- 15 | from videodb.shot import Shot
- 16 | 
- 17 | 
- 18 | class Video:
- 19 |     """Video class to interact with the Video"""
- 20 | 
- 21 |     def __init__(self, _connection, id: str, collection_id: str, **kwargs) -> None:
- 22 |         self._connection = _connection
- 23 |         self.id = id
- 24 |         self.collection_id = collection_id
- 25 |         self.stream_url = kwargs.get("stream_url", None)
- 26 |         self.player_url = kwargs.get("player_url", None)
- 27 |         self.name = kwargs.get("name", None)
- 28 |         self.description = kwargs.get("description", None)
- 29 |         self.thumbnail_url = kwargs.get("thumbnail_url", None)
- 30 |         self.length = float(kwargs.get("length", 0.0))
- 31 |         self.transcript = kwargs.get("transcript", None)
- 32 |         self.transcript_text = kwargs.get("transcript_text", None)
- 33 |         self.scenes = kwargs.get("scenes", None)
- 34 | 
- 35 |     def __repr__(self) -> str:
- 36 |         return (
- 37 |             f"Video("
- 38 |             f"id={self.id}, "
- 39 |             f"collection_id={self.collection_id}, "
- 40 |             f"stream_url={self.stream_url}, "
- 41 |             f"player_url={self.player_url}, "
- 42 |             f"name={self.name}, "
- 43 |             f"description={self.description}, "
- 44 |             f"thumbnail_url={self.thumbnail_url}, "
- 45 |             f"length={self.length})"
- 46 |         )
- 47 | 
- 48 |     def __getitem__(self, key):
- 49 |         return self.__dict__[key]
- 50 | 
- 51 |     def search(
- 52 |         self,
- 53 |         query: str,
- 54 |         search_type: Optional[str] = SearchType.semantic,
- 55 |         index_type: Optional[str] = IndexType.spoken_word,
- 56 |         result_threshold: Optional[int] = None,
- 57 |         score_threshold: Optional[float] = None,
- 58 |         dynamic_score_percentage: Optional[float] = None,
- 59 |         filter: List[Dict[str, Any]] = [],
- 60 |         **kwargs,
- 61 |     ) -> SearchResult:
- 62 |         """Search for a query in the video.
- 63 | 
- 64 |         :param str query: Query to search for
- 65 |         :param SearchType search_type:(optional) Type of search to perform :class:`SearchType <SearchType>` object
- 66 |         :param IndexType index_type:(optional) Type of index to search :class:`IndexType <IndexType>` object
- 67 |         :param str index_id: (optional) Index ID of scene index to search
- 68 |         :param int result_threshold:(optional) Number of results to return
- 69 |         :param float score_threshold:(optional) Threshold score for the search
- 70 |         :param float dynamic_score_percentage:(optional) Percentage of dynamic score to consider
- 71 |         :raise SearchError: If the search fails
- 72 |         :return: :class:`SearchResult <SearchResult>` object
- 73 |         :rtype: :class:`videodb.search.SearchResult`
- 74 |         """
- 75 |         search = SearchFactory(self._connection).get_search(search_type)
- 76 |         return search.search_inside_video(
- 77 |             video_id=self.id,
- 78 |             query=query,
- 79 |             search_type=search_type,
- 80 |             index_type=index_type,
- 81 |             result_threshold=result_threshold,
- 82 |             score_threshold=score_threshold,
- 83 |             dynamic_score_percentage=dynamic_score_percentage,
- 84 |             filter=filter,
- 85 |             **kwargs,
- 86 |         )
- 87 | 
- 88 |     def delete(self) -> None:
- 89 |         """Delete the video.
- 90 | 
- 91 |         :raises InvalidRequestError: If the delete fails
- 92 |         :return: None if the delete is successful
- 93 |         :rtype: None
- 94 |         """
- 95 |         self._connection.delete(path=f"{ApiPath.video}/{self.id}")
- 96 | 
- 97 |     def remove_storage(self) -> None:
- 98 |         self._connection.delete(path=f"{ApiPath.video}/{self.id}/{ApiPath.storage}")
- 99 | 
-100 |     def generate_stream(self, timeline: Optional[List[Tuple[int, int]]] = None) -> str:
-101 |         """Generate the stream url of the video.
-102 | 
-103 |         :param list timeline:(optional) The timeline of the video to be streamed in the format [(start, end)]
-104 |         :raises InvalidRequestError: If the get_stream fails
-105 |         :return: The stream url of the video
-106 |         :rtype: str
-107 |         """
-108 |         if not timeline and self.stream_url:
-109 |             return self.stream_url
-110 | 
-111 |         stream_data = self._connection.post(
-112 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.stream}",
-113 |             data={
-114 |                 "timeline": timeline,
-115 |                 "length": self.length,
-116 |             },
-117 |         )
-118 |         return stream_data.get("stream_url", None)
-119 | 
-120 |     def generate_thumbnail(self, time: Optional[float] = None) -> Union[str, Image]:
-121 |         """Generate the thumbnail of the video.
-122 | 
-123 |         :param float time:(optional) The time of the video to generate the thumbnail
-124 |         :returns: :class:`Image <Image>` object if time is provided else the thumbnail url
-125 |         :rtype: Union[str, :class:`videodb.image.Image`]
-126 |         """
-127 |         if self.thumbnail_url and not time:
-128 |             return self.thumbnail_url
-129 | 
-130 |         if time:
-131 |             thumbnail_data = self._connection.post(
-132 |                 path=f"{ApiPath.video}/{self.id}/{ApiPath.thumbnail}",
-133 |                 data={
-134 |                     "time": time,
-135 |                 },
-136 |             )
-137 |             return Image(self._connection, **thumbnail_data)
-138 | 
-139 |         thumbnail_data = self._connection.get(
-140 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.thumbnail}"
-141 |         )
-142 |         self.thumbnail_url = thumbnail_data.get("thumbnail_url")
-143 |         return self.thumbnail_url
-144 | 
-145 |     def get_thumbnails(self) -> List[Image]:
-146 |         """Get all the thumbnails of the video.
-147 | 
-148 |         :return: List of :class:`Image <Image>` objects
-149 |         :rtype: List[:class:`videodb.image.Image`]
-150 |         """
-151 |         thumbnails_data = self._connection.get(
-152 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.thumbnails}"
-153 |         )
-154 |         return [Image(self._connection, **thumbnail) for thumbnail in thumbnails_data]
-155 | 
-156 |     def _fetch_transcript(
-157 |         self,
-158 |         start: int = None,
-159 |         end: int = None,
-160 |         segmenter: str = Segmenter.word,
-161 |         length: int = 1,
-162 |         force: bool = None,
-163 |     ) -> None:
-164 |         if (
-165 |             self.transcript
-166 |             and not start
-167 |             and not end
-168 |             and not segmenter
-169 |             and not length
-170 |             and not force
-171 |         ):
-172 |             return
-173 |         transcript_data = self._connection.get(
-174 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.transcription}",
-175 |             params={
-176 |                 "start": start,
-177 |                 "end": end,
-178 |                 "segmenter": segmenter,
-179 |                 "length": length,
-180 |                 "force": "true" if force else "false",
-181 |             },
-182 |             show_progress=True,
-183 |         )
-184 |         self.transcript = transcript_data.get("word_timestamps", [])
-185 |         self.transcript_text = transcript_data.get("text", "")
-186 | 
-187 |     def get_transcript(
-188 |         self,
-189 |         start: int = None,
-190 |         end: int = None,
-191 |         segmenter: str = Segmenter.word,
-192 |         length: int = 1,
-193 |         force: bool = None,
-194 |     ) -> List[Dict]:
-195 |         """Get the transcript of the video.
-196 | 
-197 |         :param bool force: (optional) Force to fetch the transcript
-198 |         :return: The transcript of the video
-199 |         :rtype: list[dict]
-200 |         """
-201 |         self._fetch_transcript(
-202 |             start=start, end=end, segmenter=segmenter, length=length, force=force
-203 |         )
-204 |         return self.transcript
-205 | 
-206 |     def get_transcript_text(
-207 |         self,
-208 |         start: int = None,
-209 |         end: int = None,
-210 |         segmenter: str = Segmenter.word,
-211 |         length: int = 1,
-212 |         force: bool = None,
-213 |     ) -> str:
-214 |         """Get the transcript text of the video.
-215 | 
-216 |         :param bool force: (optional) Force to fetch the transcript
-217 |         :return: The transcript text of the video
-218 |         :rtype: str
-219 |         """
-220 |         self._fetch_transcript(
-221 |             start=start, end=end, segmenter=segmenter, length=length, force=force
-222 |         )
-223 |         return self.transcript_text
-224 | 
-225 |     def index_spoken_words(
-226 |         self,
-227 |         language_code: Optional[str] = None,
-228 |         force: bool = False,
-229 |         callback_url: str = None,
-230 |     ) -> None:
-231 |         """Semantic indexing of spoken words in the video.
-232 | 
-233 |         :param str language_code:(optional) Language code of the video
-234 |         :param bool force:(optional) Force to index the video
-235 |         :param str callback_url:(optional) URL to receive the callback
-236 |         :raises InvalidRequestError: If the video is already indexed
-237 |         :return: None if the indexing is successful
-238 |         :rtype: None
-239 |         """
-240 |         self._connection.post(
-241 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.index}",
-242 |             data={
-243 |                 "index_type": IndexType.spoken_word,
-244 |                 "language_code": language_code,
-245 |                 "force": force,
-246 |                 "callback_url": callback_url,
-247 |             },
-248 |             show_progress=True,
-249 |         )
-250 | 
-251 |     def get_scenes(self) -> Union[list, None]:
-252 |         """Get the scenes of the video.
-253 | 
-254 |         :return: The scenes of the video
-255 |         :rtype: list
-256 |         """
-257 |         if self.scenes:
-258 |             return self.scenes
-259 |         scene_data = self._connection.get(
-260 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.index}",
-261 |             params={
-262 |                 "index_type": IndexType.scene,
-263 |             },
-264 |         )
-265 |         self.scenes = scene_data
-266 |         return scene_data if scene_data else None
-267 | 
-268 |     def _format_scene_collection(self, scene_collection_data: dict) -> SceneCollection:
-269 |         scenes = []
-270 |         for scene in scene_collection_data.get("scenes", []):
-271 |             frames = []
-272 |             for frame in scene.get("frames", []):
-273 |                 frame = Frame(
-274 |                     self._connection,
-275 |                     frame.get("frame_id"),
-276 |                     self.id,
-277 |                     scene.get("scene_id"),
-278 |                     frame.get("url"),
-279 |                     frame.get("frame_time"),
-280 |                     frame.get("description"),
-281 |                 )
-282 |                 frames.append(frame)
-283 |             scene = Scene(
-284 |                 video_id=self.id,
-285 |                 start=scene.get("start"),
-286 |                 end=scene.get("end"),
-287 |                 description=scene.get("description"),
-288 |                 id=scene.get("scene_id"),
-289 |                 frames=frames,
-290 |                 connection=self._connection,
-291 |             )
-292 |             scenes.append(scene)
-293 | 
-294 |         return SceneCollection(
-295 |             self._connection,
-296 |             scene_collection_data.get("scene_collection_id"),
-297 |             self.id,
-298 |             scene_collection_data.get("config", {}),
-299 |             scenes,
-300 |         )
-301 | 
-302 |     def extract_scenes(
-303 |         self,
-304 |         extraction_type: SceneExtractionType = SceneExtractionType.shot_based,
-305 |         extraction_config: dict = {},
-306 |         force: bool = False,
-307 |         callback_url: str = None,
-308 |     ) -> Optional[SceneCollection]:
-309 |         """Extract the scenes of the video.
-310 | 
-311 |         :param SceneExtractionType extraction_type: (optional) The type of extraction, :class:`SceneExtractionType <SceneExtractionType>` object
-312 |         :param dict extraction_config: (optional) The configuration for the extraction
-313 |         :param bool force: (optional) Force to extract the scenes
-314 |         :param str callback_url: (optional) URL to receive the callback
-315 |         :raises InvalidRequestError: If the extraction fails
-316 |         :return: The scene collection, :class:`SceneCollection <SceneCollection>` object
-317 |         :rtype: :class:`videodb.scene.SceneCollection`
-318 |         """
-319 |         scenes_data = self._connection.post(
-320 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.scenes}",
-321 |             data={
-322 |                 "extraction_type": extraction_type,
-323 |                 "extraction_config": extraction_config,
-324 |                 "force": force,
-325 |                 "callback_url": callback_url,
-326 |             },
-327 |         )
-328 |         if not scenes_data:
-329 |             return None
-330 |         return self._format_scene_collection(scenes_data.get("scene_collection"))
-331 | 
-332 |     def get_scene_collection(self, collection_id: str) -> Optional[SceneCollection]:
-333 |         """Get the scene collection.
-334 | 
-335 |         :param str collection_id: The id of the scene collection
-336 |         :return: The scene collection
-337 |         :rtype: :class:`videodb.scene.SceneCollection`
-338 |         """
-339 |         if not collection_id:
-340 |             raise ValueError("collection_id is required")
-341 |         scenes_data = self._connection.get(
-342 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.scenes}/{collection_id}",
-343 |             params={"collection_id": self.collection_id},
-344 |         )
-345 |         if not scenes_data:
-346 |             return None
-347 |         return self._format_scene_collection(scenes_data.get("scene_collection"))
-348 | 
-349 |     def list_scene_collection(self):
-350 |         """List all the scene collections.
-351 | 
-352 |         :return: The scene collections
-353 |         :rtype: list
-354 |         """
-355 |         scene_collections_data = self._connection.get(
-356 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.scenes}",
-357 |             params={"collection_id": self.collection_id},
-358 |         )
-359 |         return scene_collections_data.get("scene_collections", [])
-360 | 
-361 |     def delete_scene_collection(self, collection_id: str) -> None:
-362 |         """Delete the scene collection.
-363 | 
-364 |         :param str collection_id: The id of the scene collection to be deleted
-365 |         :raises InvalidRequestError: If the delete fails
-366 |         :return: None if the delete is successful
-367 |         :rtype: None
-368 |         """
-369 |         if not collection_id:
-370 |             raise ValueError("collection_id is required")
-371 |         self._connection.delete(
-372 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.scenes}/{collection_id}"
-373 |         )
-374 | 
-375 |     def index_scenes(
-376 |         self,
-377 |         extraction_type: SceneExtractionType = SceneExtractionType.shot_based,
-378 |         extraction_config: Dict = {},
-379 |         prompt: Optional[str] = None,
-380 |         metadata: Dict = {},
-381 |         model_name: Optional[str] = None,
-382 |         model_config: Optional[Dict] = None,
-383 |         name: Optional[str] = None,
-384 |         scenes: Optional[List[Scene]] = None,
-385 |         callback_url: Optional[str] = None,
-386 |     ) -> Optional[str]:
-387 |         """Index the scenes of the video.
-388 | 
-389 |         :param SceneExtractionType extraction_type: (optional) The type of extraction, :class:`SceneExtractionType <SceneExtractionType>` object
-390 |         :param dict extraction_config: (optional) The configuration for the extraction
-391 |         :param str prompt: (optional) The prompt for the extraction
-392 |         :param str model_name: (optional) The model name for the extraction
-393 |         :param dict model_config: (optional) The model configuration for the extraction
-394 |         :param str name: (optional) The name of the scene index
-395 |         :param list[Scene] scenes: (optional) The scenes to be indexed, List of :class:`Scene <Scene>` objects
-396 |         :param str callback_url: (optional) The callback url
-397 |         :raises InvalidRequestError: If the index fails or index already exists
-398 |         :return: The scene index id
-399 |         :rtype: str
-400 |         """
-401 |         scenes_data = self._connection.post(
-402 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.index}/{ApiPath.scene}",
-403 |             data={
-404 |                 "extraction_type": extraction_type,
-405 |                 "extraction_config": extraction_config,
-406 |                 "prompt": prompt,
-407 |                 "metadata": metadata,
-408 |                 "model_name": model_name,
-409 |                 "model_config": model_config,
-410 |                 "name": name,
-411 |                 "scenes": [scene.to_json() for scene in scenes] if scenes else None,
-412 |                 "callback_url": callback_url,
-413 |             },
-414 |         )
-415 |         if not scenes_data:
-416 |             return None
-417 |         return scenes_data.get("scene_index_id")
-418 | 
-419 |     def list_scene_index(self) -> List:
-420 |         """List all the scene indexes.
-421 | 
-422 |         :return: The scene indexes
-423 |         :rtype: list
-424 |         """
-425 |         index_data = self._connection.get(
-426 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.index}/{ApiPath.scene}",
-427 |             params={"collection_id": self.collection_id},
-428 |         )
-429 |         return index_data.get("scene_indexes", [])
-430 | 
-431 |     def get_scene_index(self, scene_index_id: str) -> Optional[List]:
-432 |         """Get the scene index.
-433 | 
-434 |         :param str scene_index_id: The id of the scene index
-435 |         :return: The scene index records
-436 |         :rtype: list
-437 |         """
-438 |         index_data = self._connection.get(
-439 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.index}/{ApiPath.scene}/{scene_index_id}",
-440 |             params={"collection_id": self.collection_id},
-441 |         )
-442 |         if not index_data:
-443 |             return None
-444 |         return index_data.get("scene_index_records", [])
-445 | 
-446 |     def delete_scene_index(self, scene_index_id: str) -> None:
-447 |         """Delete the scene index.
-448 | 
-449 |         :param str scene_index_id: The id of the scene index to be deleted
-450 |         :raises InvalidRequestError: If the delete fails
-451 |         :return: None if the delete is successful
-452 |         :rtype: None
-453 |         """
-454 |         if not scene_index_id:
-455 |             raise ValueError("scene_index_id is required")
-456 |         self._connection.delete(
-457 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.index}/{ApiPath.scene}/{scene_index_id}"
-458 |         )
-459 | 
-460 |     def add_subtitle(self, style: SubtitleStyle = SubtitleStyle()) -> str:
-461 |         """Add subtitles to the video.
-462 | 
-463 |         :param SubtitleStyle style: (optional) The style of the subtitles, :class:`SubtitleStyle <SubtitleStyle>` object
-464 |         :return: The stream url of the video with subtitles
-465 |         :rtype: str
-466 |         """
-467 |         if not isinstance(style, SubtitleStyle):
-468 |             raise ValueError("style must be of type SubtitleStyle")
-469 |         subtitle_data = self._connection.post(
-470 |             path=f"{ApiPath.video}/{self.id}/{ApiPath.workflow}",
-471 |             data={
-472 |                 "type": Workflows.add_subtitles,
-473 |                 "subtitle_style": style.__dict__,
-474 |             },
-475 |         )
-476 |         return subtitle_data.get("stream_url", None)
-477 | 
-478 |     def insert_video(self, video, timestamp: float) -> str:
-479 |         """Insert a video into another video
-480 | 
-481 |         :param Video video: The video to be inserted
-482 |         :param float timestamp: The timestamp where the video should be inserted
-483 |         :raises InvalidRequestError: If the insert fails
-484 |         :return: The stream url of the inserted video
-485 |         :rtype: str
-486 |         """
-487 |         if timestamp > float(self.length):
-488 |             timestamp = float(self.length)
-489 | 
-490 |         pre_shot = Shot(self._connection, self.id, timestamp, "", 0, timestamp)
-491 |         inserted_shot = Shot(
-492 |             self._connection, video.id, video.length, "", 0, video.length
-493 |         )
-494 |         post_shot = Shot(
-495 |             self._connection,
-496 |             self.id,
-497 |             self.length - timestamp,
-498 |             "",
-499 |             timestamp,
-500 |             self.length,
-501 |         )
-502 |         all_shots = [pre_shot, inserted_shot, post_shot]
-503 | 
-504 |         compile_data = self._connection.post(
-505 |             path=f"{ApiPath.compile}",
-506 |             data=[
-507 |                 {
-508 |                     "video_id": shot.video_id,
-509 |                     "collection_id": self.collection_id,
-510 |                     "shots": [(float(shot.start), float(shot.end))],
-511 |                 }
-512 |                 for shot in all_shots
-513 |             ],
-514 |         )
-515 |         return compile_data.get("stream_url", None)
-516 | 
-517 |     def play(self) -> str:
-518 |         """Open the player url in the browser/iframe and return the stream url.
-519 | 
-520 |         :return: The player url
-521 |         :rtype: str
-522 |         """
-523 |         return play_stream(self.stream_url)
-524 | 
-
-
---------------------------------------------------------------------------------
