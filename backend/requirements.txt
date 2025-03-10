@@ -9,7 +9,7 @@ Flask-Cors==4.0.1
 openai==1.55.3
 PyJWT==2.10.0
 Pillow==11.0.0
-openai-function-calling==2.3.0
+openai-function-calling==2.4.0
 pydantic==2.8.2
 pydantic-settings==2.4.0
 python-dotenv==1.0.1
@@ -17,4 +17,3 @@ replicate==1.0.1
 yt-dlp==2024.10.7
 videodb==0.2.10
 slack_sdk==3.33.2
-
