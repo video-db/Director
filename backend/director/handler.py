@@ -25,6 +25,7 @@ from director.agents.composio import ComposioAgent
 from director.agents.transcription import TranscriptionAgent
 from director.agents.comparison import ComparisonAgent
 from director.agents.web_search_agent import WebSearchAgent
+from director.agents.clone_voice import CloneVoiceAgent
 from director.agents.voice_replacement import VoiceReplacementAgent
 
 
@@ -53,6 +54,7 @@ class ChatHandler:
             PromptClipAgent,
             FrameAgent,
             DownloadAgent,
+            CloneVoiceAgent,
             BrandkitAgent,
             ProfanityRemoverAgent,
             ImageGenerationAgent,
@@ -70,7 +72,7 @@ class ChatHandler:
             ComparisonAgent,
             WebSearchAgent,
             VoiceReplacementAgent,
-            PricingAgent,
+            PricingAgent
         ]
 
     def add_videodb_state(self, session):
