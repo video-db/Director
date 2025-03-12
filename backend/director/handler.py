@@ -1,7 +1,7 @@
 import os
 import logging
 
-from director.agents.thumbnail import ThumbnailAgent
+from director.agents.frame import FrameAgent
 from director.agents.summarize_video import SummarizeVideoAgent
 from director.agents.download import DownloadAgent
 from director.agents.pricing import PricingAgent
@@ -46,14 +46,13 @@ class ChatHandler:
 
         # Register the agents here
         self.agents = [
-            ThumbnailAgent,
             SummarizeVideoAgent,
-            DownloadAgent,
-            PricingAgent,
             UploadAgent,
+            IndexAgent,
             SearchAgent,
             PromptClipAgent,
-            IndexAgent,
+            FrameAgent,
+            DownloadAgent,
             BrandkitAgent,
             ProfanityRemoverAgent,
             ImageGenerationAgent,
@@ -71,6 +70,7 @@ class ChatHandler:
             ComparisonAgent,
             WebSearchAgent,
             VoiceReplacementAgent,
+            PricingAgent,
         ]
 
     def add_videodb_state(self, session):

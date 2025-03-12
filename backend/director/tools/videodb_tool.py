@@ -204,7 +204,7 @@ class VideoDBTool:
                 "url": media.url,
             }
 
-    def generate_thumbnail(self, video_id: str, timestamp: int = 5):
+    def extract_frame(self, video_id: str, timestamp: int = 5):
         video = self.collection.get_video(video_id)
         image = video.generate_thumbnail(time=float(timestamp))
         return {

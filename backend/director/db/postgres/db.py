@@ -2,8 +2,6 @@ import json
 import time
 import logging
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from typing import List
 
 from director.constants import DBType
@@ -16,6 +14,14 @@ logger = logging.getLogger(__name__)
 class PostgresDB(BaseDB):
     def __init__(self):
         """Initialize PostgreSQL connection using environment variables."""
+
+        try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+
+        except ImportError:
+            raise ImportError("Please install psycopg2 library to use PostgreSQL.")
+
         self.db_type = DBType.POSTGRES
         self.conn = psycopg2.connect(
             dbname=os.getenv("POSTGRES_DB", "postgres"),

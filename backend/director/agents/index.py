@@ -244,7 +244,7 @@ class IndexAgent(BaseAgent):
                 self.videodb_tool = VideoDBTool()
             else:
                 self.videodb_tool = VideoDBTool(collection_id=collection_id)
-            self.output_message.actions.append(f"Indexing {index_type} for video..")
+            self.output_message.actions.append(f"Indexing {index_type} of video..")
             self.output_message.push_update()
 
             if index_type == "spoken_words":
