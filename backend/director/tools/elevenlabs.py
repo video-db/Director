@@ -4,6 +4,30 @@ from typing import Optional
 from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings, Voice, play
 
+DEFAULT_VOICES = """
+1. 9BWtsMINqrJLrRacOk9x - Aria: Expressive, American, female.
+2. CwhRBWXzGAHq8TQ4Fs17 - Roger: Confident, American, male.
+3. EXAVITQu4vr4xnSDxMaL - Sarah: Soft, American, young female.
+4. FGY2WhTYpPnrIDTdsKH5 - Laura: Upbeat, American, young female.
+5. IKne3meq5aSn9XLyUdCD - Charlie: Natural, Australian, male.
+6. JBFqnCBsd6RMkjVDRZzb - George: Warm, British, middle-aged male.
+7. N2lVS1w4EtoT3dr4eOWO - Callum: Intense, Transatlantic, male.
+8. SAz9YHcvj6GT2YYXdXww - River: Confident, American, non-binary.
+9. TX3LPaxmHKxFdv7VOQHJ - Liam: Articulate, American, young male.
+10. XB0fDUnXU5powFXDhCwa - Charlotte: Seductive, Swedish, young female.
+11. Xb7hH8MSUJpSbSDYk0k2 - Alice: Confident, British, middle-aged female.
+12. XrExE9yKIg1WjnnlVkGX - Matilda: Friendly, American, middle-aged female.
+13. bIHbv24MWmeRgasZH58o - Will: Friendly, American, young male.
+14. cgSgspJ2msm6clMCkdW9 - Jessica: Expressive, American, young female.
+15. cjVigY5qzO86Huf0OWal - Eric: Friendly, American, middle-aged male.
+16. iP95p4xoKVk53GoZ742B - Chris: Casual, American, middle-aged male.
+17. nPczCjzI2devNBz1zQrb - Brian: Deep, American, middle-aged male.
+18. onwK4e9ZLuTAKqWW03F9 - Daniel: Authoritative, British, middle-aged male.
+19. pFZP5JQG7iQjIQuC4Bku - Lily: Warm, British, middle-aged female.
+20. pqHfZKP75CvOlQylNhV4 - Bill: Trustworthy, American, old male.
+"""
+
+
 PARAMS_CONFIG = {
     "sound_effect": {
         "prompt_influence": {
@@ -26,8 +50,8 @@ PARAMS_CONFIG = {
         },
         "voice_id": {
             "type": "string",
-            "description": "The ID of the voice to use for text-to-speech",
-            "default": "pNInz6obpgDQGcFmaJgB"
+            "description": f"The ID of the voice to use for text-to-speech, Some available voice ids are {DEFAULT_VOICES}",
+            "default": "pNInz6obpgDQGcFmaJg",
         },
         "output_format": {
             "type": "string",
@@ -42,13 +66,13 @@ PARAMS_CONFIG = {
             ),
             "enum": [
                 "mp3_22050_32",
-                "mp3_44100_32", 
+                "mp3_44100_32",
                 "mp3_44100_64",
                 "mp3_44100_96",
                 "mp3_44100_128",
-                "mp3_44100_192"
+                "mp3_44100_192",
             ],
-            "default": "mp3_44100_128"
+            "default": "mp3_44100_128",
         },
         "language_code": {
             "type": "string",
@@ -64,27 +88,27 @@ PARAMS_CONFIG = {
             "description": "Stability value between 0 and 1 for voice settings",
             "minimum": 0,
             "maximum": 1,
-            "default": 0.0
+            "default": 0.0,
         },
         "similarity_boost": {
-            "type": "number", 
+            "type": "number",
             "description": "Similarity boost value between 0 and 1 for voice settings",
             "minimum": 0,
             "maximum": 1,
-            "default": 1.0
+            "default": 1.0,
         },
         "style": {
             "type": "number",
             "description": "Style value between 0 and 1 for voice settings",
             "minimum": 0,
             "maximum": 1,
-            "default": 0.0
+            "default": 0.0,
         },
         "use_speaker_boost": {
             "type": "boolean",
             "description": "Whether to use speaker boost in voice settings",
-            "default": True
-        }
+            "default": True,
+        },
     },
 }
 
@@ -96,10 +120,7 @@ class ElevenLabsTool:
         else:
             raise Exception("ElevenLabs API key not found")
         self.voice_settings = VoiceSettings(
-            stability=0.0,
-            similarity_boost=1.0,
-            style=0.0,
-            use_speaker_boost=True
+            stability=0.0, similarity_boost=1.0, style=0.0, use_speaker_boost=True
         )
         self.constrains = {
             "sound_effect": {"max_duration": 20},
@@ -179,9 +200,7 @@ class ElevenLabsTool:
 
         for _ in range(MAX_ATTEMPTS):
             try:
-                metadata = self.client.dubbing.get_dubbing_project_metadata(
-                    dubbing_id
-                )
+                metadata = self.client.dubbing.get_dubbing_project_metadata(dubbing_id)
                 print("this is metadata", metadata)
                 if metadata.status == "dubbed":
                     return True

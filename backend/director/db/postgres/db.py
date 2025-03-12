@@ -2,8 +2,6 @@ import json
 import time
 import logging
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from typing import List
 
 from director.constants import DBType
@@ -12,22 +10,27 @@ from director.db.postgres.initialize import initialize_postgres
 
 logger = logging.getLogger(__name__)
 
+
 class PostgresDB(BaseDB):
     def __init__(self):
         """Initialize PostgreSQL connection using environment variables."""
+
+        try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+
+        except ImportError:
+            raise ImportError("Please install psycopg2 library to use PostgreSQL.")
+
         self.db_type = DBType.POSTGRES
         self.conn = psycopg2.connect(
             dbname=os.getenv("POSTGRES_DB", "postgres"),
             user=os.getenv("POSTGRES_USER", "postgres"),
             password=os.getenv("POSTGRES_PASSWORD", "postgres"),
             host=os.getenv("POSTGRES_HOST", "localhost"),
-            port=os.getenv("POSTGRES_PORT", "5432")
+            port=os.getenv("POSTGRES_PORT", "5432"),
         )
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-
-        if not self.health_check():
-            logger.error("Database health check failed - unable to initialize tables")
-            raise Exception("Failed to initialize database")
 
         logger.info("Connected to PostgreSQL DB..........")
 
@@ -229,5 +232,5 @@ class PostgresDB(BaseDB):
             return False
 
     def __del__(self):
-        if hasattr(self, 'conn') and self.conn:
+        if hasattr(self, "conn") and self.conn:
             self.conn.close()

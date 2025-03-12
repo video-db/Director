@@ -36,12 +36,27 @@ class VideoDBTool:
             }
             for collection in collections
         ]
+    def get_image(self, image_id: str = None):
+        """
+        Fetch image details by ID or validate an image URL.
+        """
+        try:
+            image = self.collection.get_image(image_id)
+            return {
+                "id": image.id,
+                "url": image.url,
+                "name": image.name,
+                "description": getattr(image, "description", None),
+                "collection_id": image.collection_id,
+            }
+        except Exception as e:
+            raise Exception(f"Failed to fetch image with ID {image_id}: {e}")
 
     def create_collection(self, name, description=""):
         """Create a new collection with the given name and description."""
         if not name:
             raise ValueError("Collection name is required to create a collection.")
-        
+
         try:
             new_collection = self.conn.create_collection(name, description)
             return {
@@ -51,21 +66,26 @@ class VideoDBTool:
                     "id": new_collection.id,
                     "name": new_collection.name,
                     "description": new_collection.description,
-                }
+                },
             }
         except Exception as e:
             logging.error(f"Failed to create collection '{name}': {e}")
             raise Exception(f"Failed to create collection '{name}': {str(e)}") from e
-        
+
     def delete_collection(self):
         """Delete the current collection."""
         if not self.collection:
             raise ValueError("Collection ID is required to delete a collection.")
         try:
             self.collection.delete()
-            return {"success": True, "message": f"Collection {self.collection.id} deleted successfully"}
+            return {
+                "success": True,
+                "message": f"Collection {self.collection.id} deleted successfully",
+            }
         except Exception as e:
-            raise Exception(f"Failed to delete collection {self.collection.id}: {str(e)}")
+            raise Exception(
+                f"Failed to delete collection {self.collection.id}: {str(e)}"
+            )
 
     def get_video(self, video_id):
         """Get a video by ID."""
@@ -87,16 +107,25 @@ class VideoDBTool:
         try:
             video = self.collection.get_video(video_id)
             if not video:
-                raise ValueError(f"Video with ID {video_id} not found in collection {self.collection.id}.")
-            
+                raise ValueError(
+                    f"Video with ID {video_id} not found in collection {self.collection.id}."
+                )
+
             video.delete()
-            return {"success": True, "message": f"Video {video.id} deleted successfully"}
+            return {
+                "success": True,
+                "message": f"Video {video.id} deleted successfully",
+            }
         except ValueError as ve:
             logging.error(f"ValueError while deleting video: {ve}")
             raise ve
         except Exception as e:
-            logging.exception(f"Unexpected error occurred while deleting video {video_id}")
-            raise Exception("An unexpected error occurred while deleting the video. Please try again later.")
+            logging.exception(
+                f"Unexpected error occurred while deleting video {video_id}"
+            )
+            raise Exception(
+                "An unexpected error occurred while deleting the video. Please try again later."
+            )
 
     def get_videos(self):
         """Get all videos in a collection."""
@@ -113,7 +142,7 @@ class VideoDBTool:
             }
             for video in videos
         ]
-    
+
     def get_audio(self, audio_id):
         """Get an audio by ID."""
         audio = self.collection.get_audio(audio_id)
@@ -124,6 +153,10 @@ class VideoDBTool:
             "length": audio.length,
             "url": audio.generate_url()
         }
+
+    def generate_image_url(self, image_id):
+        image = self.collection.get_image(image_id)
+        return image.generate_url()
 
     def upload(self, source, source_type="url", media_type="video", name=None):
         upload_args = {"media_type": media_type}
@@ -171,7 +204,7 @@ class VideoDBTool:
                 "url": media.url,
             }
 
-    def generate_thumbnail(self, video_id: str, timestamp: int = 5):
+    def extract_frame(self, video_id: str, timestamp: int = 5):
         video = self.collection.get_video(video_id)
         image = video.generate_thumbnail(time=float(timestamp))
         return {
@@ -274,5 +307,3 @@ class VideoDBTool:
         video = self.collection.get_video(video_id)
         stream_url = video.add_subtitle(style)
         return stream_url
-    
-

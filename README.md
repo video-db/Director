@@ -57,7 +57,7 @@ Built on top of VideoDB’s ‘video-as-data’ infrastructure, Director enables
 * Search for specific moments.
 * Create clips instantly.
 * Integrate top GenAI projects and APIs and create and edit content instantly.
-* Add overlays, generate thumbnails, and much more. 
+* Add overlays, extract frames, and much more. 
 
 Built with flexibility in mind, Director is perfect for developers, creators, and teams looking to harness AI to simplify media workflows and unlock new possibilities.  📺 [Watch: Intro video](https://console.videodb.io/player?url=https://stream.videodb.io/v3/published/manifests/26b4143c-ed97-442a-96ae-19b53eb3bb46.m3u8)
 

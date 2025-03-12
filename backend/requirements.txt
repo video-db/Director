@@ -1,20 +1,19 @@
 -e .
-aiohttp==3.11.11
-anthropic==0.37.1
+anthropic==0.45.2
 composio_openai==0.5.50
 elevenlabs==1.9.0
+fal-client===0.5.8
 Flask==3.0.3
 Flask-SocketIO==5.3.6
 Flask-Cors==4.0.1
 openai==1.55.3
 PyJWT==2.10.0
 Pillow==11.0.0
-openai-function-calling==2.3.0
+openai-function-calling==2.4.0
 pydantic==2.8.2
 pydantic-settings==2.4.0
 python-dotenv==1.0.1
 replicate==1.0.1
 yt-dlp==2024.10.7
-videodb==0.2.8
+videodb==0.2.10
 slack_sdk==3.33.2
-psycopg2-binary==2.9.10

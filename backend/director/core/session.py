@@ -1,3 +1,5 @@
+import json
+
 from enum import Enum
 from datetime import datetime
 from typing import Optional, List, Union
@@ -43,6 +45,33 @@ class ContentType(str, Enum):
     videos = "videos"
     image = "image"
     search_results = "search_results"
+
+
+class EventType(str, Enum):
+    """Event types for WebSocket event emission."""
+
+    update_data = "update_data"
+
+
+class BaseEvent(BaseModel):
+    """Base event class for the WebSocket event."""
+
+    event_type: EventType
+
+
+class CollectionsUpdateEvent(BaseEvent):
+    """Collections update event class for the WebSocket event."""
+
+    event_type: EventType = EventType.update_data
+    update: str = "collections"
+
+
+class VideosUpdateEvent(BaseEvent):
+    """Videos update event class for the WebSocket event."""
+
+    event_type: EventType = EventType.update_data
+    update: str = "videos"
+    collection_id: str
 
 
 class BaseContent(BaseModel):
@@ -198,7 +227,7 @@ class OutputMessage(BaseMessage):
     def push_update(self):
         """Publish the message to the socket."""
         try:
-            emit("chat", self.model_dump(), namespace="/chat")
+            self._publish()
         except Exception as e:
             print(f"Error in emitting message: {str(e)}")
 
@@ -212,6 +241,27 @@ class OutputMessage(BaseMessage):
         except Exception as e:
             print(f"Error in emitting message: {str(e)}")
         self.db.add_or_update_msg_to_conv(**self.model_dump())
+
+
+def format_user_message(message: dict) -> dict:
+    message_content = message.get("content")
+    if isinstance(message_content, str):
+        return message
+    else:
+        content_parts = message["content"]
+        sanitized_content_parts = []
+
+        for content_part in content_parts:
+            sanitized_part = content_part
+            if content_part["type"] == "image":
+                sanitized_part = {
+                    "type": "text",
+                    "text": f"User has upload image with following details : {json.dumps(content_part)}",
+                }
+            sanitized_content_parts.append(sanitized_part)
+
+        message["content"] = sanitized_content_parts
+        return message
 
 
 class ContextMessage(BaseModel):
@@ -238,7 +288,7 @@ class ContextMessage(BaseModel):
             return msg
 
         if self.role == RoleTypes.user:
-            return msg
+            return format_user_message(msg)
 
         if self.role == RoleTypes.assistant:
             if self.tool_calls:
@@ -340,3 +390,13 @@ class Session:
     def delete(self):
         """Delete the session from the database."""
         return self.db.delete_session(self.session_id)
+
+    def emit_event(self, event: BaseEvent, namespace="/chat"):
+        """Emits a structured WebSocket event to notify all clients about updates."""
+
+        event_payload = event.model_dump()
+
+        try:
+            emit("event", event_payload, namespace=namespace)
+        except Exception:
+            pass

@@ -1,5 +1,4 @@
 import os
-import psycopg2
 import logging
 from dotenv import load_dotenv
 
@@ -46,14 +45,22 @@ CREATE TABLE IF NOT EXISTS context_messages (
 );
 """
 
+
 def initialize_postgres():
     """Initialize the PostgreSQL database by creating the necessary tables."""
+
+    try:
+        import psycopg2
+
+    except ImportError:
+        raise ImportError("Please install psycopg2 library to use PostgreSQL.")
+
     conn = psycopg2.connect(
         dbname=os.getenv("POSTGRES_DB", "postgres"),
         user=os.getenv("POSTGRES_USER", "postgres"),
         password=os.getenv("POSTGRES_PASSWORD", "postgres"),
         host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=os.getenv("POSTGRES_PORT", "5432")
+        port=os.getenv("POSTGRES_PORT", "5432"),
     )
     cursor = conn.cursor()
 
@@ -69,6 +76,7 @@ def initialize_postgres():
     finally:
         cursor.close()
         conn.close()
+
 
 if __name__ == "__main__":
     initialize_postgres()
