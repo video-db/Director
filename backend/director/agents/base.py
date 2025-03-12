@@ -39,6 +39,17 @@ class BaseAgent(ABC):
             raise Exception(
                 "Failed to infere parameters, please define JSON instead of using this automated util."
             )
+
+        parameters["properties"].pop("args", None)
+        parameters["properties"].pop("kwargs", None)
+
+        if "required" in parameters:
+            parameters["required"] = [
+                param
+                for param in parameters["required"]
+                if param not in ["args", "kwargs"]
+            ]
+
         return parameters
 
     def to_llm_format(self):

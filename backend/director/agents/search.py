@@ -69,8 +69,8 @@ class SearchAgent(BaseAgent):
     def run(
         self,
         query: str,
-        search_type,
-        index_type,
+        search_type: str,
+        index_type: str,
         collection_id: str,
         video_id: str = None,
         result_threshold=8,

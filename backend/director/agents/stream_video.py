@@ -18,7 +18,7 @@ class StreamVideoAgent(BaseAgent):
 
     def run(
         self,
-        collection_id: str = None,
+        collection_id: str,
         video_id: str = None,
         stream_url: str = None,
         *args,

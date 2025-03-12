@@ -26,6 +26,7 @@ PROMPTCLIP_AGENT_PARAMETERS = {
         "content_type": {
             "type": "string",
             "enum": ["spoken_content", "visual_content", "multimodal"],
+            "default": "spoken_content",
             "description": "Type of content based on which clip is to be generated, default is spoken_content, spoken_content: based on transcript of the video, visual_content: based on visual description of the video, multimodal: based on both transcript and visual description of the video",
         },
         "video_id": {

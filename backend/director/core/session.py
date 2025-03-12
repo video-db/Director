@@ -293,6 +293,8 @@ class ContextMessage(BaseModel):
         if self.role == RoleTypes.assistant:
             if self.tool_calls:
                 msg["tool_calls"] = self.tool_calls
+            if not self.content:
+                msg["content"] = []
             return msg
 
         if self.role == RoleTypes.tool:
