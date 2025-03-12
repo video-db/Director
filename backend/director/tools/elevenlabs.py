@@ -2,7 +2,8 @@ import time
 from typing import Optional
 
 from elevenlabs.client import ElevenLabs
-from elevenlabs import VoiceSettings, Voice, play
+from elevenlabs import VoiceSettings
+from elevenlabs.core import RequestOptions
 
 DEFAULT_VOICES = """
 1. 9BWtsMINqrJLrRacOk9x - Aria: Expressive, American, female.
@@ -227,7 +228,8 @@ class ElevenLabsTool:
         except Exception as e:
             print(f"Error downloading dubbed file: {str(e)}")
             return None
-        
+
+    
     def clone_audio(self, audio_files: list[str], name_of_voice, description):
         voice = self.client.clone(
             name=name_of_voice,
@@ -235,11 +237,16 @@ class ElevenLabsTool:
             description=description
         )
         return voice
-    
+
     def get_voice(self, voice_id):
         voice = self.client.voices.get(voice_id=voice_id)
         return voice
-    
-    def synthesis_text(self, voice:Voice, text_to_synthesis:str):
-        audio = self.client.generate(text=text_to_synthesis, voice=voice, model="eleven_multilingual_v2")
-        return audio
+
+    def synthesis_text(self, voice, text_to_synthesis:str):
+        try:
+            request_options = RequestOptions(timeout_in_seconds=120)
+            audio = self.client.generate(text=text_to_synthesis, voice=voice, model="eleven_multilingual_v2", request_options=request_options)
+            return audio
+        except Exception as e:
+            print(f"Error while text synthesis {e}")
+            return None
