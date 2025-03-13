@@ -234,8 +234,7 @@ class VoiceReplacementAgent(BaseAgent):
             for video_id in video_ids:
                 video = self.videodb_tool.get_video(video_id=video_id)
                 text_to_synthesis = self._get_transcript(video_id=video_id)
-
-                self.output_message.actions.append(f"Synthesising {video["name"]}'s transcript in cloned voice")
+                self.output_message.actions.append(f"Synthesising {video['name']}'s transcript in cloned voice")
                 self.output_message.push_update()
                 synthesised_audio = audio_gen_tool.synthesis_text(voice=voice, text_to_synthesis=text_to_synthesis)
                 
@@ -258,7 +257,7 @@ class VoiceReplacementAgent(BaseAgent):
                 if not audio:
                     error_content = TextContent(
                         status=MsgStatus.progress,
-                        status_message=f"Adding cloned voice to {video["name"]} failed",
+                        status_message=f"Adding cloned voice to {video['name']} failed",
                         agent_name=self.agent_name
                     )
                     self.output_message.content.append(error_content)
@@ -267,7 +266,7 @@ class VoiceReplacementAgent(BaseAgent):
 
                 video_content = VideoContent(
                     status=MsgStatus.progress,
-                    status_message=f"Adding cloned voice to {video["name"]}",
+                    status_message=f"Adding cloned voice to {video['name']}",
                     agent_name=self.agent_name
                 )
 
@@ -281,7 +280,7 @@ class VoiceReplacementAgent(BaseAgent):
 
                 video_content.video = VideoData(stream_url=stream_url)
                 video_content.status = MsgStatus.success
-                video_content.status_message = f"Here is your video {video["name"]} with the cloned voice"
+                video_content.status_message = f"Here is your video {video['name']} with the cloned voice"
 
                 self.output_message.push_update()
 
