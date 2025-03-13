@@ -28,9 +28,10 @@ Expected output format is json like {"timestamps": [(start, end), (start, end)]}
 class ProfanityRemoverAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "profanity_remover"
+        # TODO: When audios are added in context rework in description will be needed to make sure that the existing beep id is being passed
         self.description = (
             "This agent beeps the profanities in the given video and returns the updated video stream. "
-            "If the user has not provided the optional parameter `beep_audio_id`, send it as `None` so defaults are picked from the environment."
+            "Take the `beep_audio_id` from the context, if no beep audio found send it as `None` so defaults are picked from the environment."
         )
         self.parameters = self.get_parameters()
         self.llm = get_default_llm()
@@ -66,24 +67,42 @@ class ProfanityRemoverAgent(BaseAgent):
         :rtype: AgentResponse
         """
         try:
-            beep_audio_id = beep_audio_id or BEEP_AUDIO_ID
-            if not beep_audio_id:
-                error_message = (
-                    "Please provide the beep_audio_id, or set up BEEP_AUDIO_ID in the .env file located in the backend directory."
-                    "Notify user this verbatum in summary as well since it isn't displayed to them: If you don’t have a beep sound ready, you can use the audio from https://www.youtube.com/watch?v=GvXbEO5Kbgc YouTube link. Upload it as audio, obtain the audio ID, and set it as BEEP_AUDIO_ID in your .env file.'"
-                    "Remember to add above line in summary."
-                )
-                return AgentResponse(
-                    status=AgentStatus.ERROR,
-                    message=error_message,
-                )
-            self.output_message.actions.append("Started process to remove profanity..")
             video_content = VideoContent(
                 agent_name=self.agent_name, status=MsgStatus.progress
             )
             video_content.status_message = "Generating clean stream.."
+            self.output_message.actions.append("Started process to remove profanity..")
             self.output_message.push_update()
             videodb_tool = VideoDBTool(collection_id=collection_id)
+            beep_audio_id = beep_audio_id or BEEP_AUDIO_ID
+            if not beep_audio_id:
+                self.output_message.actions.append(
+                    "Beep audio ID not passed, finding in the collection.."
+                )
+                self.output_message.push_update()
+                # Find beep in the users context
+                # TODO: This can be better by passing the context to LLM to find the auido ID
+                print("Before get audios")
+                audios = videodb_tool.get_audios()
+                for audio in audios:
+                    if "beep" in audio.get("name", "").lower():
+                        beep_audio_id = audio.get("id")
+                        self.output_message.actions.append(
+                            "Found existing beep in the collection."
+                        )
+                        self.output_message.push_update()
+                else:
+                    # Upload if not fond
+                    self.output_message.actions.append(
+                        "Couldn't find beep in the collection, uploading.."
+                    )
+                    self.output_message.push_update()
+                    beep_audio = videodb_tool.upload(
+                        "https://www.youtube.com/watch?v=GvXbEO5Kbgc",
+                        media_type="audio",
+                        name="beep",
+                    )
+                    beep_audio_id = beep_audio.get("id")
             try:
                 transcript = videodb_tool.get_transcript(video_id, text=False)
             except Exception:
