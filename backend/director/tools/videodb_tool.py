@@ -36,6 +36,7 @@ class VideoDBTool:
             }
             for collection in collections
         ]
+
     def get_image(self, image_id: str = None):
         """
         Fetch image details by ID or validate an image URL.
@@ -151,8 +152,20 @@ class VideoDBTool:
             "name": audio.name,
             "collection_id": audio.collection_id,
             "length": audio.length,
-            "url": audio.generate_url()
+            "url": audio.generate_url(),
         }
+
+    def get_audios(self):
+        """Get all audios in a collection."""
+        audios = self.collection.get_audios()
+        return [
+            {
+                "id": audio.id,
+                "name": audio.name,
+                "length": audio.length,
+            }
+            for audio in audios
+        ]
 
     def generate_image_url(self, image_id):
         image = self.collection.get_image(image_id)
