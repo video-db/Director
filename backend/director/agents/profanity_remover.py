@@ -91,6 +91,7 @@ class ProfanityRemoverAgent(BaseAgent):
                             "Found existing beep in the collection."
                         )
                         self.output_message.push_update()
+                        break
                 else:
                     # Upload if not fond
                     self.output_message.actions.append(
