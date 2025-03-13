@@ -10,7 +10,7 @@ from director.agents.search import SearchAgent
 from director.agents.prompt_clip import PromptClipAgent
 from director.agents.index import IndexAgent
 from director.agents.brandkit import BrandkitAgent
-from director.agents.profanity_remover import ProfanityRemoverAgent
+from director.agents.censor import CensorAgent
 from director.agents.image_generation import ImageGenerationAgent
 from director.agents.audio_generation import AudioGenerationAgent
 from director.agents.video_generation import VideoGenerationAgent
@@ -56,7 +56,7 @@ class ChatHandler:
             DownloadAgent,
             CloneVoiceAgent,
             BrandkitAgent,
-            ProfanityRemoverAgent,
+            CensorAgent,
             ImageGenerationAgent,
             AudioGenerationAgent,
             VideoGenerationAgent,

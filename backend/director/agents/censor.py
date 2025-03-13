@@ -19,15 +19,17 @@ from director.tools.videodb_tool import VideoDBTool
 logger = logging.getLogger(__name__)
 
 BEEP_AUDIO_ID = os.getenv("BEEP_AUDIO_ID")
-PROFANITY_FINDER_PROMPT = """
+DEFAULT_CENSOR_PROMPT = """
 Given the following transcript give the list of timestamps where profanity is there for censoring.
-Expected output format is json like {"timestamps": [(start, end), (start, end)]} where start and end are integer in seconds
+"""
+OUTPUT_PROMPT = """
+Expected output format is json like {"timestamps": [(start, end), (start, end)]} where start and end are float in seconds
 """
 
 
-class ProfanityRemoverAgent(BaseAgent):
+class CensorAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
-        self.agent_name = "profanity_remover"
+        self.agent_name = "censor"
         # TODO: When audios are added in context rework in description will be needed to make sure that the existing beep id is being passed
         self.description = (
             "This agent beeps the profanities in the given video and returns the updated video stream. "
@@ -37,7 +39,8 @@ class ProfanityRemoverAgent(BaseAgent):
         self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
-    def add_beep(self, videodb_tool, video_id, beep_audio_id, timestamps):
+    def add_beep(self, videodb_tool, video_id, beep_audio_id, beep_audio_length, timestamps):
+        beep_audio_length = float(beep_audio_length)
         timeline = videodb_tool.get_and_set_timeline()
         video_asset = VideoAsset(asset_id=video_id)
         timeline.add_inline(video_asset)
@@ -52,6 +55,7 @@ class ProfanityRemoverAgent(BaseAgent):
         collection_id: str,
         video_id: str,
         beep_audio_id: str = None,
+        censor_prompt: str = "",
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -59,8 +63,9 @@ class ProfanityRemoverAgent(BaseAgent):
         Process the video to remove the profanities by overlaying beep.
 
         :param str collection_id: collection id in which the source video is present.
-        :param str video_id: video_id on which profanity remover needs to run.
+        :param str video_id: video_id on which adding censor needs to run.
         :param str beep_audio_id: audio id of beep asset in videodb, defaults to BEEP_AUDIO_ID
+        :param str censor_prompt: direction by users on what to censor
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the sample processing operation.
@@ -71,7 +76,7 @@ class ProfanityRemoverAgent(BaseAgent):
                 agent_name=self.agent_name, status=MsgStatus.progress
             )
             video_content.status_message = "Generating clean stream.."
-            self.output_message.actions.append("Started process to remove profanity..")
+            self.output_message.actions.append("Started process to censor..")
             self.output_message.push_update()
             videodb_tool = VideoDBTool(collection_id=collection_id)
             beep_audio_id = beep_audio_id or BEEP_AUDIO_ID
@@ -82,18 +87,18 @@ class ProfanityRemoverAgent(BaseAgent):
                 self.output_message.push_update()
                 # Find beep in the users context
                 # TODO: This can be better by passing the context to LLM to find the auido ID
-                print("Before get audios")
                 audios = videodb_tool.get_audios()
                 for audio in audios:
                     if "beep" in audio.get("name", "").lower():
                         beep_audio_id = audio.get("id")
+                        beep_audio_length = audio.get("length")
                         self.output_message.actions.append(
                             "Found existing beep in the collection."
                         )
                         self.output_message.push_update()
                         break
                 else:
-                    # Upload if not fond
+                    # Upload if not found
                     self.output_message.actions.append(
                         "Couldn't find beep in the collection, uploading.."
                     )
@@ -104,6 +109,11 @@ class ProfanityRemoverAgent(BaseAgent):
                         name="beep",
                     )
                     beep_audio_id = beep_audio.get("id")
+                    beep_audio_length = beep_audio.get("length")
+            else:
+                beep_audio = videodb_tool.get_audio(beep_audio_id)
+                beep_audio_id = beep_audio.get("id")
+                beep_audio_length = beep_audio.get("length")
             try:
                 transcript = videodb_tool.get_transcript(video_id, text=False)
             except Exception:
@@ -112,19 +122,23 @@ class ProfanityRemoverAgent(BaseAgent):
                 self.output_message.push_update()
                 videodb_tool.index_spoken_words(video_id)
                 transcript = videodb_tool.get_transcript(video_id, text=False)
-            profanity_prompt = f"{PROFANITY_FINDER_PROMPT}\n\ntranscript: {transcript}"
-            profanity_llm_message = ContextMessage(
-                content=profanity_prompt,
+            if not censor_prompt:
+                censor_prompt = DEFAULT_CENSOR_PROMPT
+            self.output_message.actions.append(f"Censoring the video with prompt: '{censor_prompt[:1000]}..'")
+            self.output_message.push_update()
+            final_censor_prompt = f"{censor_prompt}{OUTPUT_PROMPT}\n\ntranscript: {transcript}"
+            censor_llm_message = ContextMessage(
+                content=final_censor_prompt,
                 role=RoleTypes.user,
             )
             llm_response = self.llm.chat_completions(
-                [profanity_llm_message.to_llm_msg()],
+                [censor_llm_message.to_llm_msg()],
                 response_format={"type": "json_object"},
             )
-            profanity_timeline_response = json.loads(llm_response.content)
-            profanity_timeline = profanity_timeline_response.get("timestamps")
+            censor_timeline_response = json.loads(llm_response.content)
+            censor_timeline = censor_timeline_response.get("timestamps")
             clean_stream = self.add_beep(
-                videodb_tool, video_id, beep_audio_id, profanity_timeline
+                videodb_tool, video_id, beep_audio_id, beep_audio_length, censor_timeline
             )
             video_content.video = VideoData(stream_url=clean_stream)
             video_content.status = MsgStatus.success
