@@ -39,14 +39,24 @@ class CensorAgent(BaseAgent):
         self.llm = get_default_llm()
         super().__init__(session=session, **kwargs)
 
-    def add_beep(self, videodb_tool, video_id, beep_audio_id, beep_audio_length, timestamps):
+    def add_beep(
+        self, videodb_tool, video_id, beep_audio_id, beep_audio_length, timestamps
+    ):
         beep_audio_length = float(beep_audio_length)
         timeline = videodb_tool.get_and_set_timeline()
         video_asset = VideoAsset(asset_id=video_id)
         timeline.add_inline(video_asset)
-        for start, _ in timestamps:
-            beep = AudioAsset(asset_id=beep_audio_id)
-            timeline.add_overlay(start=start, asset=beep)
+        for start, end in timestamps:
+            # NOTES: when words are very small (sub seconds) we need to add some padding
+            # Taking min with audio will make sure that we don't overflow
+            buffered_start = start - 0.4
+            buffered_end = end + 0.4
+            length = min(beep_audio_length, (buffered_end - buffered_start))
+            beep = AudioAsset(asset_id=beep_audio_id, end=length)
+            # Slight adjustment to land on the word
+            # TODO: Check if it can be handled in a better / dynamic way
+            adjusted_start = start - 0.4
+            timeline.add_overlay(start=adjusted_start, asset=beep)
         stream_url = timeline.generate_stream()
         return stream_url
 
@@ -124,9 +134,13 @@ class CensorAgent(BaseAgent):
                 transcript = videodb_tool.get_transcript(video_id, text=False)
             if not censor_prompt:
                 censor_prompt = DEFAULT_CENSOR_PROMPT
-            self.output_message.actions.append(f"Censoring the video with prompt: '{censor_prompt[:1000]}..'")
+            self.output_message.actions.append(
+                f"Censoring the video with prompt: '{censor_prompt[:1000]}..'"
+            )
             self.output_message.push_update()
-            final_censor_prompt = f"{censor_prompt}{OUTPUT_PROMPT}\n\ntranscript: {transcript}"
+            final_censor_prompt = (
+                f"{censor_prompt}{OUTPUT_PROMPT}\n\ntranscript: {transcript}"
+            )
             censor_llm_message = ContextMessage(
                 content=final_censor_prompt,
                 role=RoleTypes.user,
@@ -138,7 +152,11 @@ class CensorAgent(BaseAgent):
             censor_timeline_response = json.loads(llm_response.content)
             censor_timeline = censor_timeline_response.get("timestamps")
             clean_stream = self.add_beep(
-                videodb_tool, video_id, beep_audio_id, beep_audio_length, censor_timeline
+                videodb_tool,
+                video_id,
+                beep_audio_id,
+                beep_audio_length,
+                censor_timeline,
             )
             video_content.video = VideoData(stream_url=clean_stream)
             video_content.status = MsgStatus.success
