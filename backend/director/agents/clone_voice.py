@@ -39,7 +39,7 @@ CLONE_VOICE_AGENT_PARAMETERS = {
                     "description": "ID of the collection where the sample video is stored."
                 }
             },
-            "required": ["collection_id"],
+            "required": [],
             "description": "Provide either an audio URL or a video ID, but not both. If video_id is provided, collection_id is required."
         },
         "text_to_synthesis": {
@@ -211,6 +211,8 @@ class CloneVoiceAgent(BaseAgent):
         try:
             if not is_authorized_to_clone_voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Not authorised to clone the voice")
+            
+            audio_source = self.validate_audio_source(audio_source)
 
             ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
             if not ELEVENLABS_API_KEY:
