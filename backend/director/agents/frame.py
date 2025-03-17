@@ -35,11 +35,14 @@ class FrameAgent(BaseAgent):
         super().__init__(session=session, **kwargs)
 
     def run(
-        self, collection_id: str, video_id: str, timestamp: int = 5, *args, **kwargs
+        self, collection_id: str, video_id: str, timestamp = None, *args, **kwargs
     ) -> AgentResponse:
         """
         Get the image frame for the video at a given timestamp.
         """
+        if timestamp is None:
+            timestamp = 5
+
         try:
             self.output_message.actions.append("Generating frame..")
             image_content = ImageContent(agent_name=self.agent_name)
