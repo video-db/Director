@@ -60,10 +60,6 @@ class MCPClient:
         logger.info(f"Connected to {name} server with {len(tools)} tools.")
         return tools
 
-    def initialize_all_servers_sync(self):
-        """Initialize all servers synchronously."""
-        asyncio.run(self.initialize_all_servers())
-
     async def initialize_all_servers(self):
         """Initialize all servers asynchronously."""
         all_tools = []
