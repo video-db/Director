@@ -163,7 +163,7 @@ class CloneVoiceAgent(BaseAgent):
             logger.error(f"Failed to download audio from video: {e}")
             return None
 
-    def validate_audio_source(audio_source: dict):
+    def validate_audio_source(self, audio_source: dict):
         """Ensure that either 'audio_url' or 'video_id' is provided, but not both."""
         has_audio_url = "audio_url" in audio_source and bool(audio_source["audio_url"])
         has_video_id = "video_id" in audio_source and bool(audio_source["video_id"])
@@ -188,7 +188,7 @@ class CloneVoiceAgent(BaseAgent):
             text_to_synthesis: str,
             name_of_voice: str,
             is_authorized_to_clone_voice: bool,
-            collection_id: str,
+            collection_id: str = "default",
             description="",
             cloned_voice_id=None,
             *args, 
