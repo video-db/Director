@@ -112,8 +112,8 @@ class EditingAgent(BaseAgent):
 
     def run(
         self,
-        collection_id: str,
         videos: list,
+        collection_id: str = None,
         audios: list = None,
         *args,
         **kwargs,

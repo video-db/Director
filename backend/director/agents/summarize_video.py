@@ -16,7 +16,9 @@ class SummarizeVideoAgent(BaseAgent):
         self.parameters = self.get_parameters()
         super().__init__(session=session, **kwargs)
 
-    def run(self, collection_id: str, video_id: str, prompt: str) -> AgentResponse:
+    def run(
+        self, collection_id: str, video_id: str, prompt: str, stream_url: str = None
+    ) -> AgentResponse:
         """
         Generate summary of the given video.
 
