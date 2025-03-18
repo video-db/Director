@@ -17,7 +17,6 @@ class DownloadAgent(BaseAgent):
     def run(
         self,
         stream_link: str,
-        stream_name: str = None,
         name: str = None,
         *args,
         **kwargs,
@@ -27,8 +26,8 @@ class DownloadAgent(BaseAgent):
 
         :param stream_link: The URL of the video stream to download.
         :type stream_link: str
-        :param stream_name: Optional name for the video stream. If not provided, defaults to None.
-        :type stream_name: str, optional
+        :param name: Optional name for the video stream. If not provided, defaults to None.
+        :type name: str, optional
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the download operation.
