@@ -17,6 +17,7 @@ class DownloadAgent(BaseAgent):
     def run(
         self,
         stream_link: str,
+        stream_name: str = None,
         name: str = None,
         *args,
         **kwargs,
