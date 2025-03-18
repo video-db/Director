@@ -29,3 +29,5 @@ class EnvPrefix(str, Enum):
     ANTHROPIC_ = "ANTHROPIC_"
 
 DOWNLOADS_PATH="director/downloads"
+
+MCP_SERVER_CONFIG_PATH="mcp_servers.json"

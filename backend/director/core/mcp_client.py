@@ -1,11 +1,11 @@
 import json
+import logging
+import shutil
+from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from director.agents.base import AgentResponse, AgentStatus
-import asyncio
-from contextlib import AsyncExitStack
-import logging
-import shutil
+from director.constants import MCP_SERVER_CONFIG_PATH
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 class MCPClient:
     def __init__(self):
-        self.config_path = 'mcp_servers.json'
+        self.config_path = MCP_SERVER_CONFIG_PATH
         self.servers = self.load_servers()
         self.mcp_tools = []
         self.exit_stack = AsyncExitStack()
@@ -29,8 +29,7 @@ class MCPClient:
             server_params = StdioServerParameters(
                 command=exec_path if exec_path else config['command'], 
                 args=config['args'],
-                env=config.get('env'),
-                stderr="pipe",
+                env=config.get('env')
             )
             logger.info(f"Initializing server with params: {server_params}")
 

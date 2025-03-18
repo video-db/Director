@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import List
 
 
@@ -15,7 +16,6 @@ from director.core.session import (
 from director.llm.base import LLMResponse
 from director.llm import get_default_llm
 from director.core.mcp_client import MCPClient
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,6 @@ class ReasoningEngine:
         self.summary_content = None
         self.failed_agents = []
         self.mcp_tools = []
-        self.mcp_client = None
         self.mcp_client = MCPClient()
         self.setup_mcp_servers()
         
@@ -122,33 +121,15 @@ class ReasoningEngine:
         """Initialize all MCP servers and make them available to agents."""
         try:
             logger.info("Setting up MCP Servers")
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                task = loop.create_task(self.mcp_client.initialize_all_servers())
-                task.add_done_callback(lambda t: self._set_mcp_tools(t.result()))
-            else:
-                tools = asyncio.run(self.mcp_client.initialize_all_servers())
-                self._set_mcp_tools(tools)
+            tools = asyncio.run(self.mcp_client.initialize_all_servers())
+            self._set_mcp_tools(tools)
         except Exception as e:
             logger.error(f"Failed to initialize MCP servers: {e}")
 
     def call_mcp_tool_sync(self, tool_name, tool_args):
         try:
             logger.info(f"Calling MCP tool: {tool_name} with args: {tool_args}")
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                task = loop.create_task(self.mcp_client.call_tool(tool_name, tool_args))
-                return task.result()
-            else:
-                return asyncio.run(self.mcp_client.call_tool(tool_name, tool_args))
+            return asyncio.run(self.mcp_client.call_tool(tool_name, tool_args))
         except Exception as e:
             logger.error(f"Failed to call MCP tool '{tool_name}': {e}")
             return None
