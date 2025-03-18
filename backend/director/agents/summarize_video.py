@@ -30,7 +30,6 @@ class SummarizeVideoAgent(BaseAgent):
         :param str collection_id: The collection_id where given video_id is available.
         :param str video_id: The id of the video for which the video player is required.
         :param str prompt: The prompt to guide the summary generation.
-        :param str stream_url: Optional URL for video streaming.
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the sample processing operation.
