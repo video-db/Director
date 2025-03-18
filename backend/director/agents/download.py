@@ -18,8 +18,6 @@ class DownloadAgent(BaseAgent):
         self,
         stream_link: str,
         name: str = None,
-        stream_name: str = None,
-        source_type: str =None,
         *args,
         **kwargs,
     ) -> AgentResponse:

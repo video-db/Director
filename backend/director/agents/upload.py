@@ -62,7 +62,6 @@ class UploadAgent(BaseAgent):
         source: str,
         source_type: str,
         media_type: str,
-        collection_id: str,
         name: str = None,
     ):
         """Upload the media with the given URL."""
