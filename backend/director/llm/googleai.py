@@ -16,9 +16,8 @@ class GoogleChatModel(str, Enum):
     """Enum for Google Gemini Chat models"""
 
     GEMINI_1_5_FLASH = "gemini-1.5-flash"
-    GEMINI_1_5_FLASH_0_0_2 = "gemini-1.5-flash-002"
-    GEMINI_1_5_PRO = "gemini-1.5-pro"
-    GEMINI_1_5_PRO_0_0_2 = "gemini-1.5-pro-002"
+    GEMINI_1_5_FLASH_002 = "gemini-1.5-flash-002"
+    GEMINI_1_5_PRO_002 = "gemini-1.5-pro-002"
 
 
 class GoogleAIConfig(BaseLLMConfig):
@@ -32,7 +31,7 @@ class GoogleAIConfig(BaseLLMConfig):
     llm_type: str = LLMType.GOOGLEAI
     api_key: str = ""
     api_base: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    chat_model: str = Field(default=GoogleChatModel.GEMINI_1_5_FLASH)
+    chat_model: str = Field(default=GoogleChatModel.GEMINI_1_5_PRO_002)
     max_tokens: int = 4096
 
     @field_validator("api_key")
