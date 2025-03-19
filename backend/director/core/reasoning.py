@@ -118,18 +118,39 @@ class ReasoningEngine:
         self.mcp_tools = tools
     
     def setup_mcp_servers(self):
-        """Initialize all MCP servers and make them available to agents."""
         try:
             logger.info("Setting up MCP Servers")
-            tools = asyncio.run(self.mcp_client.initialize_all_servers())
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                tools = loop.run_until_complete(self.mcp_client.initialize_all_servers())
+            else:
+                tools = asyncio.run(self.mcp_client.initialize_all_servers())
+
             self._set_mcp_tools(tools)
+
         except Exception as e:
             logger.error(f"Failed to initialize MCP servers: {e}")
 
     def call_mcp_tool_sync(self, tool_name, tool_args):
+        """Call an MCP tool synchronously."""
         try:
             logger.info(f"Calling MCP tool: {tool_name} with args: {tool_args}")
-            return asyncio.run(self.mcp_client.call_tool(tool_name, tool_args))
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                return loop.run_until_complete(self.mcp_client.call_tool(tool_name, tool_args))
+            else:
+                return asyncio.run(self.mcp_client.call_tool(tool_name, tool_args))
+
         except Exception as e:
             logger.error(f"Failed to call MCP tool '{tool_name}': {e}")
             return None
@@ -245,6 +266,7 @@ class ReasoningEngine:
             mcp_tools = self.mcp_client.mcp_tools_to_llm_format()
             agent_tools = [agent.to_llm_format() for agent in self.agents]
             all_tools = mcp_tools + agent_tools
+            logger.info(f"MCP_TOOLS -> {mcp_tools}")
             llm_response: LLMResponse = self.llm.chat_completions(
                 messages=[
                     message.to_llm_msg() for message in self.session.reasoning_context
