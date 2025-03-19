@@ -119,8 +119,6 @@ class ReasoningEngine:
     
     def setup_mcp_servers(self):
         try:
-            logger.info("Setting up MCP Servers")
-
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -139,8 +137,6 @@ class ReasoningEngine:
     def call_mcp_tool_sync(self, tool_name, tool_args):
         """Call an MCP tool synchronously."""
         try:
-            logger.info(f"Calling MCP tool: {tool_name} with args: {tool_args}")
-
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -266,7 +262,6 @@ class ReasoningEngine:
             mcp_tools = self.mcp_client.mcp_tools_to_llm_format()
             agent_tools = [agent.to_llm_format() for agent in self.agents]
             all_tools = mcp_tools + agent_tools
-            logger.info(f"MCP_TOOLS -> {mcp_tools}")
             llm_response: LLMResponse = self.llm.chat_completions(
                 messages=[
                     message.to_llm_msg() for message in self.session.reasoning_context
@@ -309,7 +304,6 @@ class ReasoningEngine:
                         self.output_message.actions.append(f"Running MCP Tool @{tool_name}")
                         self.output_message.agents.append(tool_name)
                         self.output_message.push_update()
-                        logger.info(f"Detected MCP tool call for: {tool_name}, executing synchronously.")
                         agent_response_content = self.call_mcp_tool_sync(tool_name, tool_args)
                         if agent_response_content:
                             agent_response = agent_response_content

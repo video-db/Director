@@ -1,6 +1,6 @@
 import json
 import logging
-import shutil
+import os
 from typing import AsyncGenerator
 from contextlib import AsyncExitStack, asynccontextmanager
 from mcp import ClientSession, StdioServerParameters
@@ -9,8 +9,7 @@ from mcp.client.sse import sse_client
 from director.agents.base import AgentResponse, AgentStatus
 from director.constants import MCP_SERVER_CONFIG_PATH
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class MCPClient:
@@ -21,6 +20,9 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
 
     def load_servers(self):
+        if not os.path.exists(self.config_path):
+            return {}
+        
         with open(self.config_path, 'r') as file:
             return json.load(file).get('mcpServers', {})
 
@@ -66,17 +68,18 @@ class MCPClient:
             if not config.get("url"):
                 raise ValueError(f"URL is required for SSE transport: {server_name}")
 
-            async with sse_client(config["url"]) as (read_stream, write_stream):
-                session = await self.exit_stack.enter_async_context(
-                    ClientSession(read_stream, write_stream)
-                )
+            read_stream, write_stream = await self.exit_stack.enter_async_context(sse_client(config["url"]))
+            
+            session = await self.exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
 
-                logger.info(f"{server_name}: Connected to server using SSE transport.")
-
-                try:
-                    yield session
-                finally:
-                    logger.debug(f"{server_name}: Closing session.")
+            await session.initialize()
+            logger.info(f"{server_name}: Connected to server using sse transport.")
+            try:
+                yield session
+            finally:
+                logger.debug(f"{server_name}: Closing session.")
 
         else:
             raise ValueError(f"Unsupported transport: {config.get('transport')}")
@@ -87,26 +90,32 @@ class MCPClient:
         logger.info("MCPClient closed all sessions.")
 
     async def connect_to_server(self, name, config):
-        async with self.create_session(name, config) as session:
-            if not session:
-                logger.error(f"Failed to connect to server: {name}")
-                return []
+        try:
+            async with self.create_session(name, config) as session:
+                if not session:
+                    logger.error(f"Failed to connect to server: {name}")
+                    return []
 
-            response = await session.list_tools()
-            tools = response.tools
-            for tool in tools:
-                tool.server_name = name
+                response = await session.list_tools()
+                tools = response.tools
+                for tool in tools:
+                    tool.server_name = name
 
-            logger.info(f"Connected to {name} server with {len(tools)} tools.")
-            self.mcp_tools = tools
-            return tools
+                logger.info(f"Connected to {name} server with {len(tools)} tools.")
+                self.mcp_tools = tools
+                return tools
+        finally:
+            await self.close()
 
     async def initialize_all_servers(self):
         """Initialize all servers asynchronously."""
         all_tools = []
         for name, config in self.servers.items():
-            tools = await self.connect_to_server(name, config)
-            all_tools.extend(tools)
+            try:
+                tools = await self.connect_to_server(name, config)
+                all_tools.extend(tools)
+            except Exception as e:
+                logger.info(f"Could not connect to {name}: {e} \n\n config: {config}")
         logger.info(f"Loaded {len(all_tools)} tools from all servers.")
         return all_tools
 
@@ -132,12 +141,13 @@ class MCPClient:
             if not config:
                 raise ValueError(f"Server '{tool.server_name}' not found in config.")
 
-            async with self.create_session(tool.server_name) as session:
+            async with self.create_session(tool.server_name, config) as session:
                 if not session:
                     raise ValueError(f"Failed to create session for server '{tool.server_name}'.")
 
                 logger.info(f"Calling {tool_name} with args {tool_args}")
                 result = await session.call_tool(tool_name, tool_args)
+                logger.info(f"Tool call result: {result}")
 
                 return AgentResponse(
                     status=AgentStatus.SUCCESS,
@@ -152,4 +162,6 @@ class MCPClient:
                 message=f"Error calling tool '{tool_name}': {e}",
                 data={}
             )
+        finally:
+            await self.close()
 
