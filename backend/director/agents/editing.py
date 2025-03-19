@@ -11,7 +11,7 @@ from director.core.session import (
     MsgStatus,
 )
 from director.tools.videodb_tool import VideoDBTool
-from director.llm.openai import OpenAI, OpenaiConfig, OpenAIChatModel
+from director.llm.videodb_proxy import VideoDBProxy
 
 from videodb.asset import VideoAsset, AudioAsset, ImageAsset, TextAsset
 
@@ -30,7 +30,7 @@ EDITING_AGENT_PARAMETERS = {
     "required": ["collection_id"],
 }
 
-# TODO: Create tools that can create asset and return asset config as json
+# TODO: round all timeline values to 2 decimal to avoid floating point issues. 
 
 EDITING_PROMPT = """
 You are an AI video editing assistant using the VideoDB framework. 
@@ -165,8 +165,8 @@ class EditingAgent(BaseAgent):
         self.editing_response = None
 
         # TODO: benchmark different llm
-        self.llm = OpenAI()
-        self.o3mini = OpenAI(OpenaiConfig(chat_model=OpenAIChatModel.o3_MINI))
+        self.llm = VideoDBProxy()
+        # self.o3mini = OpenAI(OpenaiConfig(chat_model=OpenAIChatModel.o3_MINI))
 
         # TODO: find a way to get the tool description from function/tool and not hardcode here
         self.tools = [
@@ -293,10 +293,10 @@ class EditingAgent(BaseAgent):
                 audio_asset = ImageAsset(**overlay_asset.get("asset_config", {}))
                 overlay_at = overlay_asset.get("overlay_at", 0)
                 timeline.add_overlay(overlay_at, audio_asset)
-            # if overlay_asset.get("asset_type") == "text_asset":
-            #     audio_asset = TextAsset(**overlay_asset.get("asset_config", {}))
-            #     overlay_at = overlay_asset.get("overlay_at", 0)
-            #     timeline.add_overlay(overlay_at, audio_asset)
+            if overlay_asset.get("asset_type") == "text_asset":
+                audio_asset = TextAsset(**overlay_asset.get("asset_config", {}))
+                overlay_at = overlay_asset.get("overlay_at", 0)
+                timeline.add_overlay(overlay_at, audio_asset)
         stream_url = timeline.generate_stream()
         data = {
             "inline_assets": inline_assets,
