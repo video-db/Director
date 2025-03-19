@@ -56,7 +56,7 @@ class FrameAgent(BaseAgent):
             )
             image_content.image = ImageData(**frame_data)
             image_content.status = MsgStatus.success
-            image_content.status_message = "Here is your frane."
+            image_content.status_message = "Here is your frame."
             self.output_message.publish()
 
         except Exception as e:
