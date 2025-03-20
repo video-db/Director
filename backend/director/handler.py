@@ -1,7 +1,7 @@
 import os
 import logging
 
-from director.agents.thumbnail import ThumbnailAgent
+from director.agents.frame import FrameAgent
 from director.agents.summarize_video import SummarizeVideoAgent
 from director.agents.download import DownloadAgent
 from director.agents.pricing import PricingAgent
@@ -10,7 +10,7 @@ from director.agents.search import SearchAgent
 from director.agents.prompt_clip import PromptClipAgent
 from director.agents.index import IndexAgent
 from director.agents.brandkit import BrandkitAgent
-from director.agents.profanity_remover import ProfanityRemoverAgent
+from director.agents.censor import CensorAgent
 from director.agents.image_generation import ImageGenerationAgent
 from director.agents.audio_generation import AudioGenerationAgent
 from director.agents.video_generation import VideoGenerationAgent
@@ -26,6 +26,8 @@ from director.agents.transcription import TranscriptionAgent
 from director.agents.comparison import ComparisonAgent
 from director.agents.videodb_helper import VideoDBHelperAgent
 from director.agents.web_search_agent import WebSearchAgent
+from director.agents.clone_voice import CloneVoiceAgent
+from director.agents.voice_replacement import VoiceReplacementAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -46,16 +48,16 @@ class ChatHandler:
 
         # Register the agents here
         self.agents = [
-            ThumbnailAgent,
             SummarizeVideoAgent,
-            DownloadAgent,
-            PricingAgent,
             UploadAgent,
+            IndexAgent,
             SearchAgent,
             PromptClipAgent,
-            IndexAgent,
+            FrameAgent,
+            DownloadAgent,
+            CloneVoiceAgent,
             BrandkitAgent,
-            ProfanityRemoverAgent,
+            CensorAgent,
             ImageGenerationAgent,
             AudioGenerationAgent,
             VideoGenerationAgent,
@@ -71,6 +73,8 @@ class ChatHandler:
             ComparisonAgent,
             VideoDBHelperAgent,
             WebSearchAgent,
+            VoiceReplacementAgent,
+            PricingAgent
         ]
 
     def add_videodb_state(self, session):

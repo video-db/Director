@@ -7,3 +7,4 @@ mkdocs-material==9.5.34
 mkdocstrings-python==1.11.1
 mkdocs-git-revision-date-localized-plugin==1.2.8
 mkdocs-git-authors-plugin==0.9.0
+devzery==0.1.0

@@ -73,7 +73,7 @@ EDITING_AGENT_PARAMETERS = {
             },
         },
     },
-    "required": ["videos"],
+    "required": ["videos", "collection_id"],
 }
 
 

@@ -14,14 +14,20 @@ class DownloadAgent(BaseAgent):
         self.parameters = self.get_parameters()
         super().__init__(session=session, **kwargs)
 
-    def run(self, stream_link: str, name: str = None, *args, **kwargs) -> AgentResponse:
+    def run(
+        self,
+        stream_link: str,
+        name: str = None,
+        *args,
+        **kwargs,
+    ) -> AgentResponse:
         """
         Downloads the video from the given stream link.
 
         :param stream_link: The URL of the video stream to download.
         :type stream_link: str
-        :param stream_name: Optional name for the video stream. If not provided, defaults to None.
-        :type stream_name: str, optional
+        :param name: Optional name for the video stream. If not provided, defaults to None.
+        :type name: str, optional
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the download operation.
