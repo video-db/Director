@@ -291,6 +291,10 @@ class ReasoningEngine:
                     self.summary_content.text = llm_response.content
                     self.summary_content.status = MsgStatus.success
                 else:
+                    self.summary_content.text = (
+                        self.summary_content.text + llm_response.content
+                        if self.summary_content.text else llm_response.content
+                    )
                     self.session.reasoning_context.append(
                         ContextMessage(
                             content=SUMMARIZATION_PROMPT.format(
@@ -306,7 +310,11 @@ class ReasoningEngine:
                         ]
                     )
                     self.session.reasoning_context.pop()
-                    self.summary_content.text = summary_response.content
+                    if summary_response.content not in self.summary_content.text:
+                        self.summary_content.text += (
+                            f"\n{summary_response.content}"
+                            if self.summary_content.text else summary_response.content
+                        )
                     if self.failed_agents:
                         self.summary_content.status = MsgStatus.error
                     else:
