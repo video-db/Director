@@ -297,17 +297,21 @@ class ReasoningEngine:
                         if message.role == RoleTypes.assistant and message.content:
                             if isinstance(message.content, list):
                                 extracted_texts = [
-                                    item["text"] if isinstance(item, dict) and "text" in item else str(item)
+                                    item["text"]
+                                    if isinstance(item, dict) and "text" in item
+                                    else str(item)
                                     for item in message.content
                                 ]
                                 assistant_messages.append(" ".join(extracted_texts))
                             else:
                                 assistant_messages.append(str(message.content))
 
-                    summary_prompt = SUMMARIZATION_PROMPT.format(query=self.input_message.content)
+                    summary_prompt = SUMMARIZATION_PROMPT.format(
+                        query=self.input_message.content
+                    )
 
                     if assistant_messages:
-                        summary_prompt += " Assistant Responses: " + " ".join(assistant_messages)
+                        summary_prompt += " ".join(assistant_messages)
 
                     self.session.reasoning_context.append(
                         ContextMessage(
