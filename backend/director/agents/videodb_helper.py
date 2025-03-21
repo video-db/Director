@@ -1,4 +1,6 @@
 import logging
+import json
+import re
 import requests
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import ContextMessage, RoleTypes, TextContent, MsgStatus
@@ -24,6 +26,9 @@ Instructions:
     - Use the VideoDB context to generate your response.
     - If code is required, provide clean, working Python examples.
 
+Return a JSON with two keys, Don't Add ``` json before or after the text, just send the object as string
+- heading : a 2-3 words heading that describes the response well
+- response: actual response from you
 """
 
 # Define the fixed file path for the additional context.
@@ -81,14 +86,15 @@ class VideoDBHelperAgent(BaseAgent):
                 error_msg = f"LLM failed to generate a response: {llm_response}"
                 logger.error(error_msg)
                 return AgentResponse(status=AgentStatus.ERROR, message=error_msg)
-
-            generated_text = llm_response.content
+            llm_response = json.loads(llm_response.content)
+            heading = llm_response.get("heading", "Response")
+            response = llm_response.get("response", "")
 
             # Create an output message with the extracted code.
             output_content = TextContent(
-                agent_name=self.agent_name, status_message="Response"
+                agent_name=self.agent_name, status_message=heading
             )
-            output_content.text = generated_text
+            output_content.text = response
             output_content.status = MsgStatus.success
             self.output_message.content.append(output_content)
             self.output_message.publish()
@@ -96,7 +102,7 @@ class VideoDBHelperAgent(BaseAgent):
             return AgentResponse(
                 status=AgentStatus.SUCCESS,
                 message="Response generated successfully.",
-                data={"response": generated_text},
+                data={"response": response},
             )
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
