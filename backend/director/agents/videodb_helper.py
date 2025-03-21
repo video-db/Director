@@ -39,7 +39,7 @@ VIDEODB_LLMS_FULL_TXT_URL = (
 
 class VideoDBHelperAgent(BaseAgent):
     def __init__(self, session=None, **kwargs):
-        self.agent_name = "videodb_helper"
+        self.agent_name = "help"
         self.description = (
             "This agent generates VideoDB-related code from a natural language requirement. "
             "It constructs a prompt for the LLM, processes the response, extracts the code snippet, "
