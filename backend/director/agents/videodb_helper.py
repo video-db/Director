@@ -1,24 +1,35 @@
 import logging
-import re
-import json
-import datetime
-import uuid
-import boto3
-import os
+import requests
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import ContextMessage, RoleTypes, TextContent, MsgStatus
 from director.llm import get_default_llm
 
 logger = logging.getLogger(__name__)
 
-# Define the fixed file path for the additional context.
-CONTEXT_FILE_PATH = "director/prompts/videodb-context.txt"
+VIDEODB_HELPER_AGENT_PROMT = """
+You are a technical assistant for customers of VideoDB, a specialized video management library.
+Your role is to assist users by answering their queries using the VideoDB DB CONTEXT provided below.
 
-# Define your S3 bucket name
-bucket_name = os.environ.get("S3_BUCKET_NAME")
-aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID")
-aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
-aws_region = os.environ.get("AWS_REGION")
+Your response should:
+    - Be accurate and context-aware, using only the information from the VideoDB context.
+    - Include relevant Python code snippets when applicable.
+    - Enclose all code in proper Markdown formatting using triple backticks and specify the language, e.g.,
+
+```python
+code here
+
+
+Instructions:
+    - Read the user query carefully.
+    - Use the VideoDB context to generate your response.
+    - If code is required, provide clean, working Python examples.
+
+"""
+
+# Define the fixed file path for the additional context.
+VIDEODB_LLMS_FULL_TXT_URL = (
+    "https://video-db.github.io/agent-toolkit/context/llms-full.txt"
+)
 
 
 class VideoDBHelperAgent(BaseAgent):
@@ -27,8 +38,7 @@ class VideoDBHelperAgent(BaseAgent):
         self.description = (
             "This agent generates VideoDB-related code from a natural language requirement. "
             "It constructs a prompt for the LLM, processes the response, extracts the code snippet, "
-            "and prints it for the user. The additional context for the LLM prompt is loaded "
-            "from a predefined local file."
+            "and prints it for the user. The additional context for the LLM prompt is downloaded from a URL."
         )
         self.llm = get_default_llm()
         self.parameters = {
@@ -43,43 +53,28 @@ class VideoDBHelperAgent(BaseAgent):
         }
         super().__init__(session=session, **kwargs)
 
-    def dump_to_s3(self, log_data: dict):
-        """
-        Dumps the log data as a JSON file to S3. The S3 key is generated using a timestamp
-        and a UUID for uniqueness.
-        """
-        try:
-            s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_key,
-                region_name=aws_region,
-            )
-
-            unique_id = str(uuid.uuid4())
-            s3_key = f"hosted_dev/{unique_id}.json"
-            json_body = json.dumps(log_data)
-            s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=json_body)
-            logger.info(f"Successfully dumped log data to s3://{bucket_name}/{s3_key}")
-        except Exception as s3_exception:
-            logger.exception(f"Failed to dump log data to S3: {s3_exception}")
-
     def run(self, prompt: str) -> AgentResponse:
         try:
             self.output_message.actions.append(
-                "Generating VideoDB code based on user requirement..."
+                f"Generating VideoDB code based on user requirement: {prompt}"
             )
-            # Load additional context from the predefined file path.
-            with open(CONTEXT_FILE_PATH, "r") as file:
-                context_content = file.read()
+            # Download additional context from the predefined URL.
+            response = requests.get(VIDEODB_LLMS_FULL_TXT_URL)
+            if response.status_code == 200:
+                context_content = response.text
+            else:
+                error_msg = f"Failed to download context data: {response.status_code}"
+                logger.error(error_msg)
+                return AgentResponse(status=AgentStatus.ERROR, message=error_msg)
 
             # Construct the full prompt by combining the loaded context and the user requirement.
-            full_prompt = (
-                f"{context_content}\nUser Requirement: {prompt}\n"
-                "Please generate the corresponding Python code for VideoDB operations, "
-                "including necessary imports and functionality."
-            )
+            full_prompt = f"""
+                  {VIDEODB_HELPER_AGENT_PROMT}
+                  USER REQUIREMENT: {prompt} \n \n
+                  VIDEODB CONTEXT : {context_content}\n \n"
+                """
             message = ContextMessage(content=full_prompt, role=RoleTypes.user)
+
             # Get response from the LLM.
             llm_response = self.llm.chat_completions([message.to_llm_msg()])
             if not llm_response.status:
@@ -89,43 +84,19 @@ class VideoDBHelperAgent(BaseAgent):
 
             generated_text = llm_response.content
 
-            # Extract code blocks from the LLM response using regex (detects code in triple backticks).
-            code_snippets = re.findall(
-                r"```(?:python)?\n(.*?)```", generated_text, re.DOTALL
-            )
-            if code_snippets:
-                code_output = "\n\n".join(code_snippets)
-            else:
-                code_output = generated_text  # Fallback if no code blocks are found.
-
-            code_output = f"""```python\n{code_output}\n```"""
-
             # Create an output message with the extracted code.
             output_content = TextContent(
-                agent_name=self.agent_name, status_message="Generated code:"
+                agent_name=self.agent_name, status_message="Response"
             )
-            output_content.text = code_output
+            output_content.text = generated_text
             output_content.status = MsgStatus.success
             self.output_message.content.append(output_content)
             self.output_message.publish()
 
-            # Prepare log data for S3 dump.
-            log_data = {
-                "timestamp": datetime.datetime.utcnow().isoformat(),
-                "input": prompt,
-                "output": code_output,
-                "context_file_path": CONTEXT_FILE_PATH,
-                "llm": self.llm.chat_model,
-                "session_id": self.session.session_id,
-                "conv_id": self.session.conv_id,
-            }
-            # Dump the log data to the S3 bucket.
-            self.dump_to_s3(log_data)
-
             return AgentResponse(
                 status=AgentStatus.SUCCESS,
-                message="Code generated successfully.",
-                data={"code": code_output},
+                message="Response generated successfully.",
+                data={"response": generated_text},
             )
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
