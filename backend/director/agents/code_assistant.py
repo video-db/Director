@@ -8,7 +8,7 @@ from director.llm import get_default_llm
 
 logger = logging.getLogger(__name__)
 
-VIDEODB_HELPER_AGENT_PROMPT = """
+CODE_ASSISTANT_AGENT_PROMPT = """
 You are a technical assistant for customers of VideoDB, a specialized video management library.
 Your role is to assist users by answering their queries using the VideoDB DB CONTEXT provided below.
 
@@ -37,9 +37,9 @@ VIDEODB_LLMS_FULL_TXT_URL = (
 )
 
 
-class VideoDBHelperAgent(BaseAgent):
+class CodeAssistantAgent(BaseAgent):
     def __init__(self, session=None, **kwargs):
-        self.agent_name = "help"
+        self.agent_name = "code_assistant"
         self.description = (
             "This agent generates VideoDB-related code from a natural language requirement. "
             "It constructs a prompt for the LLM, processes the response, extracts the code snippet, "
@@ -74,7 +74,7 @@ class VideoDBHelperAgent(BaseAgent):
 
             # Construct the full prompt by combining the loaded context and the user requirement.
             full_prompt = f"""
-                  {VIDEODB_HELPER_AGENT_PROMPT}
+                  {CODE_ASSISTANT_AGENT_PROMPT}
                   USER REQUIREMENT: {prompt} \n \n
                   VIDEODB CONTEXT : {context_content}\n \n"
                 """

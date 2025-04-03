@@ -24,7 +24,7 @@ from director.agents.meme_maker import MemeMakerAgent
 from director.agents.composio import ComposioAgent
 from director.agents.transcription import TranscriptionAgent
 from director.agents.comparison import ComparisonAgent
-from director.agents.videodb_helper import VideoDBHelperAgent
+from director.agents.code_assistant import CodeAssistantAgent
 from director.agents.web_search_agent import WebSearchAgent
 from director.agents.clone_voice import CloneVoiceAgent
 from director.agents.voice_replacement import VoiceReplacementAgent
@@ -71,7 +71,7 @@ class ChatHandler:
             MemeMakerAgent,
             ComposioAgent,
             ComparisonAgent,
-            VideoDBHelperAgent,
+            CodeAssistantAgent,
             WebSearchAgent,
             VoiceReplacementAgent,
             PricingAgent
