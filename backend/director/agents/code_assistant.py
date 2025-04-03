@@ -32,7 +32,7 @@ Return a JSON with two keys, Don't Add ``` json before or after the text, just s
 
 # Define the fixed file path for the additional context.
 VIDEODB_LLMS_FULL_TXT_URL = (
-    "https://video-db.github.io/agent-toolkit/context/llms-full.txt"
+    "https://videodb.io/llms-full.txt"
 )
 
 
