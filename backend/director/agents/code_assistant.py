@@ -1,6 +1,5 @@
 import logging
 import json
-import re
 import requests
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import ContextMessage, RoleTypes, TextContent, MsgStatus
