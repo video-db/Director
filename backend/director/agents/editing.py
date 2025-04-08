@@ -8,14 +8,11 @@ from director.core.session import (
     MsgStatus,
     ContextMessage,
     RoleTypes,
-    MsgStatus,
 )
 from director.tools.videodb_tool import VideoDBTool
 from director.llm.videodb_proxy import VideoDBProxy
 
 from videodb.asset import VideoAsset, AudioAsset, ImageAsset, TextAsset
-
-from openai_function_calling import FunctionInferrer
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +27,7 @@ EDITING_AGENT_PARAMETERS = {
     "required": ["collection_id"],
 }
 
-# TODO: round all timeline values to 2 decimal to avoid floating point issues. 
+# TODO: round all timeline values to 2 decimal to avoid floating point issues.
 
 EDITING_PROMPT = """
 You are an AI video editing assistant using the VideoDB framework. 
@@ -144,17 +141,6 @@ Rules
 """.strip()
 
 
-def get_parameters(func):
-    function_inferrer = FunctionInferrer.infer_from_function_reference(func)
-    function_json = function_inferrer.to_json_schema()
-    parameters = function_json.get("parameters")
-    if not parameters:
-        raise Exception(
-            "Failed to infere parameters, please define JSON instead of using this automated util."
-        )
-    return parameters
-
-
 class EditingAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
         self.agent_name = "editing"
@@ -166,7 +152,6 @@ class EditingAgent(BaseAgent):
 
         # TODO: benchmark different llm
         self.llm = VideoDBProxy()
-        # self.o3mini = OpenAI(OpenaiConfig(chat_model=OpenAIChatModel.o3_MINI))
 
         # TODO: find a way to get the tool description from function/tool and not hardcode here
         self.tools = [
@@ -321,7 +306,7 @@ class EditingAgent(BaseAgent):
             tools=[tool for tool in self.tools],
         )
 
-        print("this is llm response ", llm_response)
+        print("Editing Agent LLM Response", llm_response)
 
         if llm_response.tool_calls:
             self.editing_context.append(
@@ -424,12 +409,17 @@ class EditingAgent(BaseAgent):
                 video_content.video = VideoData(stream_url=stream_url)
                 video_content.status = MsgStatus.success
                 video_content.status_message = "Here is your stream."
-                self.output_message.publish()
+            else:
+                video_content.status = MsgStatus.error
+                video_content.status_message = (
+                    "An error occurred while editing the video."
+                )
+            self.output_message.publish()
 
         except Exception as e:
             logger.exception(f"Error in {self.agent_name} agent: {e}")
-            # video_content.status = MsgStatus.error
-            # video_content.status_message = "An error occurred while editing the video."
+            video_content.status = MsgStatus.error
+            video_content.status_message = "An error occurred while editing the video."
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
