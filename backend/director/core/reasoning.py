@@ -305,6 +305,7 @@ class ReasoningEngine:
                             for message in self.get_current_run_context()
                         ]
                     )
+                    self.session.reasoning_context.pop()
                     self.summary_content.text = summary_response.content
                     if self.failed_agents:
                         self.summary_content.status = MsgStatus.error

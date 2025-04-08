@@ -57,7 +57,13 @@ class UploadAgent(BaseAgent):
         self.parameters = UPLOAD_AGENT_PARAMETERS
         super().__init__(session=session, **kwargs)
 
-    def _upload(self, source: str, source_type: str, media_type: str, name: str = None):
+    def _upload(
+        self,
+        source: str,
+        source_type: str,
+        media_type: str,
+        name: str = None,
+    ):
         """Upload the media with the given URL."""
         try:
             if media_type == "video":

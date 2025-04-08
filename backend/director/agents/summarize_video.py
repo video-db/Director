@@ -16,12 +16,20 @@ class SummarizeVideoAgent(BaseAgent):
         self.parameters = self.get_parameters()
         super().__init__(session=session, **kwargs)
 
-    def run(self, collection_id: str, video_id: str, prompt: str) -> AgentResponse:
+    def run(
+        self,
+        collection_id: str,
+        video_id: str,
+        prompt: str,
+        *args,
+        **kwargs,
+    ) -> AgentResponse:
         """
         Generate summary of the given video.
 
         :param str collection_id: The collection_id where given video_id is available.
         :param str video_id: The id of the video for which the video player is required.
+        :param str prompt: The prompt to guide the summary generation.
         :param args: Additional positional arguments.
         :param kwargs: Additional keyword arguments.
         :return: The response containing information about the sample processing operation.

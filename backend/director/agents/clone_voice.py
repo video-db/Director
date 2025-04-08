@@ -15,44 +15,32 @@ CLONE_VOICE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "audio_source": {
-            "oneOf": [
-                {
-                    "type": "object",
-                    "properties": {
-                        "audio_url": {
-                            "type": "string",
-                            "format": "uri",
-                            "description": "A direct URL to the audio file to clone the voice from."
-                        }
-                    },
-                    "required": ["audio_url"]
+            "type": "object",
+            "properties": {
+                "audio_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "A direct URL to the audio file to clone the voice from."
                 },
-                {
-                    "type": "object",
-                    "properties": {
-                        "video_id": {
-                            "type": "string",
-                            "description": "ID of the video from which the audio should be extracted."
-                        }, 
-                        "start_time": {
-                            "type": "number",
-                            "description": "The start time from where the 1 and a half minute. start time is given in seconds that is 1 minute 37 seconds is 97",
-                            "default": 0
-                        },
-                        "end_time": {
-                            "type": "number",
-                            "description": "The end time is where the extracted audio sample must end. Make sure that the end time is farther than start time and should only be 1 to 2 minutes farther than start_time. end time is given in seconds. for example 1 minute 37 seconds is 97",
-                            "default": 90
-                        },
-                        "collection_id": {
-                            "type": "string",
-                            "description": "ID of the collection where the sample video is stored",
-                        }
-                    },
-                    "required": ["video_id", "start_time", "end_time", "collection_id"]
+                "video_id": {
+                    "type": "string",
+                    "description": "ID of the video from which the audio should be extracted."
+                }, 
+                "start_time": {
+                    "type": "number",
+                    "description": "The start time (in seconds)."
+                },
+                "end_time": {
+                    "type": "number",
+                    "description": "The end time (in seconds)."
+                },
+                "collection_id": {
+                    "type": "string",
+                    "description": "ID of the collection where the sample video is stored."
                 }
-            ],
-            "description": "Provide either an audio URL or a video ID, but not both."
+            },
+            "required": [],
+            "description": "Provide either an audio URL or a video ID, but not both. If video_id is provided, collection_id is required."
         },
         "text_to_synthesis": {
             "type": "string",
@@ -175,6 +163,24 @@ class CloneVoiceAgent(BaseAgent):
             logger.error(f"Failed to download audio from video: {e}")
             return None
 
+    def validate_audio_source(self, audio_source: dict):
+        """Ensure that either 'audio_url' or 'video_id' is provided, but not both."""
+        has_audio_url = "audio_url" in audio_source and bool(audio_source["audio_url"])
+        has_video_id = "video_id" in audio_source and bool(audio_source["video_id"])
+
+        if has_audio_url and has_video_id:
+            raise ValueError("Provide either 'audio_url' or 'video_id', but not both.")
+
+        if not has_audio_url and not has_video_id:
+            raise ValueError("Either 'audio_url' or 'video_id' must be provided.")
+
+        if has_video_id:
+            audio_source.setdefault("start_time", 0)
+            audio_source.setdefault("end_time", 90)
+            if "collection_id" not in audio_source:
+                raise ValueError("'collection_id' is required when using 'video_id'.")
+
+        return audio_source
 
     def run(
             self,
@@ -182,7 +188,7 @@ class CloneVoiceAgent(BaseAgent):
             text_to_synthesis: str,
             name_of_voice: str,
             is_authorized_to_clone_voice: bool,
-            collection_id: str,
+            collection_id: str = "default",
             description="",
             cloned_voice_id=None,
             *args, 
@@ -205,6 +211,8 @@ class CloneVoiceAgent(BaseAgent):
         try:
             if not is_authorized_to_clone_voice:
                 return AgentResponse(status=AgentStatus.ERROR, message="Not authorised to clone the voice")
+            
+            audio_source = self.validate_audio_source(audio_source)
 
             ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
             if not ELEVENLABS_API_KEY:
