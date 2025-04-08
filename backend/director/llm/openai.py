@@ -20,6 +20,7 @@ class OpenAIChatModel(str, Enum):
     GPT4_TURBO = "gpt-4-turbo"
     GPT4o = "gpt-4o-2024-11-20"
     GPT4o_MINI = "gpt-4o-mini"
+    o3_MINI = "o3-mini"
 
 
 class OpenaiConfig(BaseLLMConfig):
@@ -35,6 +36,7 @@ class OpenaiConfig(BaseLLMConfig):
     api_base: str = "https://api.openai.com/v1"
     chat_model: str = Field(default=OpenAIChatModel.GPT4o)
     max_tokens: int = 4096
+    
 
     @field_validator("api_key")
     @classmethod

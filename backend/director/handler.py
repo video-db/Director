@@ -9,7 +9,6 @@ from director.agents.upload import UploadAgent
 from director.agents.search import SearchAgent
 from director.agents.prompt_clip import PromptClipAgent
 from director.agents.index import IndexAgent
-from director.agents.brandkit import BrandkitAgent
 from director.agents.censor import CensorAgent
 from director.agents.image_generation import ImageGenerationAgent
 from director.agents.audio_generation import AudioGenerationAgent
@@ -20,7 +19,6 @@ from director.agents.slack_agent import SlackAgent
 from director.agents.editing import EditingAgent
 from director.agents.dubbing import DubbingAgent
 from director.agents.text_to_movie import TextToMovieAgent
-from director.agents.meme_maker import MemeMakerAgent
 from director.agents.composio import ComposioAgent
 from director.agents.transcription import TranscriptionAgent
 from director.agents.comparison import ComparisonAgent
@@ -56,7 +54,6 @@ class ChatHandler:
             FrameAgent,
             DownloadAgent,
             CloneVoiceAgent,
-            BrandkitAgent,
             CensorAgent,
             ImageGenerationAgent,
             AudioGenerationAgent,
@@ -68,7 +65,6 @@ class ChatHandler:
             DubbingAgent,
             TranscriptionAgent,
             TextToMovieAgent,
-            MemeMakerAgent,
             ComposioAgent,
             ComparisonAgent,
             CodeAssistantAgent,
