@@ -10,7 +10,7 @@ from director.core.session import (
     RoleTypes,
 )
 from director.tools.videodb_tool import VideoDBTool
-from director.llm.videodb_proxy import VideoDBProxy
+from director.llm import get_default_llm
 
 from videodb.asset import VideoAsset, AudioAsset, ImageAsset, TextAsset
 
@@ -151,7 +151,7 @@ class EditingAgent(BaseAgent):
         self.editing_response = None
 
         # TODO: benchmark different llm
-        self.llm = VideoDBProxy()
+        self.llm = get_default_llm()
 
         # TODO: find a way to get the tool description from function/tool and not hardcode here
         self.tools = [
