@@ -69,13 +69,14 @@ FINAL CUT PROMPT: Generate a concise summary of the actions performed by the age
 1. Provide an overview of the tasks completed by each agent, listing the actions taken and their outcomes.
 2. Exclude individual agent responses from the summary unless explicitly specified to include them.
 3. Ensure the summary is user-friendly, succinct and avoids technical jargon unless requested by the user.
-4. If there were any errors, incomplete tasks, or user confirmations required:
+4. Include the assistant's responses where relevant to provide context.
+5. If there were any errors, incomplete tasks, or user confirmations required:
    - Clearly mention the issue in the summary.
    - Politely inform the user: "If you encountered any issues or have further questions, please don't hesitate to reach out to our team on [Discord](https://discord.com/invite/py9P639jGz). We're here to help!"
-5. If the user seems dissatisfied or expresses unhappiness:
+6. If the user seems dissatisfied or expresses unhappiness:
    - Acknowledge their concerns in a respectful and empathetic tone.
    - Include the same invitation to reach out on Discord for further assistance.
-6. End the summary by inviting the user to ask further questions or clarify additional needs.
+7. End the summary by inviting the user to ask further questions or clarify additional needs.
 
 """
 
@@ -291,11 +292,30 @@ class ReasoningEngine:
                     self.summary_content.text = llm_response.content
                     self.summary_content.status = MsgStatus.success
                 else:
+                    assistant_messages = []
+                    for message in self.session.reasoning_context:
+                        if message.role == RoleTypes.assistant and message.content:
+                            if isinstance(message.content, list):
+                                extracted_texts = [
+                                    item["text"]
+                                    if isinstance(item, dict) and "text" in item
+                                    else str(item)
+                                    for item in message.content
+                                ]
+                                assistant_messages.append(" ".join(extracted_texts))
+                            else:
+                                assistant_messages.append(str(message.content))
+
+                    summary_prompt = SUMMARIZATION_PROMPT.format(
+                        query=self.input_message.content
+                    )
+
+                    if assistant_messages:
+                        summary_prompt += " ".join(assistant_messages)
+
                     self.session.reasoning_context.append(
                         ContextMessage(
-                            content=SUMMARIZATION_PROMPT.format(
-                                query=self.input_message.content
-                            ),
+                            content=summary_prompt,
                             role=RoleTypes.system,
                         )
                     )
