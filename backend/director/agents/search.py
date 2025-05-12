@@ -111,7 +111,8 @@ class SearchAgent(BaseAgent):
 
             elif index_type == "spoken_word":
                 try:
-                    videodb_tool.get_transcript(video_id)
+                    if video_id:
+                        videodb_tool.get_transcript(video_id)
                 except InvalidRequestError as e:
                     logger.error(f"Transcript not found for video {video_id}. {e}")
                     search_result_content.status = MsgStatus.error
@@ -272,7 +273,7 @@ class SearchAgent(BaseAgent):
             if search_result_content.status != MsgStatus.success:
                 search_result_content.status = MsgStatus.error
                 search_result_content.status_message = "Failed to get search results."
-                
+
             return AgentResponse(
                 status=AgentStatus.ERROR,
                 message=f"{ve}",
