@@ -19,6 +19,8 @@ from videodb import InvalidRequestError
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_INDEX_TYPES = ["spoken_word", "scene"]
+
 SEARCH_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -30,7 +32,7 @@ SEARCH_AGENT_PARAMETERS = {
         },
         "index_type": {
             "type": "string",
-            "enum": ["spoken_word", "scene"],
+            "enum": SUPPORTED_INDEX_TYPES,
             "description": "Type of indexing to perform, spoken_word: based on transcript of the video, scene: based on visual description of the video",
         },
         "result_threshold": {
@@ -100,33 +102,35 @@ class SearchAgent(BaseAgent):
             videodb_tool = VideoDBTool(collection_id=collection_id)
 
             scene_index_id = None
-            if index_type == "scene" and video_id:
-                scene_index_list = videodb_tool.list_scene_index(video_id)
-                if scene_index_list:
-                    scene_index_id = scene_index_list[0].get("scene_index_id")
-                else:
-                    self.output_message.actions.append("Scene index not found")
-                    self.output_message.push_update()
-                    raise ValueError("Scene index not found. Please index scene first.")
 
-            elif index_type == "spoken_word":
-                try:
-                    videodb_tool.get_transcript(video_id)
-                except InvalidRequestError as e:
-                    logger.error(f"Transcript not found for video {video_id}. {e}")
-                    search_result_content.status = MsgStatus.error
-                    search_result_content.status_message = (
-                        "Spoken words index not found for video."
-                    )
-                    self.output_message.push_update()
-                    raise ValueError(
-                        "Transcript not found. Please index spoken word first."
-                    )
-
-            else:
+            if index_type not in SUPPORTED_INDEX_TYPES:
                 raise ValueError(
-                    f"Invalid index type {index_type}, please use supported index type."
+                    f"Invalid index type '{index_type}'. Supported types: {', '.join(SUPPORTED_INDEX_TYPES)}."
                 )
+            
+            if video_id:
+                if index_type == "scene":
+                    scene_index_list = videodb_tool.list_scene_index(video_id)
+                    if scene_index_list:
+                        scene_index_id = scene_index_list[0].get("scene_index_id")
+                    else:
+                        self.output_message.actions.append("Scene index not found")
+                        self.output_message.push_update()
+                        raise ValueError("Scene index not found. Please index scene first.")
+
+                elif index_type == "spoken_word":
+                    try:
+                        videodb_tool.get_transcript(video_id)
+                    except InvalidRequestError as e:
+                        logger.error(f"Transcript not found for video {video_id}. {e}")
+                        search_result_content.status = MsgStatus.error
+                        search_result_content.status_message = (
+                            "Spoken words index not found for video."
+                        )
+                        self.output_message.push_update()
+                        raise ValueError(
+                            "Transcript not found. Please index spoken word first."
+                        )
 
             if search_type == "semantic":
                 search_results = videodb_tool.semantic_search(
@@ -272,7 +276,7 @@ class SearchAgent(BaseAgent):
             if search_result_content.status != MsgStatus.success:
                 search_result_content.status = MsgStatus.error
                 search_result_content.status_message = "Failed to get search results."
-                
+
             return AgentResponse(
                 status=AgentStatus.ERROR,
                 message=f"{ve}",
