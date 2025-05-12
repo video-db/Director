@@ -105,10 +105,10 @@ class SearchAgent(BaseAgent):
                     scene_index_list = videodb_tool.list_scene_index(video_id)
                     if scene_index_list:
                         scene_index_id = scene_index_list[0].get("scene_index_id")
-                else:
-                    self.output_message.actions.append("Scene index not found")
-                    self.output_message.push_update()
-                    raise ValueError("Scene index not found. Please index scene first.")
+                    else:
+                        self.output_message.actions.append("Scene index not found")
+                        self.output_message.push_update()
+                        raise ValueError("Scene index not found. Please index scene first.")
 
             elif index_type == "spoken_word":
                 try:
