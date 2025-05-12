@@ -100,10 +100,11 @@ class SearchAgent(BaseAgent):
             videodb_tool = VideoDBTool(collection_id=collection_id)
 
             scene_index_id = None
-            if index_type == "scene" and video_id:
-                scene_index_list = videodb_tool.list_scene_index(video_id)
-                if scene_index_list:
-                    scene_index_id = scene_index_list[0].get("scene_index_id")
+            if index_type == "scene":
+                if video_id:
+                    scene_index_list = videodb_tool.list_scene_index(video_id)
+                    if scene_index_list:
+                        scene_index_id = scene_index_list[0].get("scene_index_id")
                 else:
                     self.output_message.actions.append("Scene index not found")
                     self.output_message.push_update()
