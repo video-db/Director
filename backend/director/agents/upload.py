@@ -143,7 +143,7 @@ class UploadAgent(BaseAgent):
                 logger.exception(f"Error in uploading {media['title']}: {e}")
         return AgentResponse(
             status=AgentStatus.SUCCESS,
-            message="All the videos in the playlist uploaded successfully as {media_type}",
+            message=f"All the videos in the playlist uploaded successfully as {media_type}",
         )
 
     def run(
