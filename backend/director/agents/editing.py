@@ -1,4 +1,3 @@
-import json
 import logging
 from videodb import TextStyle
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
