@@ -1,4 +1,6 @@
+import json
 import logging
+from videodb import TextStyle
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.llm.base import LLMResponse
 from director.core.session import (
@@ -88,7 +90,7 @@ In your final output, create a JSON object containing two lists: 'inline_assets'
                text : (string) the text to display
           - Optional:
                duration: (number) how long the text stays visible (seconds)
-               style: (object) e.g. { "font_size": 24, "text_color": "white", "alpha": 0.8, "x_coord": 100, "y_coord": 50 }
+               style: (object) e.g. { "fontsize": 24, "fontcolor": "white", "alpha": 0.8, "x": 100, "y": 50 } // "x" and "y" are the position of the text on the screen
         - These parameter as Asset's configuration 
 
 3. Final Editing 
@@ -275,13 +277,19 @@ class EditingAgent(BaseAgent):
                 overlay_at = overlay_asset.get("overlay_at", 0)
                 timeline.add_overlay(overlay_at, audio_asset)
             if overlay_asset.get("asset_type") == "image_asset":
-                audio_asset = ImageAsset(**overlay_asset.get("asset_config", {}))
+                image_asset = ImageAsset(**overlay_asset.get("asset_config", {}))
                 overlay_at = overlay_asset.get("overlay_at", 0)
-                timeline.add_overlay(overlay_at, audio_asset)
+                timeline.add_overlay(overlay_at, image_asset)
             if overlay_asset.get("asset_type") == "text_asset":
-                audio_asset = TextAsset(**overlay_asset.get("asset_config", {}))
+                asset_config = overlay_asset.get("asset_config", {}).copy()
+                if asset_config.get("style"):
+                    style_dict = asset_config.get("style", {}).copy() 
+                    style = TextStyle(**style_dict)
+                    asset_config["style"] = style
+
+                text_asset = TextAsset(**asset_config)
                 overlay_at = overlay_asset.get("overlay_at", 0)
-                timeline.add_overlay(overlay_at, audio_asset)
+                timeline.add_overlay(overlay_at, text_asset)
         stream_url = timeline.generate_stream()
         data = {
             "inline_assets": inline_assets,
