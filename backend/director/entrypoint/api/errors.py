@@ -14,7 +14,7 @@ def handle_http_exception(e):
     # start with the correct headers and status code from the error
 
     if e.code != 404:
-        logger.error(e)
+        logger.exception(e)
 
     response = e.get_response()
     # replace the body with JSON
