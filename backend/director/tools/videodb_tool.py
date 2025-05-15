@@ -53,6 +53,20 @@ class VideoDBTool:
         except Exception as e:
             raise Exception(f"Failed to fetch image with ID {image_id}: {e}")
 
+    def get_images(self):
+        """Get all images in a collection."""
+        images = self.collection.get_images()
+        return [
+            {
+                "id": image.id,
+                "collection_id": image.collection_id,
+                "name": image.name,
+                "url": image.url,
+                "type": "image",
+            }
+            for image in images
+        ]
+
     def create_collection(self, name, description=""):
         """Create a new collection with the given name and description."""
         if not name:
@@ -140,6 +154,7 @@ class VideoDBTool:
                 "stream_url": video.stream_url,
                 "length": video.length,
                 "thumbnail_url": video.thumbnail_url,
+                "type": "video",
             }
             for video in videos
         ]
@@ -161,11 +176,17 @@ class VideoDBTool:
         return [
             {
                 "id": audio.id,
+                "collection_id": audio.collection_id,
                 "name": audio.name,
                 "length": audio.length,
+                "type": "audio",
             }
             for audio in audios
         ]
+
+    def generate_audio_url(self, audio_id):
+        audio = self.collection.get_audio(audio_id)
+        return audio.generate_url()
 
     def generate_image_url(self, image_id):
         image = self.collection.get_image(image_id)
@@ -320,3 +341,58 @@ class VideoDBTool:
         video = self.collection.get_video(video_id)
         stream_url = video.add_subtitle(style)
         return stream_url
+
+    def delete_audio(self, audio_id):
+        """Delete a specific audio by its ID."""
+        if not audio_id:
+            raise ValueError("Audio ID is required to delete a audio.")
+        try:
+            audio = self.collection.get_audio(audio_id)
+            if not audio:
+                raise ValueError(
+                    f"Audio with ID {audio_id} not found in collection {self.collection.id}."
+                )
+
+            audio.delete()
+            return {
+                "success": True,
+                "message": f"Video {audio.id} deleted successfully",
+            }
+        except ValueError as ve:
+            logging.error(f"ValueError while deleting video: {ve}")
+            raise ve
+        except Exception as e:
+            logging.exception(
+                f"Unexpected error occurred while deleting video {audio_id}"
+            )
+            raise Exception(
+                "An unexpected error occurred while deleting the video. Please try again later."
+            )
+
+    def delete_image(self, image_id):
+        """Delete a specific image by its ID."""
+        if not image_id:
+            raise ValueError("Image ID is required to delete a image.")
+        try:
+            image = self.collection.get_image(image_id)
+            if not image:
+                raise ValueError(
+                    f"Image with ID {image_id} not found in collection {self.collection.id}."
+                )
+
+            image.delete()
+            return {
+                "success": True,
+                "message": f"Image {image_id} deleted successfully",
+            }
+        except ValueError as ve:
+            logging.error(f"ValueError while deleting video: {ve}")
+            raise ve
+        except Exception as e:
+            logging.exception(
+                f"Unexpected error occurred while deleting video {image_id}"
+            )
+            raise Exception(
+                "An unexpected error occurred while deleting the video. Please try again later."
+            )
+

@@ -148,7 +148,7 @@ class VideoDBHandler:
     def upload(self, source, source_type="url", media_type="video", name=None):
         return self.videodb_tool.upload(source, source_type, media_type, name)
 
-    def get_collection(self):
+    def get_collection(self, collection_id):
         """Get a collection by ID."""
         return self.videodb_tool.get_collection()
 
@@ -170,9 +170,39 @@ class VideoDBHandler:
         """Delete a specific video by its ID."""
         return self.videodb_tool.delete_video(video_id)
 
+    def delete_image(self, image_id):
+        """Delete a specific image by its ID."""
+        return self.videodb_tool.delete_image(image_id)
+
+    def delete_audio(self, video_id):
+        """Delete a specific audio by its ID."""
+        return self.videodb_tool.delete_audio(video_id)
+
     def get_videos(self):
         """Get all videos in a collection."""
         return self.videodb_tool.get_videos()
+
+    def get_audio(self, audio_id):
+        """Get a audio by ID."""
+        return self.videodb_tool.get_audio(audio_id)
+
+    def get_audios(self):
+        """Get all audios in a collection."""
+        return self.videodb_tool.get_audios()
+
+    def generate_audio_url(self, audio_id):
+        return self.videodb_tool.generate_audio_url(audio_id=audio_id)
+
+    def delete_audio(self, audio_id):
+        return self.videodb_tool.delete_audio(audio_id)
+
+    def get_image(self, image_id):
+        """Get a image by ID."""
+        return self.videodb_tool.get_image(image_id)
+
+    def get_images(self):
+        """Get all images in a collection."""
+        return self.videodb_tool.get_images()
 
     def generate_image_url(self, image_id):
         return self.videodb_tool.generate_image_url(image_id=image_id)

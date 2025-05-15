@@ -125,6 +125,32 @@ def get_video_or_all(collection_id, video_id):
         return videodb.get_video(video_id)
     else:
         return videodb.get_videos()
+    
+@videodb_bp.route(
+    "/collection/<collection_id>/audio", defaults={"audio_id": None}, methods=["GET"]
+)
+@videodb_bp.route("/collection/<collection_id>/audio/<audio_id>", methods=["GET"])
+def get_audio_or_all(collection_id, audio_id, **kwargs):
+    """Get a video by ID or all videos in a collection."""
+    videodb = VideoDBHandler(collection_id)
+    if audio_id:
+        return videodb.get_audio(audio_id)
+    else:
+        return videodb.get_audios()
+
+
+@videodb_bp.route(
+    "/collection/<collection_id>/image", defaults={"image_id": None}, methods=["GET"]
+)
+@videodb_bp.route("/collection/<collection_id>/image/<image_id>", methods=["GET"])
+def get_image_or_all(collection_id, image_id, **kwargs):
+    """Get a video by ID or all videos in a collection."""
+    videodb = VideoDBHandler(collection_id)
+    if image_id:
+        return videodb.get_image(image_id)
+    else:
+        return videodb.get_images()
+
 
 
 @videodb_bp.route("/collection/<collection_id>/video/<video_id>", methods=["DELETE"])
@@ -135,6 +161,32 @@ def delete_video(collection_id, video_id):
             return {"message": "Video ID is required"}, 400
         videodb = VideoDBHandler(collection_id)
         result = videodb.delete_video(video_id)
+        return result, 200
+    except Exception as e:
+        return {"message": str(e)}, 500
+
+
+@videodb_bp.route("/collection/<collection_id>/audio/<audio_id>", methods=["DELETE"])
+def delete_audio(collection_id, audio_id):
+    """Delete a audio by ID from a specific collection."""
+    try:
+        if not audio_id:
+            return {"message": "Video ID is required"}, 400
+        videodb = VideoDBHandler(collection_id)
+        result = videodb.delete_audio(audio_id)
+        return result, 200
+    except Exception as e:
+        return {"message": str(e)}, 500
+
+
+@videodb_bp.route("/collection/<collection_id>/image/<image_id>", methods=["DELETE"])
+def delete_image(collection_id, image_id):
+    """Delete a image by ID from a specific collection."""
+    try:
+        if not image_id:
+            return {"message": "Video ID is required"}, 400
+        videodb = VideoDBHandler(collection_id)
+        result = videodb.delete_image(image_id)
         return result, 200
     except Exception as e:
         return {"message": str(e)}, 500
@@ -157,6 +209,22 @@ def generate_image_url(collection_id, image_id):
     except Exception as e:
         return {"message": str(e)}, 500
 
+@videodb_bp.route(
+    "/collection/<collection_id>/audio/<audio_id>/generate_url", methods=["GET"]
+)
+def generate_audio_url(collection_id, audio_id):
+    try:
+        if not collection_id:
+            return {"message": "Collection ID is required"}, 400
+
+        if not audio_id:
+            return {"message": "Audio ID is required"}, 400
+
+        videodb = VideoDBHandler(collection_id)
+        result = videodb.generate_audio_url(audio_id)
+        return result, 200
+    except Exception as e:
+        return {"message": str(e)}, 500
 
 @videodb_bp.route("/collection/<collection_id>/upload", methods=["POST"])
 def upload_video(collection_id):
