@@ -32,8 +32,6 @@ class PostgresDB(BaseDB):
         )
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
 
-        logger.info("Connected to PostgreSQL DB..........")
-
     def create_session(
         self,
         session_id: str,
