@@ -286,6 +286,8 @@ class EditingAgent(BaseAgent):
                     style = TextStyle(**style_dict)
                     asset_config["style"] = style
 
+                if not asset_config.get("duration"):
+                    asset_config["duration"] = 5
                 text_asset = TextAsset(**asset_config)
                 overlay_at = overlay_asset.get("overlay_at", 0)
                 timeline.add_overlay(overlay_at, text_asset)
