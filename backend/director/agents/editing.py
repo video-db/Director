@@ -89,7 +89,7 @@ In your final output, create a JSON object containing two lists: 'inline_assets'
                text : (string) the text to display
           - Optional:
                duration: (number) how long the text stays visible (seconds)
-               style: (object) e.g. { "fontsize": 24, "fontcolor": "white", "alpha": 0.8, "x": 100, "y": 50 } // "x" and "y" are the position of the text on the screen
+               style: (object) e.g. { "fontsize": 18, "fontcolor": "white", "alpha": 0.7, "boxcolor": "black", "x": 50, "y": 50 } // "x" and "y" are the position of the text on the screen
         - These parameter as Asset's configuration 
 
 3. Final Editing 
