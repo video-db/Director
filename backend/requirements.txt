@@ -15,5 +15,5 @@ pydantic-settings==2.4.0
 python-dotenv==1.0.1
 replicate==1.0.1
 yt-dlp==2024.10.7
-videodb==0.2.10
+videodb==0.2.13
 slack_sdk==3.33.2

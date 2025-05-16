@@ -10,7 +10,7 @@ from director.tools.elevenlabs import ElevenLabsTool
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["elevenlabs"]
+SUPPORTED_ENGINES = ["elevenlabs", "videodb"]
 DUBBING_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -32,8 +32,9 @@ DUBBING_AGENT_PARAMETERS = {
         },
         "engine": {
             "type": "string",
-            "description": "The dubbing engine to use. Default is 'elevenlabs'. Possible values include 'elevenlabs'.",
+            "description": "The dubbing engine to use. Default is 'videodb'. Possible values include 'videodb' and 'elevenlabs'.",
             "default": "elevenlabs",
+            "enum": SUPPORTED_ENGINES,
         },
     },
     "required": [
@@ -94,15 +95,16 @@ class DubbingAgent(BaseAgent):
                 status_message="Processing...",
             )
             self.output_message.content.append(video_content)
-            self.output_message.actions.append("Downloading video")
             self.output_message.push_update()
 
-            download_response = self.videodb_tool.download(video["stream_url"])
-
-            os.makedirs(DOWNLOADS_PATH, exist_ok=True)
-            dubbed_file_path = f"{DOWNLOADS_PATH}/{video_id}_dubbed.mp4"
-
             if engine == "elevenlabs":
+                self.output_message.actions.append("Downloading video")
+                self.output_message.push_update()
+
+                download_response = self.videodb_tool.download(video["stream_url"])
+
+                os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+                dubbed_file_path = f"{DOWNLOADS_PATH}/{video_id}_dubbed.mp4"
                 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
                 if not ELEVENLABS_API_KEY:
                     raise Exception("Elevenlabs API key not present in .env")
@@ -135,12 +137,22 @@ class DubbingAgent(BaseAgent):
                 )
                 self.output_message.push_update()
 
-            dubbed_video = self.videodb_tool.upload(
-                dubbed_file_path,
-                source_type="file_path",
-                media_type="video",
-                name=f"[Dubbed in {target_language}] {video['name']}",
-            )
+                dubbed_video = self.videodb_tool.upload(
+                    dubbed_file_path,
+                    source_type="file_path",
+                    media_type="video",
+                    name=f"[Dubbed in {target_language}] {video['name']}",
+                )
+            else:
+                self.output_message.actions.append("Dubbing job initiated")
+                self.output_message.actions.append(
+                    "Waiting for the dubbing process. It may take a few minutes to complete.."
+                )
+                self.output_message.push_update()
+
+                dubbed_video = self.videodb_tool.dub_video(
+                    video_id=video_id, language_code=target_language_code
+                )
 
             video_content.video = VideoData(stream_url=dubbed_video["stream_url"])
             video_content.status = MsgStatus.success
