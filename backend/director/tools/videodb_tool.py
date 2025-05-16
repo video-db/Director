@@ -320,3 +320,85 @@ class VideoDBTool:
         video = self.collection.get_video(video_id)
         stream_url = video.add_subtitle(style)
         return stream_url
+
+    def translate_transcript(self, video_id, language, additional_notes=None):
+        video = self.collection.get_video(video_id)
+        return video.translate_transcript(
+            language=language,
+            additional_notes=additional_notes,
+        )
+
+    def youtube_search(self, query, count=5, duration=None):
+        return self.conn.youtube_search(
+            query=query,
+            result_threshold=count,
+            duration=duration,
+        )
+
+    def dub_video(self, video_id, language_code):
+        dubed_video = self.collection.dub_video(
+            video_id=video_id, language_code=language_code
+        )
+        return {
+            "id": dubed_video.id,
+            "name": dubed_video.name,
+            "description": dubed_video.description,
+            "collection_id": dubed_video.collection_id,
+            "stream_url": dubed_video.stream_url,
+            "length": dubed_video.length,
+            "thumbnail_url": dubed_video.thumbnail_url,
+        }
+
+    def generate_image(self, prompt, aspect_ratio="16:9"):
+        image = self.collection.generate_image(prompt=prompt, aspect_ratio=aspect_ratio)
+        return {
+            "id": image.id,
+            "name": image.name,
+            "collection_id": image.collection_id,
+            "url": image.generate_url(),
+        }
+
+    def generate_music(self, prompt, duration):
+        music = self.collection.generate_music(prompt=prompt, duration=duration)
+        return {
+            "id": music.id,
+            "name": music.name,
+            "collection_id": music.collection_id,
+            "url": music.generate_url(),
+        }
+
+    def generate_sound_effect(self, prompt, duration, config):
+        sound_effect = self.collection.generate_sound_effect(
+            prompt=prompt,
+            duration=duration,
+            config=config,
+        )
+        return {
+            "id": sound_effect.id,
+            "name": sound_effect.name,
+            "collection_id": sound_effect.collection_id,
+            "url": sound_effect.generate_url(),
+        }
+
+    def generate_voice(self, text, voice_name, config):
+        voice = self.collection.generate_voice(
+            text=text,
+            voice_name=voice_name,
+            config=config,
+        )
+        return {
+            "id": voice.id,
+            "name": voice.name,
+            "collection_id": voice.collection_id,
+            "url": voice.generate_url(),
+        }
+
+    def generate_video(self, prompt, duration):
+        video = self.collection.generate_video(prompt=prompt, duration=duration)
+        return {
+            "id": video.id,
+            "name": video.name,
+            "collection_id": video.collection_id,
+            "stream_url": video.generate_stream(),
+            "length": video.length,
+        }

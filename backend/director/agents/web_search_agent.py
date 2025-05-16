@@ -6,6 +6,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+from director.tools.videodb_tool import VideoDBTool
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import (
     Session,
@@ -19,14 +20,16 @@ from urllib.parse import urlparse, parse_qs
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+
+SUPPORTED_ENGINES = ["serp", "videodb"]
 SEARCH_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
         "engine": {
             "type": "string",
-            "description": "Engine to use for the search. Currently supports 'serp'.",
-            "enum": ["serp"],
-            "default": "serp",
+            "description": "Engine to use for the search. Currently supports 'videodb' and 'serp'.",
+            "enum": SUPPORTED_ENGINES,
+            "default": "videodb",
         },
         "job_type": {
             "type": "string",
@@ -75,8 +78,14 @@ SEARCH_AGENT_PARAMETERS = {
     "required": ["job_type", "engine"],
 }
 
-SUPPORTED_ENGINES = ["serp"]
-
+class VideoDBSearchTool:
+    def __init__(self):
+        self.videodb_tool = VideoDBTool()
+    def search_videos(
+        self, query: str, count: int = 5, duration="medium"
+    ) -> list:
+        return self.videodb_tool.youtube_search(query=query, count=count, duration=duration)
+        
 
 class WebSearchAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
@@ -108,18 +117,15 @@ class WebSearchAgent(BaseAgent):
             )
 
         self.api_key = os.getenv("SERP_API_KEY")
-        if not self.api_key:
-            return AgentResponse(
-                status=AgentStatus.ERROR,
-                message="SERP_API_KEY environment variable is not set.",
+        if self.api_key and engine == "serp":
+            serp_config = search_videos.get("serp_config", {})
+            search_engine_tool = SerpAPI(
+                api_key=self.api_key,
+                base_url=serp_config.get("base_url"),
+                timeout=serp_config.get("timeout", 10),
             )
-
-        serp_config = search_videos.get("serp_config", {})
-        search_engine_tool = SerpAPI(
-            api_key=self.api_key,
-            base_url=serp_config.get("base_url"),
-            timeout=serp_config.get("timeout", 10),
-        )
+        else:
+            search_engine_tool = VideoDBSearchTool()
 
         if job_type == "search_videos":
             if not isinstance(search_videos, dict):
