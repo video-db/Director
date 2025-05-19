@@ -1,6 +1,4 @@
 import os
-import uuid
-from elevenlabs import save
 import requests
 import videodb
 import logging
@@ -508,7 +506,6 @@ class VDBVideoGenerationTool:
         video = self.collection.generate_video(prompt=prompt, duration=duration)
         download_response = self.videodb_tool.download(video.stream_url)
         download_url = download_response.get("download_url")
-
 
         self._download_video_file(download_url, save_at)
         if not os.path.exists(save_at):

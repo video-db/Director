@@ -1,19 +1,15 @@
 import logging
 import os
-from re import I
 import uuid
 import base64
 from typing import Optional
-
-import requests
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, TextContent, MsgStatus
 from director.tools.videodb_tool import VDBAudioGenerationTool, VideoDBTool
 from director.tools.elevenlabs import (
     ElevenLabsTool,
-    PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
-    VOICE_ID_MAP
+    PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG
 )
 from director.tools.beatoven import BeatovenTool
 
