@@ -17,7 +17,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["elevenlabs", "beatoven"]
+SUPPORTED_ENGINES = ["elevenlabs", "beatoven", "videodb"]
 
 AUDIO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
@@ -33,7 +33,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                 - elevenlabs: supports text_to_speech and sound_effect
                 - beatoven: supports create_music""",
             "default": "videodb",
-            "enum": ["elevenlabs", "beatoven", "videodb"],
+            "enum": SUPPORTED_ENGINES,
         },
         "job_type": {
             "type": "string",
@@ -189,8 +189,8 @@ class AudioGenerationAgent(BaseAgent):
                     config={},
                 )
             elif job_type == "text_to_speech":
-                if engine != "elevenlabs":
-                    raise Exception("Text to speech only supported with elevenlabs")
+                if engine != "elevenlabs" and engine != "videodb":
+                    raise Exception("Text to speech only supported with elevenlabs and videodb")
                 text = text_to_speech.get("text")
                 config = text_to_speech.get(config_key, {})
                 msg = f"Using <b>{engine}</b> to convert text"

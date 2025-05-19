@@ -27,7 +27,7 @@ SEARCH_AGENT_PARAMETERS = {
     "properties": {
         "engine": {
             "type": "string",
-            "description": "Engine to use for the search. Currently supports 'videodb' and 'serp'.",
+            "description": "Engine to use for the search. Currently supports 'videodb' and 'serp'. Default is 'videodb'",
             "enum": SUPPORTED_ENGINES,
             "default": "videodb",
         },

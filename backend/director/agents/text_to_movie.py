@@ -146,6 +146,12 @@ class TextToMovieAgent(BaseAgent):
                 preferred_style="photorealistic",
                 prompt_format="concise",
             ),
+            "videodb": EngineConfig(
+                name="kling",
+                max_duration=6,
+                preferred_style="cinematic",
+                prompt_format="detailed",
+            ),
         }
         super().__init__(session=session, **kwargs)
 
@@ -197,6 +203,7 @@ class TextToMovieAgent(BaseAgent):
                 self.video_gen_config_key = "video_kling_config"
 
             elif engine == "videodb":
+                self.video_gen_config_key = "video_kling_config"
                 self.video_gen_tool = VDBVideoGenerationTool()
             else:
                 raise Exception(f"{engine} not supported")

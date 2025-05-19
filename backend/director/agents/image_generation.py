@@ -55,7 +55,7 @@ IMAGE_GENERATION_AGENT_PARAMETERS = {
             "properties": {
                 "engine": {
                     "type": "string",
-                    "description": "The engine to use for image generation. Possible values: 'videodb' and 'flux'.",
+                    "description": "The engine to use for image generation. Possible values: 'videodb' and 'flux'. Must be present if job_type is 'text_to_image'.",
                     "default": "videodb",
                     "enum": ["videodb", "flux"],
                 },
@@ -63,28 +63,8 @@ IMAGE_GENERATION_AGENT_PARAMETERS = {
         },
     },
     "required": ["collection_id", "job_type", "prompt"],
-    "allOf": [
-        {
-            "if": {
-                "properties": {
-                    "job_type": {"const": "image_to_image"}
-                }
-            },
-            "then": {
-                "required": ["image_to_image"]
-            }
-        },
-        {
-            "if": {
-                "properties": {
-                    "job_type": {"const": "text_to_image"}
-                }
-            },
-            "then": {
-                "required": ["text_to_image"]
-            }
-        }
-    ]
+    "if": {"properties": {"job_type": {"const": "image_to_image"}}},
+    "then": {"required": ["image_to_image"]},
 }
 
 class ImageGenerationAgent(BaseAgent):
@@ -126,7 +106,7 @@ class ImageGenerationAgent(BaseAgent):
 
             output_image_url = ""
             if job_type == "text_to_image":
-                engine = text_to_image.get("engine", "videodb")
+                engine = text_to_image.get("engine", "videodb") if text_to_image else "videodb"
                 if engine == "flux":
                     flux_output = flux_dev(prompt)
                     if not flux_output:
