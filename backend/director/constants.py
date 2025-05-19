@@ -31,3 +31,5 @@ class EnvPrefix(str, Enum):
     GOOGLEAI_ = "GOOGLEAI_"
 
 DOWNLOADS_PATH="director/downloads"
+
+MCP_SERVER_CONFIG_PATH="mcp_servers.json"
