@@ -1,4 +1,6 @@
 import os
+import uuid
+from elevenlabs import save
 import requests
 import videodb
 import logging
@@ -6,7 +8,8 @@ import logging
 from videodb import SearchType, SubtitleStyle, IndexType, SceneExtractionType
 from videodb.timeline import Timeline
 from videodb.asset import VideoAsset, ImageAsset
-
+from director.tools.elevenlabs import VOICE_ID_MAP
+from director.constants import DOWNLOADS_PATH
 
 class VideoDBTool:
     def __init__(self, collection_id="default"):
@@ -476,4 +479,76 @@ class VideoDBTool:
             raise Exception(
                 "An unexpected error occurred while deleting the video. Please try again later."
             )
+
+class VDBVideoGenerationTool:
+    def __init__(self, collection_id="default"):
+        self.videodb_tool = VideoDBTool(collection_id=collection_id)
+        self.collection = self.videodb_tool.conn.get_collection(collection_id)
+    
+    def _download_video_file(self, video_url: str, save_at: str) -> bool:
+        os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+
+        try:
+            response = requests.get(video_url, stream=True)
+            response.raise_for_status()
+
+            if not response.headers.get('Content-Type', '').startswith('video'):
+                raise ValueError(f"The URL does not point to a video file: {video_url}")
+
+            with open(save_at, 'wb') as file:
+                file.write(response.content)
+
+            return True
+
+        except Exception as e:
+            print(f"Failed to download {video_url}: {e}")
+            return False
+
+    def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
+        video = self.collection.generate_video(prompt=prompt, duration=duration)
+        download_response = self.videodb_tool.download(video.stream_url)
+        download_url = download_response.get("download_url")
+
+
+        self._download_video_file(download_url, save_at)
+        if not os.path.exists(save_at):
+            raise Exception(f"Failed to save video at {save_at}")
+        
+class VDBAudioGenerationTool:
+    def __init__(self, collection_id="default"):
+        self.videodb_tool = VideoDBTool(collection_id=collection_id)
+        self.collection = self.videodb_tool.conn.get_collection(collection_id)
+
+
+    def _download_audio_file(self, audio_url: str, save_at: str) -> bool:
+        os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+
+        try:
+            response = requests.get(audio_url, stream=True)
+            response.raise_for_status()
+
+            with open(save_at, 'wb') as file:
+                file.write(response.content)
+
+            return True
+
+        except Exception as e:
+            print(f"Failed to download {audio_url}: {e}")
+            return False
+
+    def generate_sound_effect(
+        self, prompt: str, save_at: str, duration: float, config: dict
+    ):        
+        audio = self.collection.generate_sound_effect(prompt=prompt, duration=duration, config=config)
+        download_url = audio.generate_url()
+        self._download_audio_file(download_url, save_at)
+        if not os.path.exists(save_at):
+            raise Exception(f"Failed to save audio at {save_at}")
+        
+    def text_to_speech(self, text: str, save_at: str, config: dict):
+        audio = self.collection.generate_voice(text=text, voice_name=VOICE_ID_MAP.get(config.get("voice_id")), config=config)
+        download_url = audio.generate_url()
+        self._download_audio_file(download_url, save_at)
+        if not os.path.exists(save_at):
+            raise Exception(f"Failed to save audio at {save_at}")
 

@@ -25,14 +25,14 @@ from director.tools.elevenlabs import (
     ElevenLabsTool,
     PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
 )
-from director.tools.videodb_tool import VideoDBTool
+from director.tools.videodb_tool import VDBAudioGenerationTool, VDBVideoGenerationTool, VideoDBTool
 from director.constants import DOWNLOADS_PATH
 
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling"]
-
+SUPPORTED_ENGINES = ["stabilityai", "kling", "videodb"]
+SUPPORTED_AUDIO_ENGINES = ["elevenlabs", "videodb"]
 TEXT_TO_MOVIE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -44,7 +44,13 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
             "type": "string",
             "description": "The video generation engine to use",
             "enum": SUPPORTED_ENGINES,
-            "default": "stabilityai",
+            "default": "videodb",
+        },
+        "audio_engine": {
+            "type": "string",
+            "description": "The audio generation engine to use",
+            "enum": SUPPORTED_AUDIO_ENGINES,
+            "default": "videodb",
         },
         "job_type": {
             "type": "string",
@@ -147,6 +153,7 @@ class TextToMovieAgent(BaseAgent):
         self,
         collection_id: str,
         engine: str = "stabilityai",
+        audio_engine: str = "videodb",
         job_type: str = "text_to_movie",
         text_to_movie: Optional[dict] = None,
         *args,
@@ -188,17 +195,24 @@ class TextToMovieAgent(BaseAgent):
                     access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
                 )
                 self.video_gen_config_key = "video_kling_config"
+
+            elif engine == "videodb":
+                self.video_gen_tool = VDBVideoGenerationTool()
             else:
                 raise Exception(f"{engine} not supported")
 
             # Initialize tools
-            ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-            if not ELEVENLABS_API_KEY:
-                raise Exception("ElevenLabs API key not found")
-            self.audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.audio_gen_config_key = "audio_elevenlabs_config"
 
-            # Initialize steps
+            if audio_engine == "elevenlabs":
+                ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+                if not ELEVENLABS_API_KEY:
+                    raise Exception("ElevenLabs API key not found")
+                self.audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
+
+            else:
+                self.audio_gen_tool = VDBAudioGenerationTool()    
+
             if job_type == "text_to_movie":
                 raw_storyline = text_to_movie.get("storyline", [])
                 video_gen_config = text_to_movie.get(self.video_gen_config_key, {})
