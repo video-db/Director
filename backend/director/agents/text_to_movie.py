@@ -262,7 +262,7 @@ class TextToMovieAgent(BaseAgent):
                     video_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
                     os.makedirs(DOWNLOADS_PATH, exist_ok=True)
 
-                    self.video_gen_tool.text_to_video(
+                    video = self.video_gen_tool.text_to_video(
                         prompt=prompt,
                         save_at=video_path,
                         duration=suggested_duration,
@@ -270,7 +270,7 @@ class TextToMovieAgent(BaseAgent):
                     )
                     generated_videos_results.append(
                         VideoGenResult(
-                            step_index=index, video_path=video_path, success=True
+                            step_index=index, video_path=video_path, success=True, video=video
                         )
                     )
 
@@ -282,7 +282,7 @@ class TextToMovieAgent(BaseAgent):
                 # Process videos and track duration
                 total_duration = 0
                 for result in generated_videos_results:
-                    if result.success:
+                    if result.success and result.video is None:
                         self.output_message.actions.append(
                             f"Uploading video {result.step_index + 1}..."
                         )
@@ -313,21 +313,22 @@ class TextToMovieAgent(BaseAgent):
                 os.makedirs(DOWNLOADS_PATH, exist_ok=True)
                 sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
 
-                self.audio_gen_tool.generate_sound_effect(
+                sound_effects_media = self.audio_gen_tool.generate_sound_effect(
                     prompt=sound_effects_description,
                     save_at=sound_effects_path,
                     duration=total_duration,
                     config=audio_gen_config,
                 )
 
-                self.output_message.actions.append(
-                    "Uploading background music to VideoDB..."
-                )
-                self.output_message.push_update()
+                if sound_effects_media is None:
+                    self.output_message.actions.append(
+                        "Uploading background music to VideoDB..."
+                    )
+                    self.output_message.push_update()
 
-                sound_effects_media = self.videodb_tool.upload(
-                    sound_effects_path, source_type="file_path", media_type="audio"
-                )
+                    sound_effects_media = self.videodb_tool.upload(
+                        sound_effects_path, source_type="file_path", media_type="audio"
+                    )
 
                 if os.path.exists(sound_effects_path):
                     os.remove(sound_effects_path)

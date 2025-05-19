@@ -128,6 +128,7 @@ class AudioGenerationAgent(BaseAgent):
         :return: Response containing the generated audio URL
         """
         try:
+            media = None
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
             if engine not in SUPPORTED_ENGINES:
@@ -164,7 +165,7 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                audio_gen_tool.generate_sound_effect(
+                media = audio_gen_tool.generate_sound_effect(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
@@ -182,7 +183,7 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                audio_gen_tool.generate_sound_effect(
+                media = audio_gen_tool.generate_sound_effect(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
@@ -198,7 +199,7 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} <i>{text}</i> to speech"
                 )
                 self.output_message.push_update()
-                audio_gen_tool.text_to_speech(
+                media = audio_gen_tool.text_to_speech(
                     text=text,
                     save_at=output_path,
                     config=config,
@@ -209,13 +210,16 @@ class AudioGenerationAgent(BaseAgent):
             )
             self.output_message.push_update()
 
-            # Upload to VideoDB
-            media = self.videodb_tool.upload(
-                output_path,
-                source_type="file_path",
-                media_type="audio"
-            )
-            msg = "Uploaded generated audio to VideoDB"
+            if media is None:
+                # Upload to VideoDB
+                media = self.videodb_tool.upload(
+                    output_path,
+                    source_type="file_path",
+                    media_type="audio"
+                )
+                msg = "Uploaded generated audio to VideoDB"
+            else:
+                msg = "Generated audio stored in collection"
             self.output_message.actions.append(
                 f"{msg} with Audio ID {media['id']}"
             )

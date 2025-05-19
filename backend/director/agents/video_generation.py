@@ -135,6 +135,7 @@ class VideoGenerationAgent(BaseAgent):
         :return: Response containing the generated video ID
         """
         try:
+            media = None
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
             stealth_mode = kwargs.get("stealth_mode", False)
 
@@ -187,12 +188,15 @@ class VideoGenerationAgent(BaseAgent):
                     f"Generating video using <b>{engine}</b> for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                video_gen_tool.text_to_video(
+                response = video_gen_tool.text_to_video(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
                     config=config,
                 )
+
+                if response:
+                    media = response
             elif job_type == "image_to_video":
                 image_id = image_to_video.get("image_id")
                 video_name = image_to_video.get("name")
@@ -255,16 +259,21 @@ class VideoGenerationAgent(BaseAgent):
             )
             self.output_message.push_update()
 
-            # Upload to VideoDB
-            media = self.videodb_tool.upload(
-                output_path,
-                source_type="file_path",
-                media_type="video",
-                name=video_name,
-            )
-            self.output_message.actions.append(
-                f"Uploaded generated video to VideoDB with Video ID {media['id']}"
-            )
+            if media is None:
+                # Upload to VideoDB
+                media = self.videodb_tool.upload(
+                    output_path,
+                    source_type="file_path",
+                    media_type="video",
+                    name=video_name,
+                )
+                self.output_message.actions.append(
+                    f"Uploaded generated video to VideoDB with Video ID {media['id']}"
+                )
+            else:
+                self.output_message.actions.append(
+                    f"Video already uploaded to VideoDB {media['id']}"
+                )
             stream_url = media["stream_url"]
             id = media["id"]
             collection_id = media["collection_id"]
