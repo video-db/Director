@@ -30,7 +30,7 @@ DEFAULT_VOICES = """
 
 VOICE_ID_MAP = {
     "9BWtsMINqrJLrRacOk9x": "Aria",
-    "2CwhRBWXzGAHq8TQ4Fs17": "Roger",
+    "CwhRBWXzGAHq8TQ4Fs17": "Roger",
     "EXAVITQu4vr4xnSDxMaL": "Sarah",
     "FGY2WhTYpPnrIDTdsKH5": "Laura",
     "IKne3meq5aSn9XLyUdCD": "Charlie",

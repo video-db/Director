@@ -486,21 +486,15 @@ class VDBVideoGenerationTool:
     def _download_video_file(self, video_url: str, save_at: str) -> bool:
         os.makedirs(DOWNLOADS_PATH, exist_ok=True)
 
-        try:
-            response = requests.get(video_url, stream=True)
-            response.raise_for_status()
+        response = requests.get(video_url, stream=True)
+        response.raise_for_status()
 
-            if not response.headers.get('Content-Type', '').startswith('video'):
-                raise ValueError(f"The URL does not point to a video file: {video_url}")
+        if not response.headers.get('Content-Type', '').startswith('video'):
+            raise ValueError(f"The URL does not point to a video file: {video_url}")
 
-            with open(save_at, 'wb') as file:
-                file.write(response.content)
+        with open(save_at, 'wb') as file:
+            file.write(response.content)
 
-            return True
-
-        except Exception as e:
-            print(f"Failed to download {video_url}: {e}")
-            return False
 
     def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict):
         video = self.collection.generate_video(prompt=prompt, duration=duration)
@@ -519,19 +513,12 @@ class VDBAudioGenerationTool:
 
     def _download_audio_file(self, audio_url: str, save_at: str) -> bool:
         os.makedirs(DOWNLOADS_PATH, exist_ok=True)
+        response = requests.get(audio_url, stream=True)
+        response.raise_for_status()
 
-        try:
-            response = requests.get(audio_url, stream=True)
-            response.raise_for_status()
+        with open(save_at, 'wb') as file:
+            file.write(response.content)
 
-            with open(save_at, 'wb') as file:
-                file.write(response.content)
-
-            return True
-
-        except Exception as e:
-            print(f"Failed to download {audio_url}: {e}")
-            return False
 
     def generate_sound_effect(
         self, prompt: str, save_at: str, duration: float, config: dict

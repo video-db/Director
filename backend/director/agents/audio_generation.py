@@ -29,7 +29,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
         "engine": {
             "type": "string",
             "description": """The engine to use for audio generation. Default is 'videodb'.`:
-                - videodb: supports text_to_speech, sound_effect and create_music`
+                - videodb: supports text_to_speech, sound_effect
                 - elevenlabs: supports text_to_speech and sound_effect
                 - beatoven: supports create_music""",
             "default": "videodb",
@@ -182,7 +182,6 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-
                 audio_gen_tool.generate_sound_effect(
                     prompt=prompt,
                     save_at=output_path,
@@ -199,7 +198,6 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} <i>{text}</i> to speech"
                 )
                 self.output_message.push_update()
-                
                 audio_gen_tool.text_to_speech(
                     text=text,
                     save_at=output_path,

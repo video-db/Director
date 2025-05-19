@@ -33,7 +33,7 @@ DUBBING_AGENT_PARAMETERS = {
         "engine": {
             "type": "string",
             "description": "The dubbing engine to use. Default is 'videodb'. Possible values include 'videodb' and 'elevenlabs'.",
-            "default": "elevenlabs",
+            "default": "videodb",
             "enum": SUPPORTED_ENGINES,
         },
     },
