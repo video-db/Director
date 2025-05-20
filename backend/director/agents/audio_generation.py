@@ -153,8 +153,8 @@ class AudioGenerationAgent(BaseAgent):
             output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
 
             if job_type == "sound_effect":
-                if engine != "elevenlabs":
-                    raise Exception("Sound effects only supported with elevenlabs")
+                if engine == "beatoven":
+                    raise Exception("Sound effects only supported with elevenlabs or videodb")
                 prompt = sound_effect.get("prompt")
                 duration = sound_effect.get("duration", 5)
                 config = sound_effect.get(config_key, {})
@@ -253,6 +253,9 @@ class AudioGenerationAgent(BaseAgent):
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
+        finally:
+            if output_path and os.path.exists(output_path):
+                os.remove(output_path)
         msg = "Audio generated successfully"
         return AgentResponse(
             status=AgentStatus.SUCCESS,

@@ -143,6 +143,8 @@ class DubbingAgent(BaseAgent):
                     media_type="video",
                     name=f"[Dubbed in {target_language}] {video['name']}",
                 )
+                if os.path.exists(dubbed_file_path):
+                    os.remove(dubbed_file_path)
             else:
                 self.output_message.actions.append("Dubbing job initiated")
                 self.output_message.actions.append(

@@ -223,7 +223,11 @@ class TextToMovieAgent(BaseAgent):
             if job_type == "text_to_movie":
                 raw_storyline = text_to_movie.get("storyline", [])
                 video_gen_config = text_to_movie.get(self.video_gen_config_key, {})
-                audio_gen_config = text_to_movie.get(self.audio_gen_config_key, {})
+
+                if engine == "videodb":
+                    audio_gen_config = {}
+                else:
+                    audio_gen_config = text_to_movie.get(self.audio_gen_config_key, {})
 
                 # Generate visual style
                 visual_style = self.generate_visual_style(raw_storyline)
@@ -282,7 +286,11 @@ class TextToMovieAgent(BaseAgent):
                 # Process videos and track duration
                 total_duration = 0
                 for result in generated_videos_results:
-                    if result.success and result.video is None:
+                    if not result.success:
+                        raise Exception(
+                            f"Failed to generate video {result.step_index}: {result.error}"
+                        )
+                    if result.video is None:
                         self.output_message.actions.append(
                             f"Uploading video {result.step_index + 1}..."
                         )
@@ -292,16 +300,14 @@ class TextToMovieAgent(BaseAgent):
                             source_type="file_path",
                             media_type="video",
                         )
-                        total_duration += float(media.get("length", 0))
-                        scenes[result.step_index]["video"] = media
-
-                        # Cleanup temporary files
-                        if os.path.exists(result.video_path):
-                            os.remove(result.video_path)
                     else:
-                        raise Exception(
-                            f"Failed to generate video {result.step_index}: {result.error}"
-                        )
+                        media = result.video
+
+                    total_duration += float(media.get("length", 0))
+                    scenes[result.step_index]["video"] = media
+
+                    if os.path.exists(result.video_path):
+                        os.remove(result.video_path)
 
                 # Generate audio prompt
                 sound_effects_description = self.generate_audio_prompt(raw_storyline)

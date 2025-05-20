@@ -270,10 +270,7 @@ class VideoGenerationAgent(BaseAgent):
                 self.output_message.actions.append(
                     f"Uploaded generated video to VideoDB with Video ID {media['id']}"
                 )
-            else:
-                self.output_message.actions.append(
-                    f"Video already uploaded to VideoDB {media['id']}"
-                )
+
             stream_url = media["stream_url"]
             id = media["id"]
             collection_id = media["collection_id"]
@@ -296,6 +293,10 @@ class VideoGenerationAgent(BaseAgent):
             self.output_message.push_update()
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
+
+        finally:
+            if output_path and os.path.exists(output_path):
+                os.remove(output_path)
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,
