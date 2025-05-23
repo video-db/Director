@@ -254,13 +254,11 @@ class VideoGenerationAgent(BaseAgent):
             else:
                 raise Exception(f"{job_type} not supported")
 
-            self.output_message.actions.append(
-                f"Generated video saved at <i>{output_path}</i>"
-            )
-            self.output_message.push_update()
-
             if media is None:
-                # Upload to VideoDB
+                self.output_message.actions.append(
+                    f"Generated video saved at <i>{output_path}</i>"
+                )
+                self.output_message.push_update()
                 media = self.videodb_tool.upload(
                     output_path,
                     source_type="file_path",
