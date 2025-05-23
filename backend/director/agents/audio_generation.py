@@ -29,7 +29,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
         "engine": {
             "type": "string",
             "description": """The engine to use for audio generation. Default is 'videodb'.`:
-                - videodb: supports text_to_speech, sound_effect
+                - videodb: supports text_to_speech, sound_effect and create_music
                 - elevenlabs: supports text_to_speech and sound_effect
                 - beatoven: supports create_music""",
             "default": "videodb",
@@ -39,9 +39,9 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
             "type": "string",
             "enum": ["text_to_speech", "sound_effect", "create_music"],
             "description": """The type of audio generation to perform:
-                - text_to_speech: converts text to speech (elevenlabs only)
-                - sound_effect: creates sound effects (elevenlabs only)
-                - create_music: creates background music (beatoven only)""",
+                - text_to_speech: converts text to speech (elevenlabs and videodb engine only)
+                - sound_effect: creates sound effects (elevenlabs and videodb engine only)
+                - create_music: creates background music (beatoven and videodb engine only)""",
         },
         "sound_effect": {
             "type": "object",
@@ -55,7 +55,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                     "description": "Duration of the sound effect in seconds",
                     "default": 2,
                 },
-                "elevenlabs_config": {
+                "audio_config": {
                     "type": "object",
                     "properties": ELEVENLABS_PARAMS_CONFIG["sound_effect"],
                     "description": "Config for elevenlabs engine",
@@ -85,7 +85,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                     "type": "string",
                     "description": "The text to convert to speech",
                 },
-                "elevenlabs_config": {
+                "audio_config": {
                     "type": "object",
                     "properties": ELEVENLABS_PARAMS_CONFIG["text_to_speech"],
                 },
@@ -134,7 +134,7 @@ class AudioGenerationAgent(BaseAgent):
             if engine not in SUPPORTED_ENGINES:
                 raise Exception(f"{engine} not supported")
 
-            config_key = "elevenlabs_config"
+            config_key = "audio_config"
             if engine == "elevenlabs":
                 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
                 if not ELEVENLABS_API_KEY:
@@ -172,7 +172,7 @@ class AudioGenerationAgent(BaseAgent):
                     config=config,
                 )
             elif job_type == "create_music":
-                if engine != "beatoven":
+                if engine not in ["beatoven", "videodb"]:
                     raise Exception("Music creation only supported with beatoven")
                 prompt = create_music.get("prompt")
                 duration = create_music.get("duration", 30)
@@ -183,14 +183,13 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                media = audio_gen_tool.generate_sound_effect(
+                media = audio_gen_tool.generate_music(
                     prompt=prompt,
                     save_at=output_path,
-                    duration=duration,
-                    config={},
+                    duration=duration
                 )
             elif job_type == "text_to_speech":
-                if engine != "elevenlabs" and engine != "videodb":
+                if engine not in ["elevenlabs", "videodb"]:
                     raise Exception("Text to speech only supported with elevenlabs and videodb")
                 text = text_to_speech.get("text")
                 config = text_to_speech.get(config_key, {})
@@ -205,13 +204,12 @@ class AudioGenerationAgent(BaseAgent):
                     config=config,
                 )
 
-            self.output_message.actions.append(
-                f"Generated audio saved at <i>{output_path}</i>"
-            )
             self.output_message.push_update()
 
             if media is None:
-                # Upload to VideoDB
+                self.output_message.actions.append(
+                    f"Generated audio saved at <i>{output_path}</i>"
+                )
                 media = self.videodb_tool.upload(
                     output_path,
                     source_type="file_path",

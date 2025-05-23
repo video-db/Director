@@ -538,8 +538,6 @@ class VDBAudioGenerationTool:
 
         download_url = audio.generate_url()
         self._download_audio_file(download_url, save_at)
-        if not os.path.exists(save_at):
-            raise Exception(f"Failed to save audio at {save_at}")
         
         return {
             "id": audio.id,
@@ -554,8 +552,20 @@ class VDBAudioGenerationTool:
 
         download_url = audio.generate_url()
         self._download_audio_file(download_url, save_at)
-        if not os.path.exists(save_at):
-            raise Exception(f"Failed to save audio at {save_at}")
+        
+        return {
+            "id": audio.id,
+            "collection_id": audio.collection_id,
+            "name": audio.name,
+            "length": audio.length,
+            "url": audio.generate_url()
+        }
+    
+    def generate_music(self, prompt: str, save_at:str, duration:float):
+        audio = self.collection.generate_music(prompt=prompt, duration=duration)
+
+        download_url = audio.generate_url()
+        self._download_audio_file(download_url, save_at)
         
         return {
             "id": audio.id,
