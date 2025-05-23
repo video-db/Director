@@ -28,6 +28,28 @@ DEFAULT_VOICES = """
 20. pqHfZKP75CvOlQylNhV4 - Bill: Trustworthy, American, old male.
 """
 
+VOICE_ID_MAP = {
+    "9BWtsMINqrJLrRacOk9x": "Aria",
+    "CwhRBWXzGAHq8TQ4Fs17": "Roger",
+    "EXAVITQu4vr4xnSDxMaL": "Sarah",
+    "FGY2WhTYpPnrIDTdsKH5": "Laura",
+    "IKne3meq5aSn9XLyUdCD": "Charlie",
+    "JBFqnCBsd6RMkjVDRZzb": "George",
+    "N2lVS1w4EtoT3dr4eOWO": "Callum",
+    "SAz9YHcvj6GT2YYXdXww": "River",
+    "TX3LPaxmHKxFdv7VOQHJ": "Liam",
+    "XB0fDUnXU5powFXDhCwa": "Charlotte",
+    "Xb7hH8MSUJpSbSDYk0k2": "Alice",
+    "XrExE9yKIg1WjnnlVkGX": "Matilda",
+    "bIHbv24MWmeRgasZH58o": "Will",
+    "cgSgspJ2msm6clMCkdW9": "Jessica",
+    "cjVigY5qzO86Huf0OWal": "Eric",
+    "iP95p4xoKVk53GoZ742B": "Chris",
+    "nPczCjzI2devNBz1zQrb": "Brian",
+    "onwK4e9ZLuTAKqWW03F9": "Daniel",
+    "pFZP5JQG7iQjIQuC4Bku": "Lily",
+    "pqHfZKP75CvOlQylNhV4": "Bill",
+}
 
 PARAMS_CONFIG = {
     "sound_effect": {

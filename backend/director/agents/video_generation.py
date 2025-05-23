@@ -6,7 +6,7 @@ from typing import Optional
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, VideoContent, VideoData, MsgStatus
-from director.tools.videodb_tool import VideoDBTool
+from director.tools.videodb_tool import VDBVideoGenerationTool, VideoDBTool
 from director.tools.stabilityai import (
     StabilityAITool,
     PARAMS_CONFIG as STABILITYAI_PARAMS_CONFIG,
@@ -19,7 +19,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "fal"]
+SUPPORTED_ENGINES = ["stabilityai", "fal", "videodb"]
 
 VIDEO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
@@ -30,9 +30,9 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
         },
         "engine": {
             "type": "string",
-            "description": "The video generation engine to use. Use Fal by default. If the query includes any of the following: 'minimax-video, mochi-v1, hunyuan-video, luma-dream-machine, cogvideox-5b, ltx-video, fast-svd, fast-svd-lcm, t2v-turbo, kling video v 1.0, kling video v1.5 pro, fast-animatediff, fast-animatediff turbo, and animatediff-sparsectrl-lcm'- always use Fal. In case user specifies any other engine, use the supported engines like Stability.",
-            "default": "fal",
-            "enum": ["fal", "stabilityai"],
+            "description": "The video generation engine to use. Use VideoDB by default. If the query includes any of the following: 'minimax-video, mochi-v1, hunyuan-video, luma-dream-machine, cogvideox-5b, ltx-video, fast-svd, fast-svd-lcm, t2v-turbo, kling video v 1.0, kling video v1.5 pro, fast-animatediff, fast-animatediff turbo, and animatediff-sparsectrl-lcm'- always use Fal. In case user specifies any other engine, use the supported engines like Stability or Fal.",
+            "default": "videodb",
+            "enum": SUPPORTED_ENGINES,
         },
         "job_type": {
             "type": "string",
@@ -41,7 +41,7 @@ VIDEO_GENERATION_AGENT_PARAMETERS = {
             The type of video generation to perform
             Possible values:
                 - text_to_video: generates a video from a text prompt
-                - image_to_video: generates a video using an image as a base. The feature is only available in fal engine. Stability AI does not support this feature.
+                - image_to_video: generates a video using an image as a base. The feature is only available in fal engine. Stability AI or VideoDB does not support this feature.
             """,
         },
         "text_to_video": {
@@ -135,6 +135,7 @@ class VideoGenerationAgent(BaseAgent):
         :return: Response containing the generated video ID
         """
         try:
+            media = None
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
             stealth_mode = kwargs.get("stealth_mode", False)
 
@@ -161,6 +162,10 @@ class VideoGenerationAgent(BaseAgent):
                     raise Exception("FAL API key not found")
                 video_gen_tool = FalVideoGenerationTool(api_key=FAL_KEY)
                 config_key = "fal_config"
+
+            elif engine == "videodb":
+                video_gen_tool = VDBVideoGenerationTool()
+                config_key = "videodb_config"
             else:
                 raise Exception(f"{engine} not supported")
 
@@ -183,12 +188,15 @@ class VideoGenerationAgent(BaseAgent):
                     f"Generating video using <b>{engine}</b> for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                video_gen_tool.text_to_video(
+                response = video_gen_tool.text_to_video(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
                     config=config,
                 )
+
+                if response:
+                    media = response
             elif job_type == "image_to_video":
                 image_id = image_to_video.get("image_id")
                 video_name = image_to_video.get("name")
@@ -246,21 +254,21 @@ class VideoGenerationAgent(BaseAgent):
             else:
                 raise Exception(f"{job_type} not supported")
 
-            self.output_message.actions.append(
-                f"Generated video saved at <i>{output_path}</i>"
-            )
-            self.output_message.push_update()
+            if media is None:
+                self.output_message.actions.append(
+                    f"Generated video saved at <i>{output_path}</i>"
+                )
+                self.output_message.push_update()
+                media = self.videodb_tool.upload(
+                    output_path,
+                    source_type="file_path",
+                    media_type="video",
+                    name=video_name,
+                )
+                self.output_message.actions.append(
+                    f"Uploaded generated video to VideoDB with Video ID {media['id']}"
+                )
 
-            # Upload to VideoDB
-            media = self.videodb_tool.upload(
-                output_path,
-                source_type="file_path",
-                media_type="video",
-                name=video_name,
-            )
-            self.output_message.actions.append(
-                f"Uploaded generated video to VideoDB with Video ID {media['id']}"
-            )
             stream_url = media["stream_url"]
             id = media["id"]
             collection_id = media["collection_id"]
@@ -283,6 +291,10 @@ class VideoGenerationAgent(BaseAgent):
             self.output_message.push_update()
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
+
+        finally:
+            if output_path and os.path.exists(output_path):
+                os.remove(output_path)
 
         return AgentResponse(
             status=AgentStatus.SUCCESS,

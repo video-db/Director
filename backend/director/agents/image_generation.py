@@ -27,8 +27,8 @@ IMAGE_GENERATION_AGENT_PARAMETERS = {
             "description": """
             The type of image generation to perform
             Possible values:
-                - image_to_image: generates a image from an image input 
-                - text_to_image: generates a image from give text prompt.
+                - image_to_image: generates an image from an image input 
+                - text_to_image: generates an image from a given text prompt.
             """,
         },
         "prompt": {
@@ -50,12 +50,22 @@ IMAGE_GENERATION_AGENT_PARAMETERS = {
             },
             "required": ["image_id"],
         },
+        "text_to_image": {
+            "type": "object",
+            "properties": {
+                "engine": {
+                    "type": "string",
+                    "description": "The engine to use for image generation. Possible values: 'videodb' and 'flux'. Must be present if job_type is 'text_to_image'.",
+                    "default": "videodb",
+                    "enum": ["videodb", "flux"],
+                },
+            },
+        },
     },
     "required": ["collection_id", "job_type", "prompt"],
     "if": {"properties": {"job_type": {"const": "image_to_image"}}},
     "then": {"required": ["image_to_image"]},
 }
-
 
 class ImageGenerationAgent(BaseAgent):
     def __init__(self, session: Session, **kwargs):
@@ -70,6 +80,7 @@ class ImageGenerationAgent(BaseAgent):
         job_type: str,
         prompt: str,
         image_to_image: Optional[dict] = None,
+        text_to_image: Optional[dict] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -95,16 +106,26 @@ class ImageGenerationAgent(BaseAgent):
 
             output_image_url = ""
             if job_type == "text_to_image":
-                flux_output = flux_dev(prompt)
-                if not flux_output:
-                    image_content.status = MsgStatus.error
-                    image_content.status_message = "Error in generating image."
-                    self.output_message.publish()
-                    error_message = "Agent failed with error in replicate."
-                    return AgentResponse(
-                        status=AgentStatus.ERROR, message=error_message
-                    )
-                output_image_url = flux_output[0].url
+                engine = text_to_image.get("engine", "videodb") if text_to_image else "videodb"
+                if engine == "flux":
+                    flux_output = flux_dev(prompt)
+                    if not flux_output:
+                        image_content.status = MsgStatus.error
+                        image_content.status_message = "Error in generating image."
+                        self.output_message.publish()
+                        error_message = "Agent failed with error in replicate."
+                        return AgentResponse(
+                            status=AgentStatus.ERROR, message=error_message
+                        )
+                    output_image_url = flux_output[0].url
+                    image_content.image = ImageData(url=output_image_url)
+                    image_content.status = MsgStatus.success
+                    image_content.status_message = "Here is your generated image"
+                else:
+                    generated_image = self.videodb_tool.generate_image(prompt)
+                    image_content.image = ImageData(**generated_image)
+                    image_content.status = MsgStatus.success
+                    image_content.status_message = "Here is your generated image"
             elif job_type == "image_to_image":
                 FAL_KEY = os.getenv("FAL_KEY")
                 image_id = image_to_image.get("image_id")
@@ -137,9 +158,7 @@ class ImageGenerationAgent(BaseAgent):
                 output_image_url = fal_output[0]["url"]
             else:
                 raise Exception(f"{job_type} not supported")
-            image_content.image = ImageData(url=output_image_url)
-            image_content.status = MsgStatus.success
-            image_content.status_message = "Here is your generated image"
+            
             self.output_message.publish()
         except Exception as e:
             logger.exception(f"Error in {self.agent_name}")

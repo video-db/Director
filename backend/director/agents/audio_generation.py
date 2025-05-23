@@ -6,10 +6,10 @@ from typing import Optional
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, TextContent, MsgStatus
-from director.tools.videodb_tool import VideoDBTool
+from director.tools.videodb_tool import VDBAudioGenerationTool, VideoDBTool
 from director.tools.elevenlabs import (
     ElevenLabsTool,
-    PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
+    PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG
 )
 from director.tools.beatoven import BeatovenTool
 
@@ -17,7 +17,7 @@ from director.constants import DOWNLOADS_PATH
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["elevenlabs", "beatoven"]
+SUPPORTED_ENGINES = ["elevenlabs", "beatoven", "videodb"]
 
 AUDIO_GENERATION_AGENT_PARAMETERS = {
     "type": "object",
@@ -28,19 +28,20 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
         },
         "engine": {
             "type": "string",
-            "description": """The engine to use for audio generation:
+            "description": """The engine to use for audio generation. Default is 'videodb'.`:
+                - videodb: supports text_to_speech, sound_effect and create_music
                 - elevenlabs: supports text_to_speech and sound_effect
                 - beatoven: supports create_music""",
-            "default": "elevenlabs",
-            "enum": ["elevenlabs", "beatoven"],
+            "default": "videodb",
+            "enum": SUPPORTED_ENGINES,
         },
         "job_type": {
             "type": "string",
             "enum": ["text_to_speech", "sound_effect", "create_music"],
             "description": """The type of audio generation to perform:
-                - text_to_speech: converts text to speech (elevenlabs only)
-                - sound_effect: creates sound effects (elevenlabs only)
-                - create_music: creates background music (beatoven only)""",
+                - text_to_speech: converts text to speech (elevenlabs and videodb engine only)
+                - sound_effect: creates sound effects (elevenlabs and videodb engine only)
+                - create_music: creates background music (beatoven and videodb engine only)""",
         },
         "sound_effect": {
             "type": "object",
@@ -54,7 +55,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                     "description": "Duration of the sound effect in seconds",
                     "default": 2,
                 },
-                "elevenlabs_config": {
+                "audio_config": {
                     "type": "object",
                     "properties": ELEVENLABS_PARAMS_CONFIG["sound_effect"],
                     "description": "Config for elevenlabs engine",
@@ -84,7 +85,7 @@ AUDIO_GENERATION_AGENT_PARAMETERS = {
                     "type": "string",
                     "description": "The text to convert to speech",
                 },
-                "elevenlabs_config": {
+                "audio_config": {
                     "type": "object",
                     "properties": ELEVENLABS_PARAMS_CONFIG["text_to_speech"],
                 },
@@ -127,31 +128,33 @@ class AudioGenerationAgent(BaseAgent):
         :return: Response containing the generated audio URL
         """
         try:
+            media = None
             self.videodb_tool = VideoDBTool(collection_id=collection_id)
 
             if engine not in SUPPORTED_ENGINES:
                 raise Exception(f"{engine} not supported")
 
+            config_key = "audio_config"
             if engine == "elevenlabs":
                 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
                 if not ELEVENLABS_API_KEY:
                     raise Exception("Elevenlabs API key not present in .env")
                 audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
-                config_key = "elevenlabs_config"
             elif engine == "beatoven":
                 BEATOVEN_API_KEY = os.getenv("BEATOVEN_API_KEY")
                 if not BEATOVEN_API_KEY:
                     raise Exception("Beatoven API key not present in .env")
                 audio_gen_tool = BeatovenTool(api_key=BEATOVEN_API_KEY)
-                config_key = "elevenlabs_config"
+            elif engine == "videodb":
+                audio_gen_tool = VDBAudioGenerationTool()    
 
             os.makedirs(DOWNLOADS_PATH, exist_ok=True)
             output_file_name = f"audio_{job_type}_{str(uuid.uuid4())}.mp3"
             output_path = f"{DOWNLOADS_PATH}/{output_file_name}"
 
             if job_type == "sound_effect":
-                if engine != "elevenlabs":
-                    raise Exception("Sound effects only supported with elevenlabs")
+                if engine == "beatoven":
+                    raise Exception("Sound effects only supported with elevenlabs or videodb")
                 prompt = sound_effect.get("prompt")
                 duration = sound_effect.get("duration", 5)
                 config = sound_effect.get(config_key, {})
@@ -162,14 +165,14 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                audio_gen_tool.generate_sound_effect(
+                media = audio_gen_tool.generate_sound_effect(
                     prompt=prompt,
                     save_at=output_path,
                     duration=duration,
                     config=config,
                 )
             elif job_type == "create_music":
-                if engine != "beatoven":
+                if engine not in ["beatoven", "videodb"]:
                     raise Exception("Music creation only supported with beatoven")
                 prompt = create_music.get("prompt")
                 duration = create_music.get("duration", 30)
@@ -180,15 +183,14 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} for prompt <i>{prompt}</i>"
                 )
                 self.output_message.push_update()
-                audio_gen_tool.generate_sound_effect(
+                media = audio_gen_tool.generate_music(
                     prompt=prompt,
                     save_at=output_path,
-                    duration=duration,
-                    config={},
+                    duration=duration
                 )
             elif job_type == "text_to_speech":
-                if engine != "elevenlabs":
-                    raise Exception("Text to speech only supported with elevenlabs")
+                if engine not in ["elevenlabs", "videodb"]:
+                    raise Exception("Text to speech only supported with elevenlabs and videodb")
                 text = text_to_speech.get("text")
                 config = text_to_speech.get(config_key, {})
                 msg = f"Using <b>{engine}</b> to convert text"
@@ -196,24 +198,26 @@ class AudioGenerationAgent(BaseAgent):
                     f"{msg} <i>{text}</i> to speech"
                 )
                 self.output_message.push_update()
-                audio_gen_tool.text_to_speech(
+                media = audio_gen_tool.text_to_speech(
                     text=text,
                     save_at=output_path,
                     config=config,
                 )
 
-            self.output_message.actions.append(
-                f"Generated audio saved at <i>{output_path}</i>"
-            )
             self.output_message.push_update()
 
-            # Upload to VideoDB
-            media = self.videodb_tool.upload(
-                output_path,
-                source_type="file_path",
-                media_type="audio"
-            )
-            msg = "Uploaded generated audio to VideoDB"
+            if media is None:
+                self.output_message.actions.append(
+                    f"Generated audio saved at <i>{output_path}</i>"
+                )
+                media = self.videodb_tool.upload(
+                    output_path,
+                    source_type="file_path",
+                    media_type="audio"
+                )
+                msg = "Uploaded generated audio to VideoDB"
+            else:
+                msg = "Generated audio stored in collection"
             self.output_message.actions.append(
                 f"{msg} with Audio ID {media['id']}"
             )
@@ -247,6 +251,9 @@ class AudioGenerationAgent(BaseAgent):
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
 
+        finally:
+            if output_path and os.path.exists(output_path):
+                os.remove(output_path)
         msg = "Audio generated successfully"
         return AgentResponse(
             status=AgentStatus.SUCCESS,
