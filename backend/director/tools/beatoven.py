@@ -21,8 +21,8 @@ class BeatovenTool:
             "Content-Type": "application/json",
         }
 
-    def generate_sound_effect(
-        self, prompt: str, save_at: str, duration: float, config: dict
+    def generate_music(
+        self, prompt: str, save_at: str, duration: float
     ):
         """
         Generate a sound effect using Beatoven API

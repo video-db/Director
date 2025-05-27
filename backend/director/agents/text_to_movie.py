@@ -25,14 +25,14 @@ from director.tools.elevenlabs import (
     ElevenLabsTool,
     PARAMS_CONFIG as ELEVENLABS_PARAMS_CONFIG,
 )
-from director.tools.videodb_tool import VideoDBTool
+from director.tools.videodb_tool import VDBAudioGenerationTool, VDBVideoGenerationTool, VideoDBTool
 from director.constants import DOWNLOADS_PATH
 
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_ENGINES = ["stabilityai", "kling"]
-
+SUPPORTED_ENGINES = ["stabilityai", "kling", "videodb"]
+SUPPORTED_AUDIO_ENGINES = ["elevenlabs", "videodb"]
 TEXT_TO_MOVIE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -44,7 +44,13 @@ TEXT_TO_MOVIE_AGENT_PARAMETERS = {
             "type": "string",
             "description": "The video generation engine to use",
             "enum": SUPPORTED_ENGINES,
-            "default": "stabilityai",
+            "default": "videodb",
+        },
+        "audio_engine": {
+            "type": "string",
+            "description": "The audio generation engine to use",
+            "enum": SUPPORTED_AUDIO_ENGINES,
+            "default": "videodb",
         },
         "job_type": {
             "type": "string",
@@ -140,6 +146,12 @@ class TextToMovieAgent(BaseAgent):
                 preferred_style="photorealistic",
                 prompt_format="concise",
             ),
+            "videodb": EngineConfig(
+                name="kling",
+                max_duration=6,
+                preferred_style="cinematic",
+                prompt_format="detailed",
+            ),
         }
         super().__init__(session=session, **kwargs)
 
@@ -147,6 +159,7 @@ class TextToMovieAgent(BaseAgent):
         self,
         collection_id: str,
         engine: str = "stabilityai",
+        audio_engine: str = "videodb",
         job_type: str = "text_to_movie",
         text_to_movie: Optional[dict] = None,
         *args,
@@ -188,21 +201,33 @@ class TextToMovieAgent(BaseAgent):
                     access_key=KLING_API_ACCESS_KEY, secret_key=KLING_API_SECRET_KEY
                 )
                 self.video_gen_config_key = "video_kling_config"
+
+            elif engine == "videodb":
+                self.video_gen_config_key = "video_kling_config"
+                self.video_gen_tool = VDBVideoGenerationTool()
             else:
                 raise Exception(f"{engine} not supported")
 
             # Initialize tools
-            ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-            if not ELEVENLABS_API_KEY:
-                raise Exception("ElevenLabs API key not found")
-            self.audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
             self.audio_gen_config_key = "audio_elevenlabs_config"
 
-            # Initialize steps
+            if audio_engine == "elevenlabs":
+                ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+                if not ELEVENLABS_API_KEY:
+                    raise Exception("ElevenLabs API key not found")
+                self.audio_gen_tool = ElevenLabsTool(api_key=ELEVENLABS_API_KEY)
+
+            else:
+                self.audio_gen_tool = VDBAudioGenerationTool()    
+
             if job_type == "text_to_movie":
                 raw_storyline = text_to_movie.get("storyline", [])
                 video_gen_config = text_to_movie.get(self.video_gen_config_key, {})
-                audio_gen_config = text_to_movie.get(self.audio_gen_config_key, {})
+
+                if engine == "videodb":
+                    audio_gen_config = {}
+                else:
+                    audio_gen_config = text_to_movie.get(self.audio_gen_config_key, {})
 
                 # Generate visual style
                 visual_style = self.generate_visual_style(raw_storyline)
@@ -241,7 +266,7 @@ class TextToMovieAgent(BaseAgent):
                     video_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp4"
                     os.makedirs(DOWNLOADS_PATH, exist_ok=True)
 
-                    self.video_gen_tool.text_to_video(
+                    video = self.video_gen_tool.text_to_video(
                         prompt=prompt,
                         save_at=video_path,
                         duration=suggested_duration,
@@ -249,7 +274,7 @@ class TextToMovieAgent(BaseAgent):
                     )
                     generated_videos_results.append(
                         VideoGenResult(
-                            step_index=index, video_path=video_path, success=True
+                            step_index=index, video_path=video_path, success=True, video=video
                         )
                     )
 
@@ -261,7 +286,11 @@ class TextToMovieAgent(BaseAgent):
                 # Process videos and track duration
                 total_duration = 0
                 for result in generated_videos_results:
-                    if result.success:
+                    if not result.success:
+                        raise Exception(
+                            f"Failed to generate video {result.step_index}: {result.error}"
+                        )
+                    if result.video is None:
                         self.output_message.actions.append(
                             f"Uploading video {result.step_index + 1}..."
                         )
@@ -271,16 +300,14 @@ class TextToMovieAgent(BaseAgent):
                             source_type="file_path",
                             media_type="video",
                         )
-                        total_duration += float(media.get("length", 0))
-                        scenes[result.step_index]["video"] = media
-
-                        # Cleanup temporary files
-                        if os.path.exists(result.video_path):
-                            os.remove(result.video_path)
                     else:
-                        raise Exception(
-                            f"Failed to generate video {result.step_index}: {result.error}"
-                        )
+                        media = result.video
+
+                    total_duration += float(media.get("length", 0))
+                    scenes[result.step_index]["video"] = media
+
+                    if os.path.exists(result.video_path):
+                        os.remove(result.video_path)
 
                 # Generate audio prompt
                 sound_effects_description = self.generate_audio_prompt(raw_storyline)
@@ -292,21 +319,22 @@ class TextToMovieAgent(BaseAgent):
                 os.makedirs(DOWNLOADS_PATH, exist_ok=True)
                 sound_effects_path = f"{DOWNLOADS_PATH}/{str(uuid.uuid4())}.mp3"
 
-                self.audio_gen_tool.generate_sound_effect(
+                sound_effects_media = self.audio_gen_tool.generate_sound_effect(
                     prompt=sound_effects_description,
                     save_at=sound_effects_path,
                     duration=total_duration,
                     config=audio_gen_config,
                 )
 
-                self.output_message.actions.append(
-                    "Uploading background music to VideoDB..."
-                )
-                self.output_message.push_update()
+                if sound_effects_media is None:
+                    self.output_message.actions.append(
+                        "Uploading background music to VideoDB..."
+                    )
+                    self.output_message.push_update()
 
-                sound_effects_media = self.videodb_tool.upload(
-                    sound_effects_path, source_type="file_path", media_type="audio"
-                )
+                    sound_effects_media = self.videodb_tool.upload(
+                        sound_effects_path, source_type="file_path", media_type="audio"
+                    )
 
                 if os.path.exists(sound_effects_path):
                     os.remove(sound_effects_path)
