@@ -11,7 +11,6 @@
 After deployment, update the backend environment variables:
     ``` 
     VIDEO_DB_API_KEY="your_video_db_api_key"
-    OPENAI_API_KEY="your_openai_api_key"
     ```
 
 ### Frontend Configuration
