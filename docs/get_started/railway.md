@@ -60,7 +60,6 @@
 * After deployment, go to the [Railway project dashboard](https://railway.app/dashboard), and under the backend service, update the environment variables:
     ``` 
     VIDEO_DB_API_KEY="your_video_db_api_key"
-    OPENAI_API_KEY="your_openai_api_key"
     ```
 
 * Go to Settings → Networking → Public Networking, generate a domain, and copy the domain. You will need to use this domain in the frontend service configuration.
