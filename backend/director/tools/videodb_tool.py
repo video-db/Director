@@ -9,6 +9,7 @@ from videodb.asset import VideoAsset, ImageAsset
 from director.tools.elevenlabs import VOICE_ID_MAP
 from director.constants import DOWNLOADS_PATH
 
+
 class VideoDBTool:
     def __init__(self, collection_id="default"):
         self.conn = videodb.connect(
@@ -268,7 +269,6 @@ class VideoDBTool:
         video_id: str,
         extraction_type=SceneExtractionType.shot_based,
         extraction_config={},
-        model_name=None,
         prompt=None,
     ):
         video = self.collection.get_video(video_id)
@@ -276,7 +276,6 @@ class VideoDBTool:
             extraction_type=extraction_type,
             extraction_config=extraction_config,
             prompt=prompt,
-            model_name=model_name,
         )
 
     def list_scene_index(self, video_id: str):
@@ -424,6 +423,7 @@ class VideoDBTool:
             "stream_url": video.generate_stream(),
             "length": video.length,
         }
+
     def delete_audio(self, audio_id):
         """Delete a specific audio by its ID."""
         if not audio_id:
@@ -478,6 +478,7 @@ class VideoDBTool:
                 "An unexpected error occurred while deleting the video. Please try again later."
             )
 
+
 class VDBVideoGenerationTool:
     def __init__(self, collection_id="default"):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
@@ -489,34 +490,37 @@ class VDBVideoGenerationTool:
         response = requests.get(video_url, stream=True)
         response.raise_for_status()
 
-        if not response.headers.get('Content-Type', '').startswith('video'):
+        if not response.headers.get("Content-Type", "").startswith("video"):
             raise ValueError(f"The URL does not point to a video file: {video_url}")
 
-        with open(save_at, 'wb') as file:
+        with open(save_at, "wb") as file:
             file.write(response.content)
 
-    def text_to_video(self, prompt: str, save_at: str, duration: float, config: dict = {}):
+    def text_to_video(
+        self, prompt: str, save_at: str, duration: float, config: dict = {}
+    ):
         media = self.collection.generate_video(prompt=prompt, duration=duration)
-        
+
         download_response = self.videodb_tool.download(media.stream_url)
         download_url = download_response.get("download_url")
 
         self._download_video_file(download_url, save_at)
         if not os.path.exists(save_at):
             raise Exception(f"Failed to save video at {save_at}")
-        
+
         video_dict = {
-                "id": media.id,
-                "collection_id": media.collection_id,
-                "stream_url": media.stream_url,
-                "player_url": media.player_url,
-                "name": media.name,
-                "description": media.description,
-                "thumbnail_url": media.thumbnail_url,
-                "length": media.length,
-            }
+            "id": media.id,
+            "collection_id": media.collection_id,
+            "stream_url": media.stream_url,
+            "player_url": media.player_url,
+            "name": media.name,
+            "description": media.description,
+            "thumbnail_url": media.thumbnail_url,
+            "length": media.length,
+        }
         return video_dict
-        
+
+
 class VDBAudioGenerationTool:
     def __init__(self, collection_id="default"):
         self.videodb_tool = VideoDBTool(collection_id=collection_id)
@@ -527,51 +531,55 @@ class VDBAudioGenerationTool:
         response = requests.get(audio_url, stream=True)
         response.raise_for_status()
 
-        with open(save_at, 'wb') as file:
+        with open(save_at, "wb") as file:
             file.write(response.content)
-
 
     def generate_sound_effect(
         self, prompt: str, save_at: str, duration: float, config: dict
-    ):        
-        audio = self.collection.generate_sound_effect(prompt=prompt, duration=duration, config=config)
+    ):
+        audio = self.collection.generate_sound_effect(
+            prompt=prompt, duration=duration, config=config
+        )
 
         download_url = audio.generate_url()
         self._download_audio_file(download_url, save_at)
-        
+
         return {
             "id": audio.id,
             "collection_id": audio.collection_id,
             "name": audio.name,
             "length": audio.length,
-            "url": audio.generate_url()
+            "url": audio.generate_url(),
         }
-        
+
     def text_to_speech(self, text: str, save_at: str, config: dict):
-        audio = self.collection.generate_voice(text=text, voice_name=VOICE_ID_MAP.get(config.get("voice_id")), config=config)
+        audio = self.collection.generate_voice(
+            text=text,
+            voice_name=VOICE_ID_MAP.get(config.get("voice_id")),
+            config=config,
+        )
 
         download_url = audio.generate_url()
         self._download_audio_file(download_url, save_at)
-        
+
         return {
             "id": audio.id,
             "collection_id": audio.collection_id,
             "name": audio.name,
             "length": audio.length,
-            "url": audio.generate_url()
+            "url": audio.generate_url(),
         }
-    
-    def generate_music(self, prompt: str, save_at:str, duration:float):
+
+    def generate_music(self, prompt: str, save_at: str, duration: float):
         audio = self.collection.generate_music(prompt=prompt, duration=duration)
 
         download_url = audio.generate_url()
         self._download_audio_file(download_url, save_at)
-        
+
         return {
             "id": audio.id,
             "collection_id": audio.collection_id,
             "name": audio.name,
             "length": audio.length,
-            "url": audio.generate_url()
+            "url": audio.generate_url(),
         }
-
