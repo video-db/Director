@@ -35,7 +35,7 @@ def get_sessions():
     return session_handler.get_sessions()
 
 
-@session_bp.route("/<session_id>", methods=["GET", "DELETE"])
+@session_bp.route("/<session_id>", methods=["GET", "DELETE", "POST"])
 def get_session(session_id):
     """
     Get or delete the session details
@@ -60,6 +60,17 @@ def get_session(session_id):
             return {
                 "message": f"Failed to delete the entry for following components: {', '.join(failed_components)}"
             }, 500
+    elif request.method == "POST":
+        data = request.get_json()
+        print(data)
+        session_handler.create_session(
+            data.get("message")
+        )
+        return {
+            "session_id": data.get("session_id"),
+            "created_at": data.get("created_at"),
+            "name": "New Session!"
+        }, 200
 
 
 @session_bp.route("/<session_id>/rename", methods=["PUT"])

@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Optional
 
 from director.agents.frame import FrameAgent
 from director.agents.summarize_video import SummarizeVideoAgent
@@ -149,6 +150,9 @@ class SessionHandler:
         else:
             return {"message": "Failed to rename session"}, 500
 
+    def create_session(self, message):
+        session = Session(db=self.db, **message)
+        session.create()
 
 
 class VideoDBHandler:
