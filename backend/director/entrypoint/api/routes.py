@@ -62,15 +62,12 @@ def get_session(session_id):
             }, 500
     elif request.method == "POST":
         data = request.get_json()
-        print(data)
-        session_handler.create_session(
+        
+        session = session_handler.create_session(
             data.get("message")
         )
-        return {
-            "session_id": data.get("session_id"),
-            "created_at": data.get("created_at"),
-            "name": "New Session!"
-        }, 200
+
+        return session, 200
 
 
 @session_bp.route("/<session_id>/rename", methods=["PUT"])
