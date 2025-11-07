@@ -8,8 +8,12 @@ if not exist "venv\Scripts\activate.bat" (
     exit /b 1
 )
 
+call :ensure_backend_env
+if errorlevel 1 exit /b 1
+
 echo Backend: http://127.0.0.1:8000 (Ctrl+C to stop)
 call venv\Scripts\activate.bat
+set "DB_TYPE=sqlite"
 set SQLITE_DB_PATH=director.db
 pip check >nul 2>&1
 if errorlevel 1 (
@@ -28,6 +32,61 @@ if errorlevel 1 (
 )
 python director\entrypoint\api\server.py
 exit /b %errorlevel%
+
+:ensure_backend_env
+set "ENV_FILE=.env"
+if not exist "%ENV_FILE%" (
+    if exist .env.sample (
+        copy /y .env.sample .env >nul
+    ) else (
+        (
+            echo VIDEO_DB_API_KEY=
+            echo.
+            echo # Database
+        )> "%ENV_FILE%"
+    )
+)
+
+call :set_env_value "%ENV_FILE%" "DB_TYPE" "sqlite"
+exit /b %errorlevel%
+
+:set_env_value
+setlocal ENABLEDELAYEDEXPANSION
+set "ENV_FILE=%~1"
+set "ENV_KEY=%~2"
+set "ENV_VALUE=%~3"
+
+if not exist "%ENV_FILE%" (
+    >"%ENV_FILE%" echo %ENV_KEY%=%ENV_VALUE%
+    endlocal & exit /b 0
+)
+
+set "TEMP_FILE=%ENV_FILE%.tmp"
+set "VAR_WRITTEN="
+(
+    for /f "usebackq delims=" %%L in ("%ENV_FILE%") do (
+        set "LINE=%%L"
+        set "WRITE_LINE=1"
+        for /f "tokens=1* delims==" %%K in ("!LINE!") do (
+            set "KEY=%%K"
+            if /i "!KEY!"=="%ENV_KEY%" (
+                if not defined VAR_WRITTEN (
+                    echo %ENV_KEY%=%ENV_VALUE%
+                    set "VAR_WRITTEN=1"
+                )
+                set "WRITE_LINE="
+            )
+        )
+        if defined WRITE_LINE (
+            echo !LINE!
+        )
+    )
+    if not defined VAR_WRITTEN (
+        echo %ENV_KEY%=%ENV_VALUE%
+    )
+) >"%TEMP_FILE%"
+move /Y "%TEMP_FILE%" "%ENV_FILE%" >nul
+endlocal & exit /b 0
 
 :deps_fail
 echo Failed to reinstall backend dependencies. Review the messages above.

@@ -93,6 +93,7 @@ if not exist .env (
         )> .env
     )
 )
+call :set_env_value ".env" "DB_TYPE" "sqlite"
 
 echo Initializing SQLite database...
 set SQLITE_DB_PATH=director.db
@@ -184,6 +185,44 @@ echo Use start-all.bat to launch both services.
 echo For individual control: start-backend.bat or start-frontend.bat
 echo.
 exit /b 0
+
+:set_env_value
+setlocal ENABLEDELAYEDEXPANSION
+set "ENV_FILE=%~1"
+set "ENV_KEY=%~2"
+set "ENV_VALUE=%~3"
+
+if not exist "%ENV_FILE%" (
+    >"%ENV_FILE%" echo %ENV_KEY%=%ENV_VALUE%
+    endlocal & exit /b 0
+)
+
+set "TEMP_FILE=%ENV_FILE%.tmp"
+set "VAR_WRITTEN="
+(
+    for /f "usebackq delims=" %%L in ("%ENV_FILE%") do (
+        set "LINE=%%L"
+        set "WRITE_LINE=1"
+        for /f "tokens=1* delims==" %%K in ("!LINE!") do (
+            set "KEY=%%K"
+            if /i "!KEY!"=="%ENV_KEY%" (
+                if not defined VAR_WRITTEN (
+                    echo %ENV_KEY%=%ENV_VALUE%
+                    set "VAR_WRITTEN=1"
+                )
+                set "WRITE_LINE="
+            )
+        )
+        if defined WRITE_LINE (
+            echo !LINE!
+        )
+    )
+    if not defined VAR_WRITTEN (
+        echo %ENV_KEY%=%ENV_VALUE%
+    )
+) >"%TEMP_FILE%"
+move /Y "%TEMP_FILE%" "%ENV_FILE%" >nul
+endlocal & exit /b 0
 
 :ensure_patch_package
 set "PATCH_PACKAGE_READY="
