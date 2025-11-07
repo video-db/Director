@@ -30,9 +30,9 @@ if not defined VITE_PORT set "VITE_PORT=8080"
 if not defined VITE_BIND_HOST set "VITE_BIND_HOST=0.0.0.0"
 
 if /i "%VITE_BIND_HOST%"=="0.0.0.0" (
-    echo Frontend: http://127.0.0.1:%VITE_PORT% (Ctrl+C to stop)
+    echo Frontend: http://127.0.0.1:%VITE_PORT% ^(Ctrl+C to stop^)
 ) else (
-    echo Frontend: http://%VITE_BIND_HOST%:%VITE_PORT% (Ctrl+C to stop)
+    echo Frontend: http://%VITE_BIND_HOST%:%VITE_PORT% ^(Ctrl+C to stop^)
 )
 
 call npm run dev -- --host %VITE_BIND_HOST% --port %VITE_PORT%
@@ -121,7 +121,7 @@ if /i "%VITE_BIND_HOST%"=="127.0.0.1" (
     echo Binding dev server to loopback because listening on 0.0.0.0 was blocked.
 )
 if "%VITE_PORT%" NEQ "%ORIGINAL_PORT%" (
-    echo Using port %VITE_PORT% for the dev server (requested %ORIGINAL_PORT% was unavailable).
+    echo Using port %VITE_PORT% for the dev server ^(requested %ORIGINAL_PORT% was unavailable^).
 )
 
 exit /b 0
