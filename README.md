@@ -139,62 +139,83 @@ For a closer look, check out the detailed architecture diagram below:
 
 ### Prerequisites
 
-- Python 3.9 or higher
-- Node.js 22.8.0 or higher
-- npm
+- **Python 3.9 or higher**
+- **Node.js 22.8.0 or higher**
+- **npm**
 
 ### Installation
 
 **1. Clone the repository:**
 
-``` bash
+```bash
 git clone https://github.com/video-db/Director.git
 cd Director
 ```
 
 **2. Run the setup script:**
 
+**For Mac/Linux:**
 ```bash
 ./setup.sh
 ```
 
+**For Windows:**
+```cmd
+setup.bat
+```
+
 > This script will:
-> - Install Node.js 22.8.0 using nvm
+> - Install Node.js 22.8.0 using nvm (Mac/Linux)
+> - Verify Python 3.9+ and Node.js 22.8.0+ are installed (Windows)
 > - Install Python and pip
-> - Set up virtual environments for both frontend and backend.
-
-
+> - Set up virtual environments for both frontend and backend
 
 **3. Configure the environment variables:**
 
 Edit the `.env` files to add your API keys and other configuration options.
 
-### Supported platforms: 
-- Mac
-- Linux
-- Windows (WSL)
+Get your free VideoDB API key from [console.videodb.io](https://console.videodb.io/)
 
-## 💬 Running the Application
+### Supported Platforms
+- ✅ **Mac**
+- ✅ **Linux**
+- ✅ **Windows** (native)
+- ✅ **Windows (WSL)**
+
+---
+
+## � Running the Application
+
+**For Mac/Linux:**
 
 To start both the backend and frontend servers:
-
 ```bash
 make run
 ```
 
 - Backend: `http://127.0.0.1:8000`
-
 - Frontend: `http://127.0.0.1:8080`
 
-For specific tasks:
-
+**For specific tasks:**
 - Backend only: `make run-be`
-
 - Frontend only: `make run-fe`
 
+**For Windows:**
 
+To start both servers:
+```cmd
+start-all.bat
+```
 
-<!-- CONTRIBUTING -->
+This will open two windows (backend and frontend). The application will be available at:
+- Backend: `http://127.0.0.1:8000`
+- Frontend: `http://127.0.0.1:8080`
+
+**For specific tasks:**
+- Backend only: `start-backend.bat`
+- Frontend only: `start-frontend.bat`
+
+---
 
 ## 📘 Creating a New Agent
 
