@@ -9,8 +9,7 @@ if not exist "backend\venv\Scripts\activate.bat" (
 )
 
 if not exist "frontend\node_modules\" (
-    echo Frontend not initialized. Run setup.bat first.
-    exit /b 1
+    echo Frontend dependencies will be installed on first launch.
 )
 
 set "LAUNCH_DIR=%CD%"

@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 
 echo.
 echo === Director Setup (Windows) ===
@@ -74,6 +74,12 @@ if exist requirements-dev.txt (
     pip install -r requirements-dev.txt || goto :fail_backend
 )
 
+pip check >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Backend dependencies are inconsistent. Resolve pip errors above.
+    goto :fail_backend
+)
+
 if not exist .env (
     if exist .env.sample (
         copy /y .env.sample .env >nul
@@ -100,9 +106,59 @@ echo.
 echo Setting up frontend...
 pushd frontend || goto :fail
 
-if not exist node_modules (
-    npm install || goto :fail_frontend
+echo Installing frontend dependencies...
+set "NPM_LOCK_PRESENT="
+if exist package-lock.json set "NPM_LOCK_PRESENT=1"
+
+if defined NPM_LOCK_PRESENT (
+    echo Running npm ci ^(clean install^)...
+    call npm ci >nul 2>&1
+    if errorlevel 1 (
+        echo [WARN] npm ci failed. Retrying with npm install...
+        call npm install || goto :fail_frontend
+    )
+) else (
+    echo Running npm install...
+    call npm install || goto :fail_frontend
 )
+
+set "FRONTEND_READY="
+for %%R in (1 2) do (
+    if not defined FRONTEND_READY (
+        if exist node_modules\.bin\vite.cmd set "FRONTEND_READY=1"
+    )
+    if not defined FRONTEND_READY (
+        if exist node_modules\.bin\vite.ps1 set "FRONTEND_READY=1"
+    )
+    if not defined FRONTEND_READY (
+        if exist node_modules\vite\package.json set "FRONTEND_READY=1"
+    )
+
+    if not defined FRONTEND_READY (
+        if %%R==1 (
+            echo [WARN] Frontend dependencies incomplete. Cleaning node_modules and reinstalling...
+            if exist node_modules rmdir /s /q node_modules
+            if defined NPM_LOCK_PRESENT (
+                call npm ci || goto :fail_frontend
+            ) else (
+                call npm install || goto :fail_frontend
+            )
+        )
+    )
+)
+
+:frontend_verified
+if not defined FRONTEND_READY (
+    echo [ERROR] Unable to verify frontend dependencies.
+    goto :fail_frontend
+)
+
+set "VITE_VERSION="
+for /f "usebackq tokens=* delims=" %%v in (`node -p "require('./node_modules/vite/package.json').version" 2^>^&1`) do (
+    set "VITE_VERSION=%%v"
+    goto :vite_version_ready
+)
+:vite_version_ready
 
 if not exist .env (
     (
@@ -112,8 +168,11 @@ if not exist .env (
     )> .env
 )
 
-
-echo [OK] Frontend ready
+if defined VITE_VERSION (
+    echo [OK] Frontend ready ^(Vite !VITE_VERSION!^)
+) else (
+    echo [OK] Frontend ready
+)
 
 echo.
 echo Setup complete.
