@@ -106,6 +106,9 @@ echo.
 echo Setting up frontend...
 pushd frontend || goto :fail
 
+call :ensure_patch_package
+if errorlevel 1 goto :fail_frontend
+
 echo Installing frontend dependencies...
 set "NPM_LOCK_PRESENT="
 if exist package-lock.json set "NPM_LOCK_PRESENT=1"
@@ -180,6 +183,32 @@ echo Update backend\.env with your VIDEO_DB_API_KEY before running.
 echo Use start-all.bat to launch both services.
 echo For individual control: start-backend.bat or start-frontend.bat
 echo.
+exit /b 0
+
+:ensure_patch_package
+set "PATCH_PACKAGE_READY="
+where patch-package >nul 2>&1 && set "PATCH_PACKAGE_READY=1"
+if not defined PATCH_PACKAGE_READY (
+    if exist node_modules\.bin\patch-package.cmd set "PATCH_PACKAGE_READY=1"
+)
+if not defined PATCH_PACKAGE_READY (
+    if exist node_modules\.bin\patch-package.ps1 set "PATCH_PACKAGE_READY=1"
+)
+
+if not defined PATCH_PACKAGE_READY (
+    echo Ensuring patch-package is available for npm lifecycle scripts...
+    npm install -g patch-package >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Unable to install patch-package globally. Run "npm install -g patch-package" manually and retry.
+        exit /b 1
+    )
+    where patch-package >nul 2>&1 && set "PATCH_PACKAGE_READY=1"
+    if not defined PATCH_PACKAGE_READY (
+        echo [ERROR] patch-package is still unavailable after installation. Confirm your npm global bin directory is on PATH and retry.
+        exit /b 1
+    )
+)
+
 exit /b 0
 
 :fail_frontend

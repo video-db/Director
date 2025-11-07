@@ -37,6 +37,9 @@ if not exist package.json (
     exit /b 1
 )
 
+call :ensure_patch_package
+if errorlevel 1 exit /b 1
+
 if exist node_modules\vite\package.json (
     if exist node_modules\.bin\vite.cmd goto :deps_ok
     if exist node_modules\.bin\vite.ps1 goto :deps_ok
@@ -61,4 +64,30 @@ if not exist node_modules\.bin\vite.cmd (
 )
 
 :deps_ok
+exit /b 0
+
+:ensure_patch_package
+set "PATCH_PACKAGE_READY="
+where patch-package >nul 2>&1 && set "PATCH_PACKAGE_READY=1"
+if not defined PATCH_PACKAGE_READY (
+    if exist node_modules\.bin\patch-package.cmd set "PATCH_PACKAGE_READY=1"
+)
+if not defined PATCH_PACKAGE_READY (
+    if exist node_modules\.bin\patch-package.ps1 set "PATCH_PACKAGE_READY=1"
+)
+
+if not defined PATCH_PACKAGE_READY (
+    echo Ensuring patch-package is available for npm lifecycle scripts...
+    npm install -g patch-package >nul 2>&1
+    if errorlevel 1 (
+        echo Failed to install patch-package globally. Run "npm install -g patch-package" manually and rerun the script.
+        exit /b 1
+    )
+    where patch-package >nul 2>&1 && set "PATCH_PACKAGE_READY=1"
+    if not defined PATCH_PACKAGE_READY (
+        echo patch-package is still unavailable after installation. Ensure your npm global bin directory is on PATH and rerun the script.
+        exit /b 1
+    )
+)
+
 exit /b 0
