@@ -45,7 +45,20 @@
 
 <!-- ABOUT THE PROJECT -->
 
-##  🧐 What is The Director?
+## 📚 Table of Contents
+- [🧐 What is The Director?](#what-is-the-director)
+- [⭐️ Key Features](#key-features)
+- [😎 Agent Examples](#agent-examples)
+- [⚙️ Architecture Overview](#architecture-overview)
+- [🧠 Reasoning Engine](#reasoning-engine)
+- [🏃 Getting Started](#getting-started)
+- [🚀 Running the Application](#running-the-application)
+- [📘 Creating a New Agent](#creating-a-new-agent)
+- [📖 Documentation](#documentation)
+- [🤝 Contributing](#contributing)
+
+<a id="what-is-the-director"></a>
+## 🧐 What is The Director?
 
 Think of Director as ChatGPT for videos. It is a framework to build video agents that can reason through complex video tasks like search, editing, compilation, generation etc & instantly stream the results. 
 
@@ -72,6 +85,7 @@ https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 
 <br/>
 
+<a id="key-features"></a>
 ## ⭐️ Key Features
 ### 🤖 20+ pre-built video agents that you can customize to 
 * Summarize videos in seconds.
@@ -95,12 +109,14 @@ Easily add new agents and tools to your workflow. Whether you want to run it loc
 
 <br/>
 
+<a id="agent-examples"></a>
 ## 😎 Agent Examples
 
   1. Highlight Creator: [link](https://www.youtube.com/watch?v=Dncn_0RWrro&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=11)
   2. Text to Movie: [link](https://www.youtube.com/watch?v=QpnRxuEBDCc&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=2)
   3. Video Search: [link](https://www.youtube.com/watch?v=kCiCI2KCnC8&list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw&index=4)
 
+<a id="architecture-overview"></a>
 ## ⚙️ Architecture Overview
 Director's architecture brings together:
 
@@ -111,7 +127,8 @@ Director's architecture brings together:
 
   ![Director architecture](https://github.com/user-attachments/assets/9afb2783-66db-4899-9308-03cbd12e74d7)
   
-## 🧠 **Reasoning Engine**
+<a id="reasoning-engine"></a>
+## 🧠 Reasoning Engine
 
 At the heart of The Director is its **Reasoning Engine**, a powerful core that drives intelligent decision-making and dynamic workflows. It acts as the brain behind the agents, enabling them to process commands, interact with data, and deliver meaningful outputs.
 
@@ -135,67 +152,91 @@ For a closer look, check out the detailed architecture diagram below:
 
 
 
+<a id="getting-started"></a>
 ## 🏃 Getting Started
 
 ### Prerequisites
 
-- Python 3.9 or higher
-- Node.js 22.8.0 or higher
-- npm
+- **Python 3.9 or higher**
+- **Node.js 22.8.0 or higher**
+- **npm**
 
 ### Installation
 
 **1. Clone the repository:**
 
-``` bash
+```bash
 git clone https://github.com/video-db/Director.git
 cd Director
 ```
 
 **2. Run the setup script:**
 
+**For Mac/Linux:**
 ```bash
 ./setup.sh
 ```
 
+**For Windows:**
+```cmd
+setup.bat
+```
+
 > This script will:
-> - Install Node.js 22.8.0 using nvm
+> - Install Node.js 22.8.0 using nvm (Mac/Linux)
+> - Verify Python 3.9+ and Node.js 22.8.0+ are installed (Windows)
 > - Install Python and pip
-> - Set up virtual environments for both frontend and backend.
-
-
+> - Set up virtual environments for both frontend and backend
 
 **3. Configure the environment variables:**
 
 Edit the `.env` files to add your API keys and other configuration options.
 
-### Supported platforms: 
-- Mac
-- Linux
-- Windows (WSL)
+Get your free VideoDB API key from [console.videodb.io](https://console.videodb.io/)
 
-## 💬 Running the Application
+### Supported Platforms
+- ✅ **Mac**
+- ✅ **Linux**
+- ✅ **Windows** (native)
+- ✅ **Windows (WSL)**
+
+---
+
+<a id="running-the-application"></a>
+## 🚀 Running the Application
+
+**For Mac/Linux:**
 
 To start both the backend and frontend servers:
-
 ```bash
 make run
 ```
 
 - Backend: `http://127.0.0.1:8000`
-
 - Frontend: `http://127.0.0.1:8080`
 
-For specific tasks:
-
+**For specific tasks:**
 - Backend only: `make run-be`
-
 - Frontend only: `make run-fe`
 
+**For Windows:**
 
+To start both servers:
+```cmd
+start-all.bat
+```
 
-<!-- CONTRIBUTING -->
+This will open two windows (backend and frontend). The application will be available at:
+- Backend: `http://127.0.0.1:8000`
+- Frontend: `http://127.0.0.1:8080`
 
+**For specific tasks:**
+- Backend only: `start-backend.bat`
+- Frontend only: `start-frontend.bat`
+
+---
+
+<a id="creating-a-new-agent"></a>
 ## 📘 Creating a New Agent
 
 > Checkout hosted documentation at https://docs.director.videodb.io
@@ -234,6 +275,7 @@ Duplicate `sample_agent.py` in `Director/backend/director/agents/` and rename it
 Remember to consider creating reusable tools if your agent's functionality could be shared across multiple agents.
 
 
+<a id="documentation"></a>
 ## 📖 Documentation
 > Checkout hosted documentation at https://docs.director.videodb.io
 ### Serve Locally
@@ -253,6 +295,7 @@ mkdocs build
 
 
 
+<a id="contributing"></a>
 ## 🤝 Contributing
 
 We welcome integrations from projects that can make video workflows easy and increase capabilities of the projects. Please check issues and discussions for details. 
