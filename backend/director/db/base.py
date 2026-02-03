@@ -44,6 +44,28 @@ class BaseDB(ABC):
         pass
 
     @abstractmethod
+    def update_session(self, session_id: str, **kwargs) -> bool:
+        """Update a session in the database."""
+        pass
+
+    @abstractmethod
+    def delete_session(self, session_id: str) -> tuple[bool, list]:
+        """Delete a session from the database.
+        :return: (success, failed_components)
+        """
+        pass
+
+    @abstractmethod
+    def make_session_public(self, session_id: str, is_public: bool) -> bool:
+        """Make a session public or private."""
+        pass
+
+    @abstractmethod
+    def get_public_session(self, session_id: str) -> dict:
+        """Get a public session by session_id."""
+        pass
+
+    @abstractmethod
     def health_check(self) -> bool:
         """Check if the database is healthy."""
         pass

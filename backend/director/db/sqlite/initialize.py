@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     session_id TEXT PRIMARY KEY,
     video_id TEXT,
     collection_id TEXT,
+    name TEXT,
+    is_public BOOLEAN DEFAULT FALSE,
     created_at INTEGER,
     updated_at INTEGER,
     metadata JSON
@@ -49,9 +51,19 @@ def initialize_sqlite(db_name="director.db"):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
+    # Create base tables
     cursor.execute(CREATE_SESSIONS_TABLE)
     cursor.execute(CREATE_CONVERSATIONS_TABLE)
     cursor.execute(CREATE_CONTEXT_MESSAGES_TABLE)
+
+    cursor.execute("PRAGMA table_info(sessions)")
+    columns = [col[1] for col in cursor.fetchall()]
+
+    if "name" not in columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN name TEXT")
+
+    if "is_public" not in columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN is_public BOOLEAN DEFAULT FALSE")
 
     conn.commit()
     conn.close()

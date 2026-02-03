@@ -23,6 +23,7 @@ class SQLiteDB(BaseDB):
             self.db_path = os.getenv("SQLITE_DB_PATH", "director.db")
         else:
             self.db_path = db_path
+        initialize_sqlite(self.db_path)
         self.conn = sqlite3.connect(self.db_path, check_same_thread=True)
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
@@ -33,6 +34,7 @@ class SQLiteDB(BaseDB):
         session_id: str,
         video_id: str,
         collection_id: str,
+        name: str = None,
         created_at: int = None,
         updated_at: int = None,
         metadata: dict = {},
@@ -52,13 +54,14 @@ class SQLiteDB(BaseDB):
 
         self.cursor.execute(
             """
-        INSERT OR IGNORE INTO sessions (session_id, video_id, collection_id, created_at, updated_at, metadata)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO sessions (session_id, video_id, collection_id, name, created_at, updated_at, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 session_id,
                 video_id,
                 collection_id,
+                name,
                 created_at,
                 updated_at,
                 json.dumps(metadata),
@@ -153,8 +156,7 @@ class SQLiteDB(BaseDB):
 
     def get_conversations(self, session_id: str) -> list:
         self.cursor.execute(
-            "SELECT * FROM conversations WHERE session_id = ? ORDER BY created_at ASC",
-            (session_id,),
+            "SELECT * FROM conversations WHERE session_id = ?", (session_id,)
         )
         rows = self.cursor.fetchall()
         conversations = []
@@ -241,7 +243,7 @@ class SQLiteDB(BaseDB):
         self.conn.commit()
         return self.cursor.rowcount > 0
 
-    def delete_session(self, session_id: str) -> bool:
+    def delete_session(self, session_id: str) -> tuple[bool, list]:
         """Delete a session and all its associated data.
 
         :param str session_id: Unique session ID.
@@ -258,6 +260,94 @@ class SQLiteDB(BaseDB):
             failed_components.append("session")
         success = len(failed_components) < 3
         return success, failed_components
+
+    def update_session(self, session_id: str, **kwargs) -> bool:
+        """Update a session in the database.
+
+        :param session_id: Unique session ID.
+        :param kwargs: Fields to update.
+        :return: True if update was successful, False otherwise.
+        """
+        try:
+            if not kwargs:
+                return False
+
+            allowed_fields = {"name", "video_id", "collection_id", "metadata"}
+            update_fields = []
+            update_values = []
+
+            for key, value in kwargs.items():
+                if key not in allowed_fields:
+                    continue
+                if key == "metadata" and not isinstance(value, str):
+                    value = json.dumps(value)
+                update_fields.append(f"{key} = ?")
+                update_values.append(value)
+
+            if not update_fields:
+                return False
+
+            update_fields.append("updated_at = ?")
+            update_values.append(int(time.time()))
+
+            update_values.extend([session_id])
+
+            query = f"""
+                UPDATE sessions 
+                SET {', '.join(update_fields)}
+                WHERE session_id = ?
+            """
+
+            self.cursor.execute(query, update_values)
+            self.conn.commit()
+            return self.cursor.rowcount > 0
+
+        except Exception:
+            logger.exception(f"Error updating session {session_id}")
+            return False
+
+    def make_session_public(self, session_id: str, is_public: bool) -> bool:
+        """Make a session public or private."""
+        try:
+            query = """
+                UPDATE sessions 
+                SET is_public = ?, updated_at = ?
+                WHERE session_id = ?
+            """
+            current_time = int(time.time())
+            self.cursor.execute(query, (is_public, current_time, session_id))
+            self.conn.commit()
+            return self.cursor.rowcount > 0
+        except Exception:
+            logger.exception("Error making session public/private")
+            return False
+
+    def get_public_session(self, session_id: str) -> dict:
+        """Get a public session by session_id."""
+        try:
+            query = """
+                SELECT session_id, video_id, collection_id, name, created_at, updated_at, metadata, is_public
+                FROM sessions 
+                WHERE session_id = ? AND is_public = TRUE
+            """
+            self.cursor.execute(query, (session_id,))
+            row = self.cursor.fetchone()
+            if row:
+                session = {
+                    "session_id": row[0],
+                    "video_id": row[1],
+                    "collection_id": row[2],
+                    "name": row[3],
+                    "created_at": row[4],
+                    "updated_at": row[5],
+                    "metadata": json.loads(row[6]) if row[6] else {},
+                    "is_public": row[7]
+                }
+                return session
+            return {}
+        except Exception as e:
+            logger.exception(f"Error getting public session: {e}")
+            return {}
 
     def health_check(self) -> bool:
         """Check if the SQLite database is healthy and the necessary tables exist. If not, create them."""

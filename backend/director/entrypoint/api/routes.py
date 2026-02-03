@@ -35,7 +35,7 @@ def get_sessions():
     return session_handler.get_sessions()
 
 
-@session_bp.route("/<session_id>", methods=["GET", "DELETE"])
+@session_bp.route("/<session_id>", methods=["GET", "DELETE", "POST"])
 def get_session(session_id):
     """
     Get or delete the session details
@@ -60,6 +60,97 @@ def get_session(session_id):
             return {
                 "message": f"Failed to delete the entry for following components: {', '.join(failed_components)}"
             }, 500
+    elif request.method == "POST":
+        data = request.get_json()
+        
+        session = session_handler.create_session(
+            data.get("message")
+        )
+
+        return session, 200
+
+
+@session_bp.route("/<session_id>/rename", methods=["PUT"])
+def rename_session(session_id):
+    """
+    Rename a session by updating its metadata
+    """
+    if not session_id:
+        return {"message": "Please provide session_id."}, 400
+
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return {"message": "Session name is required."}, 400
+
+    new_name = data["name"]
+    if not new_name.strip():
+        return {"message": "Session name cannot be empty."}, 400
+
+    session_handler = SessionHandler(
+        db=load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
+    )
+    
+    session = session_handler.get_session(session_id)
+    if not session:
+        return {"message": "Session not found."}, 404
+
+    result = session_handler.rename_session(session_id, new_name)
+    return result
+
+@session_bp.route("/<session_id>/public", methods=["PUT"])
+def make_session_public(session_id):
+    """
+    Make a session public or private
+    """
+    if not session_id:
+        return {"message": "Please provide session_id."}, 400
+
+    data = request.get_json()
+    if not data or "is_public" not in data:
+        return {"message": "is_public field is required."}, 400
+
+    is_public = data["is_public"]
+    if not isinstance(is_public, bool):
+        return {"message": "is_public must be a boolean value."}, 400
+
+    db = load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
+    
+    # Check if session exists and belongs to user
+    session_handler = SessionHandler(db=db)
+    session = session_handler.get_session(session_id)
+    if not session:
+        return {"message": "Session not found."}, 404
+
+    # Update the session's public status
+    success = db.make_session_public(session_id, is_public)
+    
+    if success:
+        status = "public" if is_public else "private"
+        return {"message": f"Session successfully made {status}."}, 200
+    else:
+        return {"message": "Failed to update session visibility."}, 500
+
+
+@session_bp.route("/public/<session_id>", methods=["GET"])
+def get_public_session(session_id):
+    """
+    Get a public session by session_id (no authentication required)
+    """
+    if not session_id:
+        return {"message": "Please provide session_id."}, 400
+
+    db = load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
+    
+    # Get the public session
+    session = db.get_public_session(session_id)
+    if not session:
+        return {"message": "Public session not found."}, 404
+
+    # Get the conversation for this session
+    conversation = db.get_conversations(session_id)
+    session["conversation"] = conversation
+
+    return session, 200
 
 
 @videodb_bp.route("/collection", defaults={"collection_id": None}, methods=["GET"])

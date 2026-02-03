@@ -31,12 +31,13 @@ class PostgresDB(BaseDB):
             port=os.getenv("POSTGRES_PORT", "5432"),
         )
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-
+        initialize_postgres()
     def create_session(
         self,
         session_id: str,
         video_id: str,
         collection_id: str,
+        name: str = None,
         created_at: int = None,
         updated_at: int = None,
         metadata: dict = {},
@@ -47,14 +48,15 @@ class PostgresDB(BaseDB):
 
         self.cursor.execute(
             """
-            INSERT INTO sessions (session_id, video_id, collection_id, created_at, updated_at, metadata)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO sessions (session_id, video_id, collection_id, name, created_at, updated_at, metadata)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (session_id) DO NOTHING
             """,
             (
                 session_id,
                 video_id,
                 collection_id,
+                name,
                 created_at,
                 updated_at,
                 json.dumps(metadata),
@@ -195,7 +197,7 @@ class PostgresDB(BaseDB):
         self.conn.commit()
         return self.cursor.rowcount > 0
 
-    def delete_session(self, session_id: str) -> bool:
+    def delete_session(self, session_id: str) -> tuple[bool, list]:
         failed_components = []
         if not self.delete_conversation(session_id):
             failed_components.append("conversation")
@@ -209,6 +211,89 @@ class PostgresDB(BaseDB):
 
         success = len(failed_components) < 3
         return success, failed_components
+
+    def update_session(self, session_id: str, **kwargs) -> bool:
+        """Update a session in the database."""
+        try:
+            if not kwargs:
+                return False
+
+            allowed_fields = {"name", "video_id", "collection_id", "metadata"}
+            update_fields = []
+            update_values = []
+
+            for key, value in kwargs.items():
+                if key not in allowed_fields:
+                    continue
+                if key == "metadata" and not isinstance(value, str):
+                    value = json.dumps(value)
+                update_fields.append(f"{key} = %s")
+                update_values.append(value)
+
+            if not update_fields:
+                return False
+
+            update_fields.append("updated_at = %s")
+            update_values.append(int(time.time()))
+
+            update_values.extend([session_id])
+
+            query = f"""
+                UPDATE sessions
+                SET {', '.join(update_fields)}
+                WHERE session_id = %s
+            """
+
+            self.cursor.execute(query, update_values)
+            self.conn.commit()
+            return self.cursor.rowcount > 0
+
+        except Exception:
+            logger.exception(f"Error updating session {session_id}")
+            return False
+
+    def make_session_public(self, session_id: str, is_public: bool) -> bool:
+        """Make a session public or private."""
+        try:
+            query = """
+                UPDATE sessions 
+                SET is_public = %s, updated_at = %s
+                WHERE session_id = %s
+            """
+            current_time = int(time.time())
+            self.cursor.execute(query, (is_public, current_time, session_id))
+            self.conn.commit()
+            return self.cursor.rowcount > 0
+        except Exception as e:
+            logger.exception(f"Error making session public/private: {e}")
+            return False
+
+    def get_public_session(self, session_id: str) -> dict:
+        """Get a public session by session_id."""
+        try:
+            query = """
+                SELECT session_id, video_id, collection_id, name, created_at, updated_at, metadata, is_public
+                FROM sessions 
+                WHERE session_id = %s AND is_public = TRUE
+            """
+            self.cursor.execute(query, (session_id,))
+            row = self.cursor.fetchone()
+            if row:
+                session = {
+                    "session_id": row["session_id"],
+                    "video_id": row["video_id"],
+                    "collection_id": row["collection_id"],
+                    "name": row["name"],
+                    "created_at": row["created_at"],
+                    "updated_at": row["updated_at"],
+                    "metadata": row["metadata"] if row["metadata"] else {},
+                    "is_public": row["is_public"]
+                }
+                return session
+            return {}
+        except Exception as e:
+            logger.exception(f"Error getting public session: {e}")
+            return {}
 
     def health_check(self) -> bool:
         try:

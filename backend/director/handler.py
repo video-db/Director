@@ -1,5 +1,11 @@
+import json
 import os
 import logging
+from typing import Optional
+
+from director.constants import CHAT_NAMING_SYSTEM_PROMPT
+from director.llm import get_default_llm
+from director.llm.base import LLMResponseStatus
 
 from director.agents.frame import FrameAgent
 from director.agents.summarize_video import SummarizeVideoAgent
@@ -28,7 +34,7 @@ from director.agents.clone_voice import CloneVoiceAgent
 from director.agents.voice_replacement import VoiceReplacementAgent
 
 
-from director.core.session import Session, InputMessage, MsgStatus
+from director.core.session import ContextMessage, RoleTypes, Session, InputMessage, MsgStatus
 from director.core.reasoning import ReasoningEngine
 from director.db.base import BaseDB
 from director.db import load_db
@@ -139,6 +145,46 @@ class SessionHandler:
     def delete_session(self, session_id):
         session = Session(db=self.db, session_id=session_id)
         return session.delete()
+
+    def rename_session(self, session_id, new_name):
+        """Rename a session by updating its name field."""
+        session = Session(db=self.db, session_id=session_id)
+        success = session.update(name=new_name)
+        if success:
+            return {"message": "Session renamed successfully", "session_id": session_id, "name": new_name}
+        else:
+            return {"message": "Failed to rename session"}, 500
+
+    def create_session(self, message):
+        session = Session(db=self.db, **message)
+        session.create()
+
+        session_dict = session.get()
+        if not session_dict["name"]:
+            llm = get_default_llm()
+            context_messages = [
+                ContextMessage(
+                    role=RoleTypes.system,
+                    content=CHAT_NAMING_SYSTEM_PROMPT
+                ),
+                ContextMessage(
+                    role=RoleTypes.user,
+                    content=json.dumps(session_dict["conversation"]) if session_dict["conversation"] is not None else message.get("content", json.dumps(message, indent=4))
+                )
+            ]
+
+            response = llm.chat_completions(
+                messages=[msg.to_llm_msg() for msg in context_messages]
+            )
+            if response.status == LLMResponseStatus.SUCCESS:
+                name = response.content
+                self.rename_session(
+                    session_id=session.session_id,
+                    new_name=name
+                )
+        
+        return session.get()
+
 
 
 class VideoDBHandler:
