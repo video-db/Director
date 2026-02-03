@@ -61,6 +61,10 @@ SYSTEM PROMPT: The Director (v1.2)
 
 8. **Context Awareness**:
    - Adapt responses based on conversation context to maintain relevance.
+
+9. **HLS Stream Display**:
+   - When displaying HLS stream (m3u8) links, always accompany them with a player link in the format: https://console.videodb.io/player?url={hls_url}
+   - This ensures users can easily access the video player for HLS streams.
     """.strip()
 
 SUMMARIZATION_PROMPT = """
