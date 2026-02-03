@@ -208,8 +208,15 @@ class InputMessage(BaseMessage):
     msg_type: MsgType = MsgType.input
 
     def publish(self):
-        """Store the message in the database. for conversation history."""
+        """Store the message in the database and broadcast to session room."""
         self.db.add_or_update_msg_to_conv(**self.model_dump(exclude={"db"}))
+        try:
+            emit("chat", self.model_dump(exclude={"db"}), 
+                 room=self.session_id, 
+                 namespace="/chat")
+            print(f"Broadcasted input message to session room: {self.session_id}")
+        except Exception as e:
+            print(f"Error broadcasting input message to session {self.session_id}: {str(e)}")
 
 
 class OutputMessage(BaseMessage):
@@ -220,28 +227,31 @@ class OutputMessage(BaseMessage):
     status: MsgStatus = MsgStatus.progress
 
     def update_status(self, status: MsgStatus):
-        """Update the status of the message and publish the message to the socket. for loading state."""
+        """Update the status and broadcast to session room."""
         self.status = status
         self._publish()
 
     def push_update(self):
-        """Publish the message to the socket."""
+        """Push real-time update to session room."""
         try:
             self._publish()
         except Exception as e:
-            print(f"Error in emitting message: {str(e)}")
+            print(f"Error in emitting update to session {self.session_id}: {str(e)}")
 
     def publish(self):
-        """Store the message in the database. for conversation history and publish the message to the socket."""
+        """Store in database and broadcast final result to session room."""
         self._publish()
 
     def _publish(self):
         try:
-            emit("chat", self.model_dump(), namespace="/chat")
+            emit("chat", self.model_dump(), 
+                 room=self.session_id, 
+                 namespace="/chat")
+            print(f"Emitted message to session room: {self.session_id}")
         except Exception as e:
-            print(f"Error in emitting message: {str(e)}")
-        self.db.add_or_update_msg_to_conv(**self.model_dump())
+            print(f"Error emitting to session {self.session_id}: {str(e)}")
 
+        self.db.add_or_update_msg_to_conv(**self.model_dump())
 
 def format_user_message(message: dict) -> dict:
     message_content = message.get("content")
@@ -404,6 +414,10 @@ class Session:
     def delete(self):
         """Delete the session from the database."""
         return self.db.delete_session(self.session_id)
+
+    def update(self, **kwargs) -> bool:
+        """Update the session in the database."""
+        return self.db.update_session(self.session_id, **kwargs)
 
     def emit_event(self, event: BaseEvent, namespace="/chat"):
         """Emits a structured WebSocket event to notify all clients about updates."""
