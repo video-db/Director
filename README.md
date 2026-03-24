@@ -87,7 +87,7 @@ https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 Experience a sleek, chat-based interface with built-in video playback and intuitive controls. It’s like having a personal assistant for your media.
 
 ### 🥣 A mixing bowl of your GenAI APIs
-Connect seamlessly with powerful AI tools like LLMs, databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable for cloud storage, indexing and streaming your content effortlessly. 
+Connect seamlessly with powerful AI tools like LLMs (OpenAI, Anthropic, Google Gemini, MiniMax), databases, and GenAI APIs, while VideoDB ensures your video infrastructure is reliable and scalable for cloud storage, indexing and streaming your content effortlessly.
 ![Integration-Updated](https://github.com/user-attachments/assets/d06e3b57-1135-4c3b-9f3a-d427d4142b42)
 
 ### 🧩 Customizable and Flexible
