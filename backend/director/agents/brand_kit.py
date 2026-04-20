@@ -109,9 +109,9 @@ class BrandKitAgent(BaseAgent):
         """
         video_content = None
         try:
-            videodb_tool = VideoDBTool(collection_id=collection_id)
-
             # Resolve per-slot: user-supplied ID wins, then demo fallback
+            # (done before VideoDBTool init so the no-assets early return
+            # never triggers an unnecessary external API call)
             resolved_intro = intro_video_id or BRANDKIT_DEMO_INTRO_VIDEO_ID
             resolved_outro = outro_video_id or BRANDKIT_DEMO_OUTRO_VIDEO_ID
             resolved_image = brand_image_id or BRANDKIT_DEMO_BRAND_IMAGE_ID
@@ -152,6 +152,7 @@ class BrandKitAgent(BaseAgent):
                     message="No brand kit assets configured. Prompted user to upload their own.",
                 )
 
+            videodb_tool = VideoDBTool(collection_id=collection_id)
             video_content = VideoContent(
                 agent_name=self.agent_name,
                 status=MsgStatus.progress,
