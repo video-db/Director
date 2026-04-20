@@ -226,10 +226,16 @@ class BrandKitAgent(BaseAgent):
                 },
             )
 
-        except Exception as e:
-            logger.exception(f"BrandKitAgent failed: {e}")
+        except Exception:
+            logger.exception("BrandKitAgent failed")
             if video_content is not None:
                 video_content.status = MsgStatus.error
                 video_content.status_message = "Failed to apply brand kit."
             self.output_message.publish()
-            return AgentResponse(status=AgentStatus.ERROR, message=str(e))
+            return AgentResponse(
+                status=AgentStatus.ERROR,
+                message=(
+                    "Failed to apply brand kit. Please verify the video and "
+                    "brand asset IDs, then try again."
+                ),
+            )
