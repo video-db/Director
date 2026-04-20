@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, MsgStatus, TextContent
@@ -38,7 +39,7 @@ class SceneIndexAgent(BaseAgent):
         super().__init__(session=session, **kwargs)
 
     def run(
-        self, video_id: str, collection_id: str, scene_index_id: str = None
+        self, video_id: str, collection_id: str, scene_index_id: Optional[str] = None
     ) -> AgentResponse:
         """
         Display the indexed scene descriptions for a video as a formatted table.
@@ -72,7 +73,8 @@ class SceneIndexAgent(BaseAgent):
                         status=AgentStatus.ERROR,
                         message="No scene index found. Index the video scenes first.",
                     )
-                scene_index_id = scene_list[0]["scene_index_id"]
+                # Use the last entry: REST list APIs typically append, so newest is last.
+                scene_index_id = scene_list[-1]["scene_index_id"]
 
             self.output_message.actions.append("Loading scene descriptions...")
             self.output_message.push_update()
@@ -94,7 +96,8 @@ class SceneIndexAgent(BaseAgent):
             for i, scene in enumerate(scenes, 1):
                 start = f"{float(scene.get('start', 0)):.1f}s"
                 end = f"{float(scene.get('end', 0)):.1f}s"
-                desc = scene.get("description", "").replace("|", "\\|")
+                raw_desc = scene.get("description") or ""
+                desc = raw_desc.replace("\r", " ").replace("\n", " ").replace("|", "\\|")
                 rows.append(f"| {i} | {start} | {end} | {desc} |")
 
             output_text_content.text = "\n".join(rows)
