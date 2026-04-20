@@ -52,7 +52,16 @@ BRAND_KIT_AGENT_PARAMETERS = {
             ),
         },
     },
-    "required": ["video_id", "collection_id"],
+    # OpenAI strict mode requires every property to be listed in required.
+    # Optional slots use ["string", "null"] so the model can emit null for unset fields.
+    "required": [
+        "video_id",
+        "collection_id",
+        "intro_video_id",
+        "outro_video_id",
+        "brand_image_id",
+    ],
+    "additionalProperties": False,
 }
 
 
@@ -167,6 +176,17 @@ class BrandKitAgent(BaseAgent):
             if resolved_image:
                 applied.append("logo overlay")
 
+            # Slots that were requested but couldn't be filled (no user ID, no demo constant)
+            unfilled_slots = [
+                label
+                for label, resolved in (
+                    ("intro", resolved_intro),
+                    ("outro", resolved_outro),
+                    ("logo overlay", resolved_image),
+                )
+                if not resolved
+            ]
+
             if all_demo:
                 status_message = (
                     "Here is your video with the demo brand kit applied. "
@@ -181,6 +201,12 @@ class BrandKitAgent(BaseAgent):
                 )
             else:
                 status_message = f"Brand kit applied ({', '.join(applied)})."
+
+            if unfilled_slots:
+                status_message += (
+                    f" Note: {', '.join(unfilled_slots)} slot(s) were not available — "
+                    "upload assets or configure demo assets to include them."
+                )
 
             video_content.video = VideoData(stream_url=stream_url)
             video_content.status = MsgStatus.success
