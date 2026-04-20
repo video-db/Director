@@ -1,10 +1,10 @@
 import os
 
-from flask import Blueprint, request, current_app as app
+from flask import Blueprint, jsonify, request, current_app as app
 from werkzeug.utils import secure_filename
 
 from director.db import load_db
-from director.handler import ChatHandler, SessionHandler, VideoDBHandler, ConfigHandler
+from director.handler import ChatHandler, SessionHandler, VideoDBHandler, ConfigHandler, _active_engines
 
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/agent")
@@ -60,6 +60,16 @@ def get_session(session_id):
             return {
                 "message": f"Failed to delete the entry for following components: {', '.join(failed_components)}"
             }, 500
+
+
+@session_bp.route("/<session_id>/stop", methods=["POST"])
+def stop_session(session_id):
+    """Stop an in-progress generation for the given session."""
+    engine = _active_engines.get(session_id)
+    if engine:
+        engine.stop()
+        return jsonify({"message": "Generation stopped."}), 200
+    return jsonify({"message": "No active generation found."}), 404
 
 
 @videodb_bp.route("/collection", defaults={"collection_id": None}, methods=["GET"])

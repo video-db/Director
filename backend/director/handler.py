@@ -39,6 +39,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Registry of currently running ReasoningEngine instances keyed by session_id.
+# Used by on_stop_generation to cancel an in-progress generation.
+_active_engines: dict = {}
+
 
 class ChatHandler:
     def __init__(self, db, **kwargs):
@@ -117,7 +121,13 @@ class ChatHandler:
             else:
                 res_eng.register_agents(agents)
 
-            res_eng.run()
+            _active_engines[session.session_id] = res_eng
+            try:
+                res_eng.run()
+            finally:
+                _active_engines.pop(session.session_id, None)
+                if res_eng.stop_flag:
+                    session.output_message.update_status(MsgStatus.error)
 
         except Exception as e:
             session.output_message.update_status(MsgStatus.error)

@@ -1,10 +1,13 @@
 import os
+import logging
 
 from flask import current_app as app
 from flask_socketio import Namespace
 
 from director.db import load_db
-from director.handler import ChatHandler
+from director.handler import ChatHandler, _active_engines
+
+logger = logging.getLogger(__name__)
 
 
 class ChatNamespace(Namespace):
@@ -16,3 +19,16 @@ class ChatNamespace(Namespace):
             db=load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
         )
         chat_handler.chat(message)
+
+    def on_stop_generation(self, message):
+        """Stop an in-progress generation for the given session_id."""
+        session_id = message.get("session_id")
+        if not session_id:
+            logger.warning("stop_generation received without session_id")
+            return
+        engine = _active_engines.get(session_id)
+        if engine:
+            logger.info(f"Stopping generation for session {session_id}")
+            engine.stop()
+        else:
+            logger.info(f"No active generation found for session {session_id}")

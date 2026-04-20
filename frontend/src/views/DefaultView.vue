@@ -1,10 +1,41 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from "vue";
 import { ChatInterface } from "@videodb/chat-vue";
 import "@videodb/chat-vue/dist/style.css";
 
 const BACKEND_URL = import.meta.env.VITE_APP_BACKEND_URL;
 const chatInterfaceRef = ref(null);
+const isGenerating = ref(false);
+const currentSessionId = ref(null);
+
+const stopGeneration = async () => {
+  if (currentSessionId.value) {
+    isGenerating.value = false;
+    await fetch(`${BACKEND_URL}/session/${currentSessionId.value}/stop`, {
+      method: "POST",
+    });
+  }
+};
+
+// Watch the chat component's conversations reactive object for in-progress assistant messages.
+// conversations shape: { [conv_id]: { [msg_id]: { session_id, status, sender, ... } } }
+watch(
+  () => chatInterfaceRef.value?.conversations,
+  (convs) => {
+    if (!convs) return;
+    for (const convMessages of Object.values(convs)) {
+      for (const msg of Object.values(convMessages)) {
+        if (msg.sender === "assistant" && msg.status === "progress") {
+          isGenerating.value = true;
+          currentSessionId.value = msg.session_id;
+          return;
+        }
+      }
+    }
+    isGenerating.value = false;
+  },
+  { deep: true }
+);
 
 const handleKeyDown = (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key === "k") {
@@ -13,9 +44,11 @@ const handleKeyDown = (event) => {
     chatInterfaceRef.value.chatInputRef.focus();
   }
 };
+
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
 });
+
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
 });
@@ -31,6 +64,14 @@ onUnmounted(() => {
         debug: true,
       }"
     />
+    <button
+      v-if="isGenerating"
+      class="stop-btn"
+      @click="stopGeneration"
+      title="Stop generation"
+    >
+      &#9632; Stop
+    </button>
   </main>
 </template>
 
@@ -82,5 +123,30 @@ html {
 * {
   scrollbar-width: thin; /* Makes the scrollbar narrower */
   scrollbar-color: #888 #f1f1f1; /* Thumb and track colors */
+}
+
+.stop-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background 0.15s;
+}
+
+.stop-btn:hover {
+  background: #333;
 }
 </style>
