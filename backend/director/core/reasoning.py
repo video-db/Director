@@ -3,6 +3,7 @@ from typing import List
 
 
 from director.agents.base import BaseAgent, AgentStatus, AgentResponse
+from director.constants import MAX_CONTEXT_MESSAGES
 from director.core.session import (
     Session,
     OutputMessage,
@@ -117,12 +118,25 @@ class ReasoningEngine:
         """
         self.agents.extend(agents)
 
+    def _trim_context(self, max_messages: int) -> None:
+        """Trim reasoning_context to at most max_messages, always preserving index 0 (system prompt)."""
+        ctx = self.session.reasoning_context
+        if len(ctx) <= max_messages:
+            return
+        trimmed = len(ctx) - max_messages
+        logger.warning(
+            f"Context window trimmed: dropping {trimmed} oldest message(s) "
+            f"({len(ctx)} → {max_messages})"
+        )
+        self.session.reasoning_context = [ctx[0]] + ctx[-(max_messages - 1):]
+
     def build_context(self):
         """Build the context for the reasoning engine it adds the information about the video or collection to the reasoning context."""
         input_context = ContextMessage(
             content=self.input_message.content, role=RoleTypes.user
         )
         if self.session.reasoning_context:
+            self._trim_context(MAX_CONTEXT_MESSAGES)
             self.session.reasoning_context.append(input_context)
         else:
             if self.session.video_id:
@@ -228,19 +242,37 @@ class ReasoningEngine:
             logger.info(f"LLM Response: {llm_response}")
 
             if not llm_response.status:
-                self.output_message.content.append(
-                    TextContent(
-                        text=llm_response.content,
-                        status=MsgStatus.error,
-                        status_message="Error in reasoning",
-                        agent_name="assistant",
-                    )
+                context_length_signals = (
+                    "context_length_exceeded",
+                    "prompt is too long",
+                    "maximum context length",
+                    "reduce the length",
                 )
-                self.output_message.actions.append("Failed to reason the message")
-                self.output_message.status = MsgStatus.error
-                self.output_message.publish()
-                self.stop()
-                break
+                if any(s in llm_response.content for s in context_length_signals):
+                    logger.warning("Context length exceeded — trimming and retrying")
+                    self._trim_context(max(5, len(self.session.reasoning_context) // 2))
+                    llm_response = self.llm.chat_completions(
+                        messages=[
+                            m.to_llm_msg() for m in self.session.reasoning_context
+                        ]
+                        + temp_messages,
+                        tools=[agent.to_llm_format() for agent in self.agents],
+                    )
+
+                if not llm_response.status:
+                    self.output_message.content.append(
+                        TextContent(
+                            text=llm_response.content,
+                            status=MsgStatus.error,
+                            status_message="Error in reasoning",
+                            agent_name="assistant",
+                        )
+                    )
+                    self.output_message.actions.append("Failed to reason the message")
+                    self.output_message.status = MsgStatus.error
+                    self.output_message.publish()
+                    self.stop()
+                    break
 
             if llm_response.tool_calls:
                 if self.summary_content:

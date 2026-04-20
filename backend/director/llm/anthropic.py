@@ -157,7 +157,7 @@ class AnthropicAI(BaseLLM):
         try:
             response = self.client.messages.create(**params)
         except Exception as e:
-            raise e
+            logger.exception("Anthropic LLM call failed")
             return LLMResponse(content=f"Error: {e}")
 
         return LLMResponse(
