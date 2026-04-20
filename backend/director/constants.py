@@ -36,4 +36,9 @@ DOWNLOADS_PATH = "director/downloads"
 # Maximum number of reasoning context messages retained per session.
 # Each agentic turn adds ~3-5 messages. Default: 20 msgs ≈ 5-7 turns.
 # Can be overridden via MAX_CONTEXT_MESSAGES env var.
-MAX_CONTEXT_MESSAGES = int(os.getenv("MAX_CONTEXT_MESSAGES", "20"))
+try:
+    MAX_CONTEXT_MESSAGES = int(os.getenv("MAX_CONTEXT_MESSAGES", "20"))
+except ValueError:
+    MAX_CONTEXT_MESSAGES = 20
+# Minimum 2: one slot for the system prompt, one for the current user message.
+MAX_CONTEXT_MESSAGES = max(2, MAX_CONTEXT_MESSAGES)

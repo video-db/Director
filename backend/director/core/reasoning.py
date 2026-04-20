@@ -120,6 +120,8 @@ class ReasoningEngine:
 
     def _trim_context(self, max_messages: int) -> None:
         """Trim reasoning_context to at most max_messages, always preserving index 0 (system prompt)."""
+        # Enforce a floor of 2: system prompt + at least one message.
+        max_messages = max(2, max_messages)
         ctx = self.session.reasoning_context
         if len(ctx) <= max_messages:
             return
@@ -128,7 +130,8 @@ class ReasoningEngine:
             f"Context window trimmed: dropping {trimmed} oldest message(s) "
             f"({len(ctx)} → {max_messages})"
         )
-        self.session.reasoning_context = [ctx[0]] + ctx[-(max_messages - 1):]
+        tail_len = max_messages - 1
+        self.session.reasoning_context = [ctx[0], *ctx[-tail_len:]]
 
     def build_context(self):
         """Build the context for the reasoning engine it adds the information about the video or collection to the reasoning context."""
@@ -248,9 +251,13 @@ class ReasoningEngine:
                     "maximum context length",
                     "reduce the length",
                 )
-                if any(s in llm_response.content for s in context_length_signals):
+                content_lower = llm_response.content.lower()
+                if (
+                    any(s in content_lower for s in context_length_signals)
+                    and len(self.session.reasoning_context) > 5
+                ):
                     logger.warning("Context length exceeded — trimming and retrying")
-                    self._trim_context(max(5, len(self.session.reasoning_context) // 2))
+                    self._trim_context(max(2, len(self.session.reasoning_context) // 2))
                     llm_response = self.llm.chat_completions(
                         messages=[
                             m.to_llm_msg() for m in self.session.reasoning_context

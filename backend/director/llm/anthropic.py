@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 
 from pydantic import Field, field_validator, FieldValidationInfo
@@ -9,6 +10,8 @@ from director.constants import (
     LLMType,
     EnvPrefix,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AnthropicChatModel(str, Enum):
