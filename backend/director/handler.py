@@ -26,6 +26,7 @@ from director.agents.code_assistant import CodeAssistantAgent
 from director.agents.web_search_agent import WebSearchAgent
 from director.agents.clone_voice import CloneVoiceAgent
 from director.agents.voice_replacement import VoiceReplacementAgent
+from director.agents.brand_kit import BrandKitAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -71,6 +72,7 @@ class ChatHandler:
             WebSearchAgent,
             VoiceReplacementAgent,
             PricingAgent,
+            BrandKitAgent,
         ]
 
     def add_videodb_state(self, session):

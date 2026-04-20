@@ -30,4 +30,11 @@ class EnvPrefix(str, Enum):
     ANTHROPIC_ = "ANTHROPIC_"
     GOOGLEAI_ = "GOOGLEAI_"
 
-DOWNLOADS_PATH="director/downloads"
+DOWNLOADS_PATH = "director/downloads"
+
+# VideoDB public demo assets used as brandkit defaults when the user has none.
+# These IDs are hosted in VideoDB's public collection and are accessible via any API key.
+# TODO: Replace with canonical asset IDs from the VideoDB team.
+BRANDKIT_DEMO_INTRO_VIDEO_ID = None
+BRANDKIT_DEMO_OUTRO_VIDEO_ID = None
+BRANDKIT_DEMO_BRAND_IMAGE_ID = None
