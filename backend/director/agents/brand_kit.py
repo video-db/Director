@@ -57,7 +57,18 @@ BRAND_KIT_AGENT_PARAMETERS = {
 
 
 class BrandKitAgent(BaseAgent):
+    """Agent that applies brand kit elements (intro, outro, logo overlay) to a video.
+
+    Resolves each asset slot from user-supplied IDs first, falling back to
+    configured public demo assets so users can preview the effect before
+    uploading their own brand assets.
+    """
+
     def __init__(self, session: Session, **kwargs):
+        """Initialise BrandKitAgent and register it with the reasoning engine.
+
+        :param Session session: The active Director session.
+        """
         self.agent_name = "brand_kit"
         self.description = (
             "Apply brand kit elements (intro video, outro video, and brand logo overlay) "
