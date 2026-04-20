@@ -121,6 +121,11 @@ class ChatHandler:
             else:
                 res_eng.register_agents(agents)
 
+            if session.session_id in _active_engines:
+                logger.warning(
+                    f"Generation already running for session {session.session_id}, ignoring duplicate"
+                )
+                return
             _active_engines[session.session_id] = res_eng
             try:
                 res_eng.run()

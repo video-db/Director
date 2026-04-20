@@ -7,13 +7,16 @@ const BACKEND_URL = import.meta.env.VITE_APP_BACKEND_URL;
 const chatInterfaceRef = ref(null);
 const isGenerating = ref(false);
 const currentSessionId = ref(null);
+const stopPending = ref(false);
 
 const stopGeneration = async () => {
   if (currentSessionId.value) {
+    stopPending.value = true;
     isGenerating.value = false;
     await fetch(`${BACKEND_URL}/session/${currentSessionId.value}/stop`, {
       method: "POST",
     });
+    stopPending.value = false;
   }
 };
 
@@ -22,7 +25,7 @@ const stopGeneration = async () => {
 watch(
   () => chatInterfaceRef.value?.conversations,
   (convs) => {
-    if (!convs) return;
+    if (!convs || stopPending.value) return;
     for (const convMessages of Object.values(convs)) {
       for (const msg of Object.values(convMessages)) {
         if (msg.sender === "assistant" && msg.status === "progress") {
@@ -66,7 +69,9 @@ onUnmounted(() => {
     />
     <button
       v-if="isGenerating"
+      type="button"
       class="stop-btn"
+      aria-label="Stop generation"
       @click="stopGeneration"
       title="Stop generation"
     >

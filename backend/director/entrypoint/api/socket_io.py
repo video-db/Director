@@ -21,7 +21,13 @@ class ChatNamespace(Namespace):
         chat_handler.chat(message)
 
     def on_stop_generation(self, message):
-        """Stop an in-progress generation for the given session_id."""
+        """Stop an in-progress generation for the given session_id.
+
+        Note: Director is designed for single-user local deployments; there is
+        no multi-user authentication layer. Any connected client can request a
+        stop for any session_id. If you deploy Director in a shared environment,
+        add session-ownership verification here before calling engine.stop().
+        """
         session_id = message.get("session_id")
         if not session_id:
             logger.warning("stop_generation received without session_id")
