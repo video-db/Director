@@ -30,21 +30,22 @@ BRAND_KIT_AGENT_PARAMETERS = {
             "description": "The ID of the collection containing the video.",
         },
         "intro_video_id": {
-            "type": "string",
+            # ["string", "null"] so OpenAI strict mode can emit explicit null
+            "type": ["string", "null"],
             "description": (
                 "Optional. The ID of the intro video to prepend. "
                 "If not provided, a VideoDB demo intro is used."
             ),
         },
         "outro_video_id": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": (
                 "Optional. The ID of the outro video to append. "
                 "If not provided, a VideoDB demo outro is used."
             ),
         },
         "brand_image_id": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": (
                 "Optional. The ID of the brand logo image to overlay. "
                 "If not provided, a VideoDB demo logo is used."
@@ -86,34 +87,35 @@ class BrandKitAgent(BaseAgent):
         :param str outro_video_id: Optional outro video ID to append
         :param str brand_image_id: Optional brand logo image ID to overlay
         """
-        video_content = VideoContent(
-            agent_name=self.agent_name,
-            status=MsgStatus.progress,
-            status_message="Applying brand kit...",
-        )
-        self.output_message.content.append(video_content)
-        self.output_message.push_update()
-
+        video_content = None
         try:
             videodb_tool = VideoDBTool(collection_id=collection_id)
 
-            # Resolve defaults — fall back to public demo assets when user has none
+            # Resolve per-slot: user-supplied ID wins, then demo fallback
             resolved_intro = intro_video_id or BRANDKIT_DEMO_INTRO_VIDEO_ID
             resolved_outro = outro_video_id or BRANDKIT_DEMO_OUTRO_VIDEO_ID
             resolved_image = brand_image_id or BRANDKIT_DEMO_BRAND_IMAGE_ID
 
-            using_demo = not any([intro_video_id, outro_video_id, brand_image_id])
-            has_any_demo = any([resolved_intro, resolved_outro, resolved_image])
+            # Track which slots are filled by demo assets (not the user)
+            demo_slots = [
+                label
+                for label, user_id, resolved in (
+                    ("intro", intro_video_id, resolved_intro),
+                    ("outro", outro_video_id, resolved_outro),
+                    ("logo overlay", brand_image_id, resolved_image),
+                )
+                if resolved and not user_id
+            ]
+            all_demo = not any([intro_video_id, outro_video_id, brand_image_id])
+            nothing_resolved = not any([resolved_intro, resolved_outro, resolved_image])
 
-            if using_demo and not has_any_demo:
-                # No user assets and no demo assets configured yet
-                video_content.status = MsgStatus.error
-                video_content.status_message = "No brand kit assets available."
+            if all_demo and nothing_resolved:
+                # No user assets and no demo assets configured — guide the user
                 self.output_message.content.append(
                     TextContent(
                         agent_name=self.agent_name,
-                        status=MsgStatus.success,
-                        status_message="",
+                        status=MsgStatus.error,
+                        status_message="No brand kit assets available.",
                         text=(
                             "No brand kit assets were found. To create your brand kit, "
                             "please upload your assets first:\n\n"
@@ -130,6 +132,12 @@ class BrandKitAgent(BaseAgent):
                     message="No brand kit assets configured. Prompted user to upload their own.",
                 )
 
+            video_content = VideoContent(
+                agent_name=self.agent_name,
+                status=MsgStatus.progress,
+                status_message="Applying brand kit...",
+            )
+            self.output_message.content.append(video_content)
             self.output_message.actions.append("Building brand kit timeline...")
             self.output_message.push_update()
 
@@ -140,28 +148,34 @@ class BrandKitAgent(BaseAgent):
                 brand_image_id=resolved_image,
             )
 
-            video_content.video = VideoData(stream_url=stream_url)
-            video_content.status = MsgStatus.success
+            applied = []
+            if resolved_intro:
+                applied.append("intro")
+            if resolved_outro:
+                applied.append("outro")
+            if resolved_image:
+                applied.append("logo overlay")
 
-            if using_demo:
-                video_content.status_message = (
+            if all_demo:
+                status_message = (
                     "Here is your video with the demo brand kit applied. "
                     "Upload your own intro video, outro video, and logo image "
                     "to replace the demo assets with your brand."
                 )
-            else:
-                applied = []
-                if resolved_intro:
-                    applied.append("intro")
-                if resolved_outro:
-                    applied.append("outro")
-                if resolved_image:
-                    applied.append("logo overlay")
-                video_content.status_message = (
-                    f"Brand kit applied ({', '.join(applied)})."
+            elif demo_slots:
+                status_message = (
+                    f"Brand kit applied ({', '.join(applied)}). "
+                    f"Demo assets used for: {', '.join(demo_slots)}. "
+                    "Upload your own to replace them."
                 )
+            else:
+                status_message = f"Brand kit applied ({', '.join(applied)})."
 
+            video_content.video = VideoData(stream_url=stream_url)
+            video_content.status = MsgStatus.success
+            video_content.status_message = status_message
             self.output_message.publish()
+
             return AgentResponse(
                 status=AgentStatus.SUCCESS,
                 message="Brand kit applied successfully.",
@@ -170,13 +184,15 @@ class BrandKitAgent(BaseAgent):
                     "intro_video_id": resolved_intro,
                     "outro_video_id": resolved_outro,
                     "brand_image_id": resolved_image,
-                    "used_demo_assets": using_demo,
+                    "used_demo_assets": bool(demo_slots),
+                    "demo_asset_slots": demo_slots,
                 },
             )
 
         except Exception as e:
             logger.exception(f"BrandKitAgent failed: {e}")
-            video_content.status = MsgStatus.error
-            video_content.status_message = "Failed to apply brand kit."
+            if video_content is not None:
+                video_content.status = MsgStatus.error
+                video_content.status_message = "Failed to apply brand kit."
             self.output_message.publish()
             return AgentResponse(status=AgentStatus.ERROR, message=str(e))
