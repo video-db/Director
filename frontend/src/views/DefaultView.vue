@@ -13,10 +13,13 @@ const stopGeneration = async () => {
   if (currentSessionId.value) {
     stopPending.value = true;
     isGenerating.value = false;
-    await fetch(`${BACKEND_URL}/session/${currentSessionId.value}/stop`, {
-      method: "POST",
-    });
-    stopPending.value = false;
+    try {
+      await fetch(`${BACKEND_URL}/session/${currentSessionId.value}/stop`, {
+        method: "POST",
+      });
+    } finally {
+      stopPending.value = false;
+    }
   }
 };
 
@@ -27,7 +30,9 @@ watch(
   (convs) => {
     if (!convs || stopPending.value) return;
     for (const convMessages of Object.values(convs)) {
+      if (!convMessages) continue;
       for (const msg of Object.values(convMessages)) {
+        if (!msg) continue;
         if (msg.sender === "assistant" && msg.status === "progress") {
           isGenerating.value = true;
           currentSessionId.value = msg.session_id;

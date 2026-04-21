@@ -268,5 +268,9 @@ def upload_video(collection_id):
 
 @config_bp.route("/check", methods=["GET"])
 def config_check():
-    config_handler = ConfigHandler()
-    return config_handler.check()
+    """Return the server configuration status. Always returns 200 with boolean flags."""
+    try:
+        config_handler = ConfigHandler()
+        return config_handler.check()
+    except Exception:
+        return jsonify({"videodb_configured": False, "llm_configured": False, "db_configured": False}), 200

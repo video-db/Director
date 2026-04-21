@@ -78,6 +78,7 @@ class ChatHandler:
         ]
 
     def add_videodb_state(self, session):
+        """Populate session.state with a VideoDB connection, collection, and optionally a video."""
         from videodb import connect
 
         session.state["conn"] = connect(
@@ -92,6 +93,7 @@ class ChatHandler:
             )
 
     def agents_list(self):
+        """Return a list of agent name/description dicts for all registered agents."""
         return [
             {
                 "name": agent_instance.name,
@@ -102,6 +104,7 @@ class ChatHandler:
         ]
 
     def chat(self, message):
+        """Process an incoming chat message, run the reasoning engine, and stream the response."""
         logger.info(f"ChatHandler input message: {message}")
 
         session = Session(db=self.db, **message)
@@ -125,12 +128,14 @@ class ChatHandler:
                 logger.warning(
                     f"Generation already running for session {session.session_id}, ignoring duplicate"
                 )
+                session.output_message.update_status(MsgStatus.error)
                 return
             _active_engines[session.session_id] = res_eng
             try:
                 res_eng.run()
             finally:
-                _active_engines.pop(session.session_id, None)
+                if _active_engines.get(session.session_id) is res_eng:
+                    _active_engines.pop(session.session_id, None)
                 if res_eng.stop_flag:
                     session.output_message.update_status(MsgStatus.error)
 
@@ -226,10 +231,17 @@ class VideoDBHandler:
 class ConfigHandler:
     def check(self):
         """Check the configuration of the server."""
-        videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False
+        try:
+            videodb_configured = bool(os.getenv("VIDEO_DB_API_KEY"))
+        except Exception:
+            videodb_configured = False
 
-        db = load_db(os.getenv("SERVER_DB_TYPE", os.getenv("DB_TYPE", "sqlite")))
-        db_configured = db.health_check()
+        try:
+            db = load_db(os.getenv("SERVER_DB_TYPE", os.getenv("DB_TYPE", "sqlite")))
+            db_configured = db.health_check()
+        except Exception:
+            db_configured = False
+
         return {
             "videodb_configured": videodb_configured,
             "llm_configured": True,
