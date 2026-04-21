@@ -28,6 +28,9 @@ class ChatNamespace(Namespace):
         stop for any session_id. If you deploy Director in a shared environment,
         add session-ownership verification here before calling engine.stop().
         """
+        if not isinstance(message, dict):
+            logger.warning("stop_generation received invalid payload: %r", message)
+            return
         session_id = message.get("session_id")
         if not session_id:
             logger.warning("stop_generation received without session_id")

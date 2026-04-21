@@ -110,6 +110,15 @@ class ChatHandler:
         logger.info(f"ChatHandler input message: {message}")
 
         session = Session(db=self.db, **message)
+
+        # Reject duplicates before any DB writes or progress events.
+        with _active_engines_lock:
+            if session.session_id in _active_engines:
+                logger.warning(
+                    f"Generation already running for session {session.session_id}, ignoring duplicate"
+                )
+                return
+
         session.create()
         input_message = InputMessage(db=self.db, **message)
         input_message.publish()
@@ -126,10 +135,11 @@ class ChatHandler:
             else:
                 res_eng.register_agents(agents)
 
+            # Second check-and-claim to cover the window between the early check and engine creation.
             with _active_engines_lock:
                 if session.session_id in _active_engines:
                     logger.warning(
-                        f"Generation already running for session {session.session_id}, ignoring duplicate"
+                        f"Generation already running for session {session.session_id}, ignoring duplicate (late check)"
                     )
                     session.output_message.update_status(MsgStatus.error)
                     return
