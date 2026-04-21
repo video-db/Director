@@ -5,7 +5,7 @@ from flask import current_app as app
 from flask_socketio import Namespace
 
 from director.db import load_db
-from director.handler import ChatHandler, _active_engines
+from director.handler import ChatHandler, _active_engines, _active_engines_lock
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,8 @@ class ChatNamespace(Namespace):
         if not session_id:
             logger.warning("stop_generation received without session_id")
             return
-        engine = _active_engines.get(session_id)
+        with _active_engines_lock:
+            engine = _active_engines.get(session_id)
         if engine:
             logger.info(f"Stopping generation for session {session_id}")
             engine.stop()

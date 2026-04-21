@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 
 from director.agents.frame import FrameAgent
 from director.agents.summarize_video import SummarizeVideoAgent
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 # Registry of currently running ReasoningEngine instances keyed by session_id.
 # Used by on_stop_generation to cancel an in-progress generation.
 _active_engines: dict = {}
+_active_engines_lock = threading.Lock()
 
 
 class ChatHandler:
@@ -124,18 +126,20 @@ class ChatHandler:
             else:
                 res_eng.register_agents(agents)
 
-            if session.session_id in _active_engines:
-                logger.warning(
-                    f"Generation already running for session {session.session_id}, ignoring duplicate"
-                )
-                session.output_message.update_status(MsgStatus.error)
-                return
-            _active_engines[session.session_id] = res_eng
+            with _active_engines_lock:
+                if session.session_id in _active_engines:
+                    logger.warning(
+                        f"Generation already running for session {session.session_id}, ignoring duplicate"
+                    )
+                    session.output_message.update_status(MsgStatus.error)
+                    return
+                _active_engines[session.session_id] = res_eng
             try:
                 res_eng.run()
             finally:
-                if _active_engines.get(session.session_id) is res_eng:
-                    _active_engines.pop(session.session_id, None)
+                with _active_engines_lock:
+                    if _active_engines.get(session.session_id) is res_eng:
+                        _active_engines.pop(session.session_id, None)
                 if res_eng.stop_flag:
                     session.output_message.update_status(MsgStatus.error)
 
@@ -231,15 +235,13 @@ class VideoDBHandler:
 class ConfigHandler:
     def check(self):
         """Check the configuration of the server."""
-        try:
-            videodb_configured = bool(os.getenv("VIDEO_DB_API_KEY"))
-        except Exception:
-            videodb_configured = False
+        videodb_configured = bool(os.getenv("VIDEO_DB_API_KEY"))
 
         try:
             db = load_db(os.getenv("SERVER_DB_TYPE", os.getenv("DB_TYPE", "sqlite")))
             db_configured = db.health_check()
         except Exception:
+            logger.exception("Failed to check database configuration")
             db_configured = False
 
         return {
