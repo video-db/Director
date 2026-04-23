@@ -178,12 +178,12 @@ class TestLiteLLMChatCompletions:
         call_kwargs = self.fake.completion.call_args[1]
         assert call_kwargs["response_format"] == rf
 
-    def test_top_p_not_sent(self):
-        """top_p is omitted to avoid conflicts across providers."""
-        llm = self._make_llm()
+    def test_top_p_forwarded(self):
+        """top_p is forwarded; drop_params=True handles provider conflicts."""
+        llm = self._make_llm(top_p=0.95)
         llm.chat_completions(messages=[{"role": "user", "content": "hi"}])
         call_kwargs = self.fake.completion.call_args[1]
-        assert "top_p" not in call_kwargs
+        assert call_kwargs["top_p"] == 0.95
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +263,32 @@ class TestLiteLLMToolCalling:
         assert "tools" not in call_kwargs
         assert "tool_choice" not in call_kwargs
 
+    def test_empty_tool_arguments_handled(self):
+        """Empty string arguments should not crash json.loads."""
+        tc = _ToolCall("tc1", "ping", {})
+        tc.function.arguments = ""
+        self.fake.completion.return_value = _Response(content="", tool_calls=[tc])
+
+        llm = self._make_llm()
+        result = llm.chat_completions(
+            messages=[{"role": "user", "content": "ping"}],
+            tools=[{"name": "ping", "description": "Ping", "parameters": {}}],
+        )
+        assert result.tool_calls[0]["tool"]["arguments"] == {}
+
+    def test_none_tool_arguments_handled(self):
+        """None arguments should not crash."""
+        tc = _ToolCall("tc1", "ping", {})
+        tc.function.arguments = None
+        self.fake.completion.return_value = _Response(content="", tool_calls=[tc])
+
+        llm = self._make_llm()
+        result = llm.chat_completions(
+            messages=[{"role": "user", "content": "ping"}],
+            tools=[{"name": "ping", "description": "Ping", "parameters": {}}],
+        )
+        assert result.tool_calls[0]["tool"]["arguments"] == {}
+
 
 # ---------------------------------------------------------------------------
 # Token usage and finish reason
@@ -275,6 +301,21 @@ class TestLiteLLMResponseFields:
 
     def teardown_method(self):
         _uninstall_fake_litellm()
+
+    def test_none_usage_returns_zero_tokens(self):
+        """Some providers return None for usage. Should not crash."""
+        resp = _Response(content="ok")
+        resp.usage = None
+        self.fake.completion.return_value = resp
+
+        from director.llm.litellm import LiteLLMConfig, LiteLLM
+
+        llm = LiteLLM(config=LiteLLMConfig(chat_model="x", api_key="k"))
+        result = llm.chat_completions(messages=[{"role": "user", "content": "hi"}])
+        assert result.send_tokens == 0
+        assert result.recv_tokens == 0
+        assert result.total_tokens == 0
+        assert result.status == LLMResponseStatus.SUCCESS
 
     def test_token_counts(self):
         self.fake.completion.return_value = _Response(

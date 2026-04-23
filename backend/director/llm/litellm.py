@@ -103,6 +103,7 @@ class LiteLLM(BaseLLM):
             "messages": self._format_messages(messages),
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
             "stop": stop,
             "timeout": self.timeout,
             "drop_params": True,
@@ -120,28 +121,36 @@ class LiteLLM(BaseLLM):
 
         try:
             response = litellm.completion(**params)
+
+            usage = getattr(response, "usage", None)
+            tool_calls = []
+            if response.choices[0].message.tool_calls:
+                for tool_call in response.choices[0].message.tool_calls:
+                    args_raw = tool_call.function.arguments
+                    try:
+                        arguments = json.loads(args_raw) if args_raw else {}
+                    except (json.JSONDecodeError, TypeError):
+                        arguments = {}
+                    tool_calls.append(
+                        {
+                            "id": tool_call.id,
+                            "tool": {
+                                "name": tool_call.function.name,
+                                "arguments": arguments,
+                            },
+                            "type": tool_call.type,
+                        }
+                    )
+
+            return LLMResponse(
+                content=response.choices[0].message.content or "",
+                tool_calls=tool_calls,
+                finish_reason=response.choices[0].finish_reason,
+                send_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+                recv_tokens=getattr(usage, "completion_tokens", 0) or 0,
+                total_tokens=getattr(usage, "total_tokens", 0) or 0,
+                status=LLMResponseStatus.SUCCESS,
+            )
         except Exception as e:
             print(f"Error: {e}")
             return LLMResponse(content=f"Error: {e}")
-
-        return LLMResponse(
-            content=response.choices[0].message.content or "",
-            tool_calls=[
-                {
-                    "id": tool_call.id,
-                    "tool": {
-                        "name": tool_call.function.name,
-                        "arguments": json.loads(tool_call.function.arguments),
-                    },
-                    "type": tool_call.type,
-                }
-                for tool_call in response.choices[0].message.tool_calls
-            ]
-            if response.choices[0].message.tool_calls
-            else [],
-            finish_reason=response.choices[0].finish_reason,
-            send_tokens=response.usage.prompt_tokens,
-            recv_tokens=response.usage.completion_tokens,
-            total_tokens=response.usage.total_tokens,
-            status=LLMResponseStatus.SUCCESS,
-        )
