@@ -5,6 +5,7 @@ from director.constants import LLMType
 from director.llm.openai import OpenAI
 from director.llm.anthropic import AnthropicAI
 from director.llm.googleai import GoogleAI
+from director.llm.litellm import LiteLLM
 from director.llm.videodb_proxy import VideoDBProxy
 
 
@@ -17,7 +18,9 @@ def get_default_llm():
 
     default_llm = os.getenv("DEFAULT_LLM")
 
-    if openai or default_llm == LLMType.OPENAI:
+    if default_llm == LLMType.LITELLM:
+        return LiteLLM()
+    elif openai or default_llm == LLMType.OPENAI:
         return OpenAI()
     elif anthropic or default_llm == LLMType.ANTHROPIC:
         return AnthropicAI()
