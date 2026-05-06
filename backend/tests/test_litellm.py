@@ -537,12 +537,13 @@ class TestLiteLLMConfig:
     def test_default_config_values(self):
         from director.llm.litellm import LiteLLMConfig
 
-        config = LiteLLMConfig()
-        assert config.llm_type == "litellm"
-        assert config.chat_model == "openai/gpt-4o"
-        assert config.max_tokens == 4096
-        assert config.api_key == ""
-        assert config.api_base == ""
+        with mock.patch.dict("os.environ", {}, clear=True):
+            config = LiteLLMConfig()
+            assert config.llm_type == "litellm"
+            assert config.chat_model == "openai/gpt-4o"
+            assert config.max_tokens == 4096
+            assert config.api_key == ""
+            assert config.api_base == ""
 
     def test_config_reads_from_env(self):
         from director.llm.litellm import LiteLLMConfig
@@ -565,6 +566,7 @@ class TestLiteLLMConfig:
         """Unlike OpenAI/GoogleAI configs, LiteLLM should not require api_key."""
         from director.llm.litellm import LiteLLMConfig, LiteLLM
 
-        config = LiteLLMConfig(chat_model="openai/gpt-4o")
-        llm = LiteLLM(config=config)
-        assert llm.api_key == ""
+        with mock.patch.dict("os.environ", {}, clear=True):
+            config = LiteLLMConfig(chat_model="openai/gpt-4o")
+            llm = LiteLLM(config=config)
+            assert llm.api_key == ""

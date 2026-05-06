@@ -1,10 +1,13 @@
 import json
+import logging
 
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
 from director.llm.base import BaseLLM, BaseLLMConfig, LLMResponse, LLMResponseStatus
 from director.constants import LLMType, EnvPrefix
+
+logger = logging.getLogger(__name__)
 
 
 class LiteLLMConfig(BaseLLMConfig):
@@ -89,7 +92,7 @@ class LiteLLM(BaseLLM):
         return formatted_tools
 
     def chat_completions(
-        self, messages: list, tools: list = [], stop=None, response_format=None
+        self, messages: list, tools: list | None = None, stop=None, response_format=None
     ):
         """Get chat completions via LiteLLM.
 
@@ -152,5 +155,5 @@ class LiteLLM(BaseLLM):
                 status=LLMResponseStatus.SUCCESS,
             )
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error("LiteLLM completion failed: %s", e)
             return LLMResponse(content=f"Error: {e}")
