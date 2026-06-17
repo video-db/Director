@@ -18,6 +18,7 @@ class LLMType(str, Enum):
     """Enum for LLM types"""
 
     OPENAI = "openai"
+    EVOLINK = "evolink"
     ANTHROPIC = "anthropic"
     GOOGLEAI = "googleai"
     VIDEODB_PROXY = "videodb_proxy"
@@ -27,7 +28,9 @@ class EnvPrefix(str, Enum):
     """Enum for environment prefixes"""
 
     OPENAI_ = "OPENAI_"
+    EVOLINK_ = "EVOLINK_"
     ANTHROPIC_ = "ANTHROPIC_"
     GOOGLEAI_ = "GOOGLEAI_"
 
-DOWNLOADS_PATH="director/downloads"
+
+DOWNLOADS_PATH = "director/downloads"
