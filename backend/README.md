@@ -61,7 +61,7 @@ The `VideoDBTool` (`director/tools/videodb_tool.py`) provides an interface for i
 
 ## 🧠 LLM Integration
 
-The `BaseLLM` class (`director/llm/base.py`) provides an abstraction for integrating different Language Model providers. The current implementation supports OpenAI (`director/llm/openai.py`).
+The `BaseLLM` class (`director/llm/base.py`) provides an abstraction for integrating different Language Model providers. The current implementation supports OpenAI (`director/llm/openai.py`) and EvoLink (`director/llm/evolink.py`).
 
 ## 📦 Dependencies
 
@@ -123,4 +123,3 @@ make run
 ## 📚 Further Documentation
 
 For more detailed information about specific components, please refer to the MkDocs documentation.
-

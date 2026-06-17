@@ -73,6 +73,7 @@ nav:
     - 'Interface': 'llm/interface.md'
     - Integrations:
       - 'OpenAI': 'llm/openai.md'
+      - 'EvoLink': 'llm/evolink.md'
       - 'AnthropicAI': 'llm/anthropic.md'
       - 'GoogleAI': 'llm/googleai.md'
   - 'Database':
