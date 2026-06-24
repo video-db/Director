@@ -75,6 +75,7 @@ https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 ## ⭐️ Key Features
 ### 🤖 20+ pre-built video agents that you can customize to 
 * Summarize videos in seconds.
+* Understand videos multimodally (visual + audio) with TwelveLabs Pegasus.
 * Generate full movies with voiceovers from a script.
 * Search and index your media library.
 * Organize and clip your content effortlessly.
