@@ -124,7 +124,13 @@ class MuApiVideoGenerationTool:
         """Submit a generation request and return the request_id."""
         resp = self.session.post(f"{self.BASE_URL}/{endpoint}", json=payload, timeout=30)
         resp.raise_for_status()
-        return resp.json()["request_id"]
+        try:
+            request_id = resp.json()["request_id"]
+        except KeyError:
+            raise Exception(
+                f"MuAPI did not return a request_id. Response: {resp.text}"
+            )
+        return request_id
 
     def _poll(self, request_id: str, timeout: int = 600) -> str:
         """Poll until the generation completes and return the output URL."""
@@ -167,7 +173,7 @@ class MuApiVideoGenerationTool:
             with open(save_at, "wb") as f:
                 f.write(video_data.content)
         except Exception as e:
-            raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}")
+            raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}") from e
 
         return {"status": "success", "video_path": save_at}
 
@@ -199,6 +205,6 @@ class MuApiVideoGenerationTool:
             with open(save_at, "wb") as f:
                 f.write(video_data.content)
         except Exception as e:
-            raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}")
+            raise Exception(f"Error generating video: {type(e).__name__}: {str(e)}") from e
 
         return {"status": "success", "video_path": save_at}
