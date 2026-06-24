@@ -26,6 +26,7 @@ from director.agents.code_assistant import CodeAssistantAgent
 from director.agents.web_search_agent import WebSearchAgent
 from director.agents.clone_voice import CloneVoiceAgent
 from director.agents.voice_replacement import VoiceReplacementAgent
+from director.agents.video_understanding import VideoUnderstandingAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
@@ -70,6 +71,7 @@ class ChatHandler:
             CodeAssistantAgent,
             WebSearchAgent,
             VoiceReplacementAgent,
+            VideoUnderstandingAgent,
             PricingAgent,
         ]
 
