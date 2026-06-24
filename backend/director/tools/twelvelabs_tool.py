@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class TwelveLabsTool:
         self,
         video_url: str,
         prompt: str,
-        config: dict = None,
+        config: Optional[dict] = None,
     ) -> str:
         """Analyze a video from a public URL using Pegasus.
 
@@ -86,11 +87,11 @@ class TwelveLabsTool:
             )
         except Exception as e:
             raise Exception(
-                f"Error analyzing video with TwelveLabs: {type(e).__name__}: {str(e)}"
-            )
+                f"Error analyzing video with TwelveLabs: {type(e).__name__}: {e}"
+            ) from e
         return response.data
 
-    def get_text_embedding(self, text: str, config: dict = None) -> list:
+    def get_text_embedding(self, text: str, config: Optional[dict] = None) -> list:
         """Create a multimodal embedding for a text query using Marengo.
 
         The returned vector lives in the same embedding space as
@@ -110,6 +111,6 @@ class TwelveLabsTool:
             )
         except Exception as e:
             raise Exception(
-                f"Error creating embedding with TwelveLabs: {type(e).__name__}: {str(e)}"
-            )
+                f"Error creating embedding with TwelveLabs: {type(e).__name__}: {e}"
+            ) from e
         return response.text_embedding.segments[0].float_

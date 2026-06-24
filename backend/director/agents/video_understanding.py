@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 
 from director.agents.base import BaseAgent, AgentResponse, AgentStatus
 from director.core.session import Session, TextContent, MsgStatus
@@ -65,7 +66,7 @@ class VideoUnderstandingAgent(BaseAgent):
         collection_id: str,
         video_id: str,
         prompt: str,
-        twelvelabs_config: dict = None,
+        twelvelabs_config: Optional[dict] = None,
         *args,
         **kwargs,
     ) -> AgentResponse:
@@ -105,12 +106,12 @@ class VideoUnderstandingAgent(BaseAgent):
             self.output_message.actions.append("Resolving a downloadable video URL..")
             self.output_message.push_update()
             download_response = videodb_tool.download(video["stream_url"])
-            if download_response.get("status") != "done":
+            video_url = download_response.get("download_url")
+            if download_response.get("status") != "done" or not video_url:
                 raise Exception(
                     f"Could not resolve a downloadable URL for video {video_id}: "
                     f"{download_response}"
                 )
-            video_url = download_response["download_url"]
 
             self.output_message.actions.append(
                 "Analyzing video with <b>TwelveLabs Pegasus</b>.."
