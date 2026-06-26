@@ -126,10 +126,10 @@ class MuApiVideoGenerationTool:
         resp.raise_for_status()
         try:
             request_id = resp.json()["request_id"]
-        except KeyError:
+        except KeyError as e:
             raise Exception(
                 f"MuAPI did not return a request_id. Response: {resp.text}"
-            )
+            ) from e
         return request_id
 
     def _poll(self, request_id: str, timeout: int = 600) -> str:
