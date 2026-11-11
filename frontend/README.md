@@ -1,73 +1,69 @@
 # 🎬 Director Frontend
 
-## 📋 Overview
+The chat app for Director: Vue 3 + TypeScript, Vue Router, Pinia and Tailwind, talking to the backend over HTTP and socket.io.
 
-Director Frontend is a Vue.js-based user interface for the Director project. It utilizes various components and libraries to create an interactive and responsive web application.
+## Getting started
 
-### 🧩 Key Components:
-- Vue.js 3
-- Vue Router
-- Socket.io Client
-- @videodb/chat-vue ([Github](https://github.com/video-db/videodb-chat))
-- @videodb/player-vue ([Github](https://github.com/video-db/videodb-player))
-- Tailwind CSS
-- Vite
-
-## 🚀 Getting Started
-
-### 📦 Install Dependencies
-
-To install the necessary dependencies, run:
+From the repo root, `make install-fe` then `make run-fe`. Or from this folder:
 
 ```bash
 npm install
+cp .env.sample .env   # point VITE_APP_BACKEND_URL at the backend
+npm run dev
 ```
 
-### 🏃‍♂️ Running the Frontend
+| Script | What it does |
+|---|---|
+| `npm run dev` | Dev server on `VITE_PORT` (default 8080) |
+| `npm run build` | Type-check, then build to `dist/` |
+| `npm run typecheck` | `vue-tsc --noEmit` |
+| `npm test` | Vitest |
 
-You can run the frontend in two ways:
+| Env var | Default |
+|---|---|
+| `VITE_APP_BACKEND_URL` | `http://127.0.0.1:8000` |
+| `VITE_PORT` | `8080` |
+| `VITE_OPEN_BROWSER` | `true` (set `false` to stay closed) |
 
-1. From the parent folder:
-   ```bash
-   make run-fe
-   ```
+## Routes
 
-2. From the frontend folder:
-   ```bash
-   make run
-   ```
+| Path | Page |
+|---|---|
+| `/` | Home: action cards and a preview of the active collection |
+| `/chat/:sessionId` | A chat session |
+| `/collection/:collectionId` | Every video, audio and image in a collection |
+| `/collection/:collectionId/video/:videoId` | One video; messages sent here are about that video |
+| `/setup` | Shown until `/config/check` reports a complete setup |
 
-Both commands will start the development server using Vite.
+Sending a message from any page other than a chat starts a new session and opens it.
 
-## 🌐 Deployment
+## Layout
 
-To deploy the frontend:
+```
+src/
+  main.ts, App.vue
+  router/          routes + the setup guard
+  layouts/         AppLayout: sidebar, header, composer, dialogs (stays mounted)
+  pages/           one component per route
+  stores/          Pinia: chat, sessions, collections, agents, ui
+  api/             typed fetch wrappers per backend area
+  composables/     useChatSocket (one /chat socket), useChatActions (send + navigate), useOpenVideo
+  components/      UI components and message handlers
+  messageRenderers.ts   content.type → component
+  types/           backend shapes (mirrors backend/director/core/session.py)
+  config.ts        backend URL, sidebar links, demo videos
+```
 
-1. Build the project:
-   ```bash
-   npm run build
-   ```
+## Message handlers
 
-2. The built files will be in the `dist` directory. You can then serve these files using a static file server of your choice.
+Each `content` item in an assistant message is rendered by the component registered for its `type` in `src/messageRenderers.ts`:
 
-## 🔄 Application Flow
+| `type` | Component |
+|---|---|
+| `text` | `TextResponse` |
+| `video` | `ChatVideo` |
+| `videos` | `ChatVideos` |
+| `image` | `ImageHandler` |
+| `search_results` | `ChatSearchResults` |
 
-### 💬 Chat Communication
-The frontend uses a WebSocket connection (via Socket.io) to communicate with the backend for real-time chat functionality.
-
-### 🔍 Data Fetching
-HTTP connections are used to fetch details such as session information and collections from the backend.
-
-## 🛠️ Development
-
-- The main application structure is defined in `src/App.vue`
-- Routing is handled in `src/router/index.js`
-- The entry point of the application is `src/main.js`
-
-## 📄 Additional Information
-
-- The project uses Tailwind CSS for styling
-- Custom styles and CSS variables are defined in `src/App.vue`
-- The application is set up to use Vue Router for navigation
-
-For more detailed information about the project structure and configuration, please refer to the individual files in the repository.
+When a new `ContentType` is added to the backend, add a component under `src/components/message-handlers/` and register it there. Unknown types are skipped.

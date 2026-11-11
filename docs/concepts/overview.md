@@ -2,7 +2,7 @@
 Director's architecture brings together:
 
 **Backend Reasoning Engine:** Handles workflows and decision-making. Check out the <a href="https://github.com/video-db/Director/tree/main/backend" target="_blank" rel="noopener noreferrer">backend folder</a> in director codebase. 
-**Chat-Based UI:** Engage with your media library conversationally. Check <a href="https://github.com/video-db/videodb-chat" target="_blank" rel="noopener noreferrer">videodb-chat</a> for the source code.
+**Chat-Based UI:** Engage with your media library conversationally. The source lives in <a href="https://github.com/video-db/Director/tree/main/frontend" target="_blank" rel="noopener noreferrer">frontend/</a>.
 **Video Player:** Advanced playback and interaction tools. Check <a href="https://github.com/video-db/videodb-player" target="_blank" rel="noopener noreferrer">videodb-player</a> for the details about the multi-platform video player.
 - **Collection View:** Organize and browse your media effortlessly.
 
