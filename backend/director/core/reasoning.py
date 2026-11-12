@@ -3,7 +3,6 @@ from typing import List
 
 from director.agents.base import BaseAgent, AgentStatus, AgentResponse
 from director.core.context import ContextBuilder, ContextPolicy
-from director.core.prompts import SUMMARIZATION_PROMPT
 from director.core.session import (
     Session,
     InputMessage,
@@ -17,11 +16,16 @@ from director.llm.base import BaseLLM, LLMResponse
 
 logger = logging.getLogger(__name__)
 
+MAX_ITERATIONS_REPLY = (
+    "I stopped before finishing because this request needed more steps than "
+    "I'm allowed in one turn. Tell me to continue and I'll pick up from here."
+)
+
 
 class ReasoningEngine:
     """The Reasoning Engine is the core class that directly interfaces with the user. It interprets natural language input in any conversation and orchestrates agents to fulfill the user's requests.
 
-    Each turn it calls the LLM with the registered agents as tools, runs the requested agents, feeds their responses back, and repeats until the LLM answers without tools or ``max_iterations`` is reached. If any agent ran, a final summarization pass ("Final Cut") writes the reply."""
+    Each turn it calls the LLM with the registered agents as tools, runs the requested agents, feeds their responses back, and repeats until the LLM answers without tools. That answer is the reply."""
 
     def __init__(
         self,
@@ -48,7 +52,6 @@ class ReasoningEngine:
         self.policy = policy or ContextPolicy()
         self.max_iterations = max_iterations
         self.output_message = session.output_message
-        self.failed_agents = []
 
     def run(self, input_message: InputMessage):
         """Run the reasoning engine for one user message.
@@ -59,7 +62,6 @@ class ReasoningEngine:
         self.output_message.actions.append("Reasoning the message..")
         self.output_message.push_update()
         tools = [agent.to_llm_format() for agent in self.agents.values()]
-        used_tools = False
 
         for _ in range(self.max_iterations):
             response: LLMResponse = self.llm.chat_completions(
@@ -72,7 +74,6 @@ class ReasoningEngine:
                 break
 
             if response.tool_calls:
-                used_tools = True
                 ctx.append(
                     ContextMessage(
                         content=response.content,
@@ -80,18 +81,16 @@ class ReasoningEngine:
                         role=RoleTypes.assistant,
                     )
                 )
+                if response.content:
+                    self._show_text(response.content)
                 for tool_call in response.tool_calls:
                     ctx.append(self._run_tool(tool_call))
                 continue
 
-            ctx.append(
-                ContextMessage(content=response.content, role=RoleTypes.assistant)
-            )
-            self._finish(response.content, used_tools)
+            self._reply(ctx, response.content)
             break
         else:
-            # Hit max_iterations while the LLM was still calling agents.
-            self._finish(None, used_tools=True)
+            self._reply(ctx, MAX_ITERATIONS_REPLY)
 
         self.session.save_context_messages()
 
@@ -112,38 +111,25 @@ class ReasoningEngine:
                 status=AgentStatus.ERROR, message=f"Unknown agent: {agent_name}"
             )
 
-        if agent_response.status == AgentStatus.ERROR:
-            self.failed_agents.append(agent_name)
         return ContextMessage(
             content=agent_response.__str__(),
             tool_call_id=tool_call["id"],
             role=RoleTypes.tool,
         )
 
-    def _finish(self, text: str, used_tools: bool):
-        """Write the reply: the direct answer if no agent ran, otherwise a summary of the turn."""
-        summary = TextContent(agent_name="assistant")
-        summary.status_message = "Consolidating outcomes..."
-        self.output_message.content.append(summary)
+    def _show_text(self, text: str):
+        self.output_message.content.append(
+            TextContent(text=text, status=MsgStatus.success, agent_name="assistant")
+        )
         self.output_message.push_update()
 
-        if not used_tools:
-            summary.text = text
-            summary.status_message = "Here is the response"
-            summary.status = MsgStatus.success
-        else:
-            run_context = self._current_run_context() + [
-                ContextMessage(content=SUMMARIZATION_PROMPT, role=RoleTypes.system)
-            ]
-            summary_response = self.llm.chat_completions(
-                messages=[message.to_llm_msg() for message in run_context]
+    def _reply(self, ctx: List[ContextMessage], text: str):
+        """End the turn: the reply is shown and saved as the last assistant message."""
+        if text:
+            ctx.append(ContextMessage(content=text, role=RoleTypes.assistant))
+            self.output_message.content.append(
+                TextContent(text=text, status=MsgStatus.success, agent_name="assistant")
             )
-            summary.text = summary_response.content
-            summary.status_message = "Final Cut"
-            summary.status = (
-                MsgStatus.error if self.failed_agents else MsgStatus.success
-            )
-
         self.output_message.status = MsgStatus.success
         self.output_message.publish()
 
@@ -159,11 +145,3 @@ class ReasoningEngine:
         self.output_message.actions.append("Failed to reason the message")
         self.output_message.status = MsgStatus.error
         self.output_message.publish()
-
-    def _current_run_context(self) -> List[ContextMessage]:
-        """Context from the latest user message onwards."""
-        ctx = self.session.reasoning_context
-        for i in range(len(ctx) - 1, -1, -1):
-            if ctx[i].role == RoleTypes.user:
-                return ctx[i:]
-        return []

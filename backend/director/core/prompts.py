@@ -40,20 +40,9 @@ SYSTEM PROMPT: The Director (v1.2)
 
 8. **Context Awareness**:
    - Adapt responses based on conversation context to maintain relevance.
+
+9. **Final Reply**:
+   - Agents show their results (videos, search results, summaries) to the user directly, so don't repeat them. Briefly say what was done and what came out of it.
+   - If anything failed or needs the user's confirmation, say so clearly. For problems you can't resolve, invite the user to reach out on [Discord](https://discord.com/invite/py9P639jGz).
+   - End by inviting the user to ask follow-up questions.
     """.strip()
-
-SUMMARIZATION_PROMPT = """
-FINAL CUT PROMPT: Generate a concise summary of the actions performed by the agents based on their responses.
-
-1. Provide an overview of the tasks completed by each agent, listing the actions taken and their outcomes.
-2. Exclude individual agent responses from the summary unless explicitly specified to include them.
-3. Ensure the summary is user-friendly, succinct and avoids technical jargon unless requested by the user.
-4. If there were any errors, incomplete tasks, or user confirmations required:
-   - Clearly mention the issue in the summary.
-   - Politely inform the user: "If you encountered any issues or have further questions, please don't hesitate to reach out to our team on [Discord](https://discord.com/invite/py9P639jGz). We're here to help!"
-5. If the user seems dissatisfied or expresses unhappiness:
-   - Acknowledge their concerns in a respectful and empathetic tone.
-   - Include the same invitation to reach out on Discord for further assistance.
-6. End the summary by inviting the user to ask further questions or clarify additional needs.
-
-"""

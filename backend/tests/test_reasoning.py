@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 from director.agents.base import BaseAgent, AgentResponse
 from director.core.context import ContextPolicy
-from director.core.reasoning import ReasoningEngine
+from director.core.reasoning import MAX_ITERATIONS_REPLY, ReasoningEngine
 from director.core.session import (
     ContextMessage,
     InputMessage,
@@ -108,55 +108,67 @@ def reply(session):
     return session.output_message.content[-1]
 
 
-def test_direct_answer_skips_summary(db):
+def test_direct_answer_is_the_reply(db):
     llm = FakeLLM([answer("Hello!")])
     session = run_turn(db, CollectingSink(), llm)
 
     assert len(llm.calls) == 1
     assert reply(session).text == "Hello!"
-    assert reply(session).status_message == "Here is the response"
     assert session.output_message.status == MsgStatus.success
 
 
-def test_tool_call_then_summary(db):
+def test_tool_call_then_final_answer_needs_no_extra_call(db):
     sink = CollectingSink()
-    llm = FakeLLM([call_echo("ping"), answer("done"), answer("Summary")])
+    llm = FakeLLM([call_echo("ping"), answer("Done, echoed ping.")])
     session = run_turn(db, sink, llm)
 
-    assert len(llm.calls) == 3
+    assert len(llm.calls) == 2
     assert llm.calls[0]["tools"][0]["name"] == "echo"
     tool_msg = llm.calls[1]["messages"][-1]
     assert tool_msg["role"] == RoleTypes.tool
     assert "echo: ping" in tool_msg["content"]
-    assert reply(session).text == "Summary"
-    assert reply(session).status_message == "Final Cut"
+    assert reply(session).text == "Done, echoed ping."
     assert session.output_message.agents == ["echo"]
     assert sink.events and all(channel == "chat" for channel, _ in sink.events)
 
+    saved = db.context["s-1"]["reasoning"]
+    assert saved[-1] == {"role": "assistant", "content": "Done, echoed ping."}
 
-def test_agent_error_marks_summary_error(db):
-    llm = FakeLLM([call_echo("boom"), answer("done"), answer("Something failed")])
+
+def test_text_alongside_tool_call_is_shown(db):
+    first = call_echo("ping")
+    first.content = "Let me check that."
+    llm = FakeLLM([first, answer("All done.")])
     session = run_turn(db, CollectingSink(), llm)
 
-    assert reply(session).status == MsgStatus.error
+    texts = [c.text for c in session.output_message.content]
+    assert texts == ["Let me check that.", "All done."]
+
+
+def test_agent_error_goes_back_to_the_llm(db):
+    llm = FakeLLM([call_echo("boom"), answer("The echo failed.")])
+    session = run_turn(db, CollectingSink(), llm)
+
+    tool_msg = llm.calls[1]["messages"][-1]
+    assert "status='error'" in tool_msg["content"] and "boom" in tool_msg["content"]
+    assert reply(session).text == "The echo failed."
 
 
 def test_unknown_agent_is_reported_not_raised(db):
     bad_call = call_echo("x")
     bad_call.tool_calls[0]["tool"]["name"] = "missing"
-    llm = FakeLLM([bad_call, answer("done"), answer("Summary")])
-    session = run_turn(db, CollectingSink(), llm)
+    llm = FakeLLM([bad_call, answer("done")])
+    run_turn(db, CollectingSink(), llm)
 
     assert "Unknown agent: missing" in llm.calls[1]["messages"][-1]["content"]
-    assert reply(session).status == MsgStatus.error
 
 
 def test_stops_at_max_iterations(db):
-    llm = FakeLLM([call_echo("a", f"call_{i}") for i in range(3)] + [answer("Summary")])
+    llm = FakeLLM([call_echo("a", f"call_{i}") for i in range(3)])
     session = run_turn(db, CollectingSink(), llm, max_iterations=3)
 
-    assert len(llm.calls) == 4
-    assert reply(session).text == "Summary"
+    assert len(llm.calls) == 3
+    assert reply(session).text == MAX_ITERATIONS_REPLY
 
 
 def test_context_is_saved_and_system_prompt_refreshed(db):
