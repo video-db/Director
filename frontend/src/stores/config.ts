@@ -1,14 +1,13 @@
-// Backend setup status and the agent list.
+// Backend setup status.
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-import * as api from "@/api/agents";
-import type { Agent, ConfigStatus } from "@/types";
+import * as api from "@/api/config";
+import type { ConfigStatus } from "@/types";
 
-export const useAgentsStore = defineStore("agents", () => {
+export const useConfigStore = defineStore("config", () => {
   const configStatus = ref<ConfigStatus | null>(null);
   const backendUnreachable = ref(false);
-  const agents = ref<Agent[]>([]);
 
   const isSetupComplete = computed(
     () =>
@@ -33,16 +32,10 @@ export const useAgentsStore = defineStore("agents", () => {
     return pending;
   }
 
-  async function loadAgents() {
-    agents.value = await api.listAgents();
-  }
-
   return {
     configStatus,
     backendUnreachable,
-    agents,
     isSetupComplete,
     loadConfig,
-    loadAgents,
   };
 });

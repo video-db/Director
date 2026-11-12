@@ -48,16 +48,6 @@ class ChatHandler:
                 session.video_id
             )
 
-    def agents_list(self):
-        return [
-            {
-                "name": agent_instance.name,
-                "description": agent_instance.agent_description,
-            }
-            for agent in self.agents
-            for agent_instance in [agent(Session(db=self.db))]
-        ]
-
     def chat(self, message):
         logger.info(f"ChatHandler input message: {message}")
 
@@ -70,12 +60,6 @@ class ChatHandler:
         try:
             self.add_videodb_state(session)
             agents = [agent(session=session) for agent in self.agents]
-            agents_mapping = {agent.name: agent for agent in agents}
-
-            # Mentions of agents that no longer exist fall back to all tools.
-            mentioned = [agents_mapping[n] for n in input_message.agents if n in agents_mapping]
-            if mentioned:
-                agents = mentioned
 
             engine = ReasoningEngine(
                 session=session, llm=get_default_llm(), agents=agents

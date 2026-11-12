@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import AppLayout from "@/layouts/AppLayout.vue";
-import { useAgentsStore } from "@/stores/agents";
+import { useConfigStore } from "@/stores/config";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -47,12 +47,12 @@ const router = createRouter({
 
 // Until the backend reports a complete setup, every route lands on /setup.
 router.beforeEach(async (to) => {
-  const agents = useAgentsStore();
-  await agents.loadConfig();
-  if (!agents.isSetupComplete && to.name !== "setup") {
+  const config = useConfigStore();
+  await config.loadConfig();
+  if (!config.isSetupComplete && to.name !== "setup") {
     return { name: "setup", query: { redirect: to.fullPath } };
   }
-  if (agents.isSetupComplete && to.name === "setup") {
+  if (config.isSetupComplete && to.name === "setup") {
     return (to.query.redirect as string) || { name: "home" };
   }
 });

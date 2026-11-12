@@ -27,7 +27,6 @@ export const useChatStore = defineStore("chat", () => {
 
   const chatInput = ref("");
   const chatAttachments = reactive<ImageAttachment[]>([]);
-  const taggedAgents = ref<string[]>([]);
 
   const chatLoading = computed(() =>
     Object.values(conversations).some((conv) =>
@@ -47,7 +46,6 @@ export const useChatStore = defineStore("chat", () => {
   function reset() {
     sessionId.value = null;
     videoId.value = null;
-    taggedAgents.value = [];
     clearConversations();
   }
 
@@ -83,17 +81,12 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  function tagAgent(name: string) {
-    if (name) taggedAgents.value.push(name);
-  }
-
   function addMessage(content: ContentBase[]) {
     const id = sessionId.value ?? startNewSession();
     sessions.track(id);
     const convId = String(Date.now());
     const msgId = String(Date.now() + 1);
     const message: Message = {
-      agents: taggedAgents.value,
       msg_type: "input",
       sender: "user",
       conv_id: convId,
@@ -103,7 +96,6 @@ export const useChatStore = defineStore("chat", () => {
       video_id: videoId.value,
       content,
     };
-    taggedAgents.value = [];
     conversations[convId] = { [msgId]: message };
     useChatSocket().socket.emit("chat", message);
     addClientLoading(convId);
@@ -195,13 +187,11 @@ export const useChatStore = defineStore("chat", () => {
     sessionLoading,
     chatInput,
     chatAttachments,
-    taggedAgents,
     chatLoading,
     isEmpty,
     reset,
     startNewSession,
     openSession,
-    tagAgent,
     addMessage,
     connect,
   };

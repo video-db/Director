@@ -45,7 +45,7 @@ src/
   router/          routes + the setup guard
   layouts/         AppLayout: sidebar, header, composer, dialogs (stays mounted)
   pages/           one component per route
-  stores/          Pinia: chat, sessions, collections, agents, ui
+  stores/          Pinia: chat, sessions, collections, config, ui
   api/             typed fetch wrappers per backend area
   composables/     useChatSocket (one /chat socket), useChatActions (send + navigate), useOpenVideo
   components/      UI components and message handlers

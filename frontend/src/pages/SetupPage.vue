@@ -3,8 +3,8 @@
     class="vdb-c-flex vdb-c-w-full vdb-c-flex-1 vdb-c-flex-col vdb-c-items-center vdb-c-justify-center vdb-c-gap-24"
   >
     <SetupScreen
-      v-if="agents.configStatus && !agents.backendUnreachable"
-      :config-status="agents.configStatus"
+      v-if="config.configStatus && !config.backendUnreachable"
+      :config-status="config.configStatus"
     />
     <div
       v-else
@@ -34,18 +34,18 @@ import { useRoute, useRouter } from "vue-router";
 import Button from "@/components/buttons/Button.vue";
 import SetupScreen from "@/components/chat/elements/SetupScreen.vue";
 import { backendUrl } from "@/config";
-import { useAgentsStore } from "@/stores/agents";
+import { useConfigStore } from "@/stores/config";
 
 const route = useRoute();
 const router = useRouter();
-const agents = useAgentsStore();
+const config = useConfigStore();
 const checking = ref(false);
 
 async function recheck() {
   checking.value = true;
-  await agents.loadConfig(true);
+  await config.loadConfig(true);
   checking.value = false;
-  if (agents.isSetupComplete) {
+  if (config.isSetupComplete) {
     router.replace((route.query.redirect as string) || { name: "home" });
   }
 }

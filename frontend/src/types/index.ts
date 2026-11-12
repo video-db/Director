@@ -10,11 +10,6 @@ export type MsgStatus =
 
 export type MsgType = "input" | "output" | "system";
 
-export interface Agent {
-  name: string;
-  description: string;
-}
-
 export interface ConfigStatus {
   videodb_configured: boolean;
   llm_configured: boolean;
@@ -76,6 +71,7 @@ export interface Message {
   sender: "user" | "assistant";
   content?: ContentBase[];
   actions?: string[];
+  // Tools that ran for this message, set by the backend.
   agents?: string[];
   status?: MsgStatus;
   collection_id?: string | null;

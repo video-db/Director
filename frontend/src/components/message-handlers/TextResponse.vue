@@ -4,7 +4,7 @@
     class="vdb-c-relative vdb-c-flex vdb-c-w-full vdb-c-flex-col vdb-c-gap-8 vdb-c-bg-white vdb-c-py-14 vdb-c-text-left"
   >
     <LoadingMessage
-      v-if="!isUser"
+      v-if="!isUser && !isInterimText"
       :status="
         isMainReponse && message.status === 'error' ? 'error' : content.status
       "
@@ -103,11 +103,23 @@ const getMarkedMsg = (msg) => {
   return marked.parse(msg);
 };
 
-const isMainReponse = computed(() => props.content.agent_name === "assistant");
-
 const message = computed(() => {
   return conversations?.[props.convId]?.[props.msgId];
 });
+
+// The model's text before a tool call is narration; only its last text, once
+// the turn is done, is the reply.
+const isMainReponse = computed(() => {
+  if (props.content.agent_name !== "assistant") return false;
+  if (message.value?.status === "progress") return false;
+  const texts = (message.value?.content ?? []).filter(
+    (c) => c.agent_name === "assistant",
+  );
+  return texts.length === 0 || texts[texts.length - 1] === props.content;
+});
+const isInterimText = computed(
+  () => props.content.agent_name === "assistant" && !isMainReponse.value,
+);
 </script>
 
 <style>
