@@ -29,15 +29,18 @@
       "
     />
 
+    <!-- min-w-[0px] here and on the scroll section: flex items otherwise
+         can't shrink below their widest content, so a long code line would
+         widen the whole page instead of scrolling inside its block. -->
     <main
-      class="vdb-c-relative vdb-c-flex vdb-c-h-full vdb-c-flex-1 vdb-c-flex-col vdb-c-justify-between vdb-c-bg-white vdb-c-shadow-2"
+      class="vdb-c-relative vdb-c-flex vdb-c-h-full vdb-c-min-w-[0px] vdb-c-flex-1 vdb-c-flex-col vdb-c-justify-between vdb-c-bg-white vdb-c-shadow-2"
     >
       <div
         class="vdb-c-chat-parent vdb-c-relative vdb-c-flex vdb-c-flex-1 vdb-c-items-center vdb-c-justify-center vdb-c-overflow-hidden vdb-c-px-12 md:vdb-c-px-[30px]"
       >
         <section
           ref="scrollRef"
-          class="vdb-c-flex vdb-c-h-full vdb-c-max-h-full vdb-c-w-full vdb-c-flex-col vdb-c-items-center vdb-c-overflow-x-auto vdb-c-overflow-y-auto"
+          class="vdb-c-flex vdb-c-h-full vdb-c-max-h-full vdb-c-w-full vdb-c-min-w-[0px] vdb-c-flex-col vdb-c-items-center vdb-c-overflow-x-auto vdb-c-overflow-y-auto"
           @scroll="isScrolled = ($event.target as HTMLElement).scrollTop > 0"
         >
           <div
