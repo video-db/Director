@@ -12,9 +12,24 @@ from typing import Mapping, Sequence
 
 from director.core.sandbox.base import BaseSandboxExecutor, ExecResult
 
-# Host variables a subprocess needs to find tools and a home directory. Nothing
-# else from the server's environment (LLM keys, DB URLs) is passed through.
-PASSTHROUGH_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "SYSTEMROOT")
+# Host variables a subprocess needs to find tools and a home directory, on
+# macOS, Linux and Windows. Nothing else from the server's environment (LLM
+# keys, DB URLs) is passed through.
+PASSTHROUGH_ENV = (
+    "PATH",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "TMPDIR",
+    "USERPROFILE",
+    "SYSTEMROOT",
+    "PATHEXT",
+    "COMSPEC",
+    "TEMP",
+    "TMP",
+    "APPDATA",
+    "LOCALAPPDATA",
+)
 
 TIMEOUT_EXIT_CODE = 124
 
@@ -36,7 +51,13 @@ class LocalSandboxExecutor(BaseSandboxExecutor[LocalHandle]):
         # The server's own interpreter, so videodb and the other backend
         # packages are importable from run_code.
         self._python = python
+        self._bash = shutil.which("bash")
+        self.supports_bash = self._bash is not None
         self._timeout = timeout
+
+    def skills_path(self, local_path: str, skills_dir: str) -> str:
+        # Forward slashes work in Python and in Git Bash on Windows.
+        return local_path.replace(os.sep, "/")
 
     def _create_sandbox(self, secrets: Mapping[str, str] | None) -> LocalHandle:
         env = {key: os.environ[key] for key in PASSTHROUGH_ENV if key in os.environ}
@@ -50,6 +71,8 @@ class LocalSandboxExecutor(BaseSandboxExecutor[LocalHandle]):
     ) -> ExecResult:
         if argv[0] == "python":
             argv = [self._python, *argv[1:]]
+        elif argv[0] == "bash" and self._bash:
+            argv = [self._bash, *argv[1:]]
         timeout = timeout or self._timeout
         try:
             result = subprocess.run(

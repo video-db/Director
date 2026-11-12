@@ -20,7 +20,7 @@ CODE_EXECUTOR_PARAMETERS = {
             "type": "string",
             "description": """Python code to run. `conn` (a connected VideoDB client), `videodb`, `os` and `json` are already in scope, so don't import or connect again.
 
-- Anything you print (stdout and stderr) is returned to you; print what you need to answer.
+- Anything you print (stdout and stderr) is returned to you, not shown to the user. Print what you need; to show the user a video, image or search results, pass them to `stream_content`.
 - Every call starts in a fresh, empty directory. Variables and files do not carry over between calls.""",
         },
         "progress_message": {
@@ -39,8 +39,8 @@ class CodeExecutorAgent(SandboxAgent):
         self.agent_name = "code_executor"
         self.description = (
             "Runs Python code against VideoDB in a sandbox and returns what it prints. "
-            "Use it for anything the other agents don't cover, such as custom queries "
-            "over a collection, batch operations or data processing."
+            "Use it for all VideoDB work: finding, uploading, indexing, searching and "
+            "editing media. Follow the videodb skill for the SDK."
         )
         self.parameters = CODE_EXECUTOR_PARAMETERS
         super().__init__(session=session, **kwargs)

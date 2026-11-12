@@ -139,16 +139,30 @@ def test_truncate_keeps_head_and_tail():
     assert "[4000 chars truncated]" in out
 
 
-def test_chat_handler_registers_executors_only_with_a_sandbox(db, monkeypatch):
+def test_chat_handler_tools_follow_the_sandbox(db, monkeypatch):
+    from director.agents.stream_content import StreamContentAgent
     from director.handler import ChatHandler
 
     monkeypatch.setenv("SANDBOX_PROVIDER", "none")
-    assert CodeExecutorAgent not in ChatHandler(db=db).agents
+    assert ChatHandler(db=db).agents == [StreamContentAgent]
 
     get_default_sandbox.cache_clear()
     monkeypatch.setenv("SANDBOX_PROVIDER", "local")
-    agents = ChatHandler(db=db).agents
-    assert CodeExecutorAgent in agents and BashExecutorAgent in agents
+    assert ChatHandler(db=db).agents == [
+        StreamContentAgent,
+        CodeExecutorAgent,
+        BashExecutorAgent,
+    ]
+
+
+def test_local_without_bash_offers_only_code(db, monkeypatch):
+    from director.agents.stream_content import StreamContentAgent
+    from director.handler import ChatHandler
+
+    monkeypatch.setattr("director.core.sandbox.local.shutil.which", lambda name: None)
+    monkeypatch.setenv("SANDBOX_PROVIDER", "local")
+    assert not LocalSandboxExecutor().supports_bash
+    assert ChatHandler(db=db).agents == [StreamContentAgent, CodeExecutorAgent]
 
 
 def test_engine_runs_code_executor_end_to_end(db, local):
@@ -187,11 +201,7 @@ def test_engine_runs_code_executor_end_to_end(db, local):
 
     session = make_session(db, local)
     session.state["collection"] = SimpleNamespace(
-        name="default",
-        id="c-1",
-        description="",
-        get_videos=lambda: [],
-        get_images=lambda: [],
+        name="default", id="c-1", description=""
     )
     llm = ScriptedLLM()
     ReasoningEngine(

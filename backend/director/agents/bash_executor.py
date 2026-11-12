@@ -32,7 +32,7 @@ class BashExecutorAgent(SandboxAgent):
         self.agent_name = "bash_executor"
         self.description = (
             "Runs a bash command in a sandbox and returns stdout, stderr and the exit code. "
-            "Use it for shell tools like ffmpeg, curl or pip, or to run a script."
+            "Use it to read skills, run a skill's helper scripts, or use tools like ffmpeg and curl."
         )
         self.parameters = BASH_EXECUTOR_PARAMETERS
         super().__init__(session=session, **kwargs)

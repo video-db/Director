@@ -140,7 +140,7 @@ For a closer look, check out the detailed architecture diagram below:
 ### Prerequisites
 
 - Python 3.9 or higher
-- Node.js 22.8.0 or higher
+- Node.js 22.20.0 or higher (the `skills` CLI below needs it)
 - npm
 
 ### Installation
@@ -169,6 +169,16 @@ cd Director
 
 Edit the `.env` files to add your API keys and other configuration options.
 
+**4. Install the VideoDB skill:**
+
+Director learns how to use VideoDB from the `videodb` skill in the [video-db/skills](https://github.com/video-db/skills) repo. Install it into your skills folder:
+
+```bash
+npx skills add video-db/skills --skill videodb -g -y
+```
+
+Run `npx skills update videodb` to pick up changes later. If the skill is missing, Director tells you this command instead of guessing.
+
 ### Supported platforms: 
 - Mac
 - Linux
@@ -196,43 +206,19 @@ For specific tasks:
 
 <!-- CONTRIBUTING -->
 
-## 📘 Creating a New Agent
+## 🧩 Skills and the Sandbox
 
-> Checkout hosted documentation at https://docs.director.videodb.io
+Director works by writing and running code. It has three tools: `code_executor` runs Python with a connected VideoDB client, `bash_executor` runs shell commands, and `stream_content` shows videos, images and search results in the chat. Skills teach it how to use them.
 
-To create a new agent in Director, follow these steps:
+**Skills.** A skill is a folder with a `SKILL.md` file in the open [Agent Skills](https://agentskills.io/specification) format. Director reads every skill in `SKILLS_DIR` (default `~/.agents/skills`) on each message, so installing or updating a skill takes effect on the next message, with no restart. Director lists each skill's name and description to the model, which reads the full `SKILL.md` when a task needs it. To teach Director something new, add a skill folder there.
 
-1. **Copy the template**: 
-Duplicate `sample_agent.py` in `Director/backend/director/agents/` and rename it.
+**Sandbox.** `SANDBOX_PROVIDER` decides where the code runs:
 
-2. **Update class details**:
-   - Rename the class.
-   - Update `agent_name` and `description`
+- `local` (default) runs it on your machine, using your installed tools and your skills folder directly. There is no isolation, so the code can do anything your user account can.
+- `modal` runs each call in a fresh [Modal](https://modal.com) container. Run `pip install modal`, then `modal setup`. Set `MODAL_IMAGE` to your own image that already contains your skills at `MODAL_SKILLS_DIR` (default `/root/.agents/skills`). Director does not copy skills into the image.
+- `none` turns off code, bash and skills.
 
-3. **Implement logic**:
-   - Update parameters and `docstring`
-   - Implement your agent's logic
-   - Update the run() method.
-
-4. **Handle output and status updates**:
-   - Use appropriate content types (TextContent, VideoContent, ImageContent, SearchResultContent)
-   - Update `self.output_message.actions` for progress indicators
-   - Use `push_update()` to emit progress events
-   - Set content status (progress, success, error) and messages
-
-5. **Implement error handling**:
-   - Set error status and messages if issues occur
-
-6. **Finalize the response**:
-   - Call `self.output_message.publish()` to emit final state and persist session
-   - Return an `AgentResponse` with result, message, and data
-
-7. **Register the agent**:
-   - Import your new agent class in `Director/backend/director/handler.py`
-   - Add it to the `self.agents` list in `ChatHandler`
-
-Remember to consider creating reusable tools if your agent's functionality could be shared across multiple agents.
-
+On Windows, `bash_executor` needs `bash` on the `PATH` (for example from Git Bash). Without it, Director uses `code_executor` only.
 
 ## 📖 Documentation
 > Checkout hosted documentation at https://docs.director.videodb.io

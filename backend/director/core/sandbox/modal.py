@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import posixpath
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -32,12 +33,20 @@ def _ensure_modal_ready() -> None:
 
 
 class ModalSandboxExecutor(BaseSandboxExecutor["modal.Sandbox"]):
+    """Runs each call in a fresh Modal container.
+
+    Skills are not copied in. Set MODAL_IMAGE to an image that already has them
+    at MODAL_SKILLS_DIR; without it, a slim image with only videodb is used.
+    """
+
     def __init__(
         self,
         *,
         app_name: str = "director-sandbox",
         pip_packages: Sequence[str] = ("videodb",),
         image: "modal.Image | None" = None,
+        image_name: str | None = None,
+        skills_dir: str | None = None,
         timeout: int = 300,  # hard wall-clock cap per sandbox
         idle_timeout: int | None = 60,  # safety net if a call stalls
         region: str | None = None,
@@ -46,10 +55,23 @@ class ModalSandboxExecutor(BaseSandboxExecutor["modal.Sandbox"]):
         # hit) stays off the per-call path.
         _ensure_modal_ready()
         self._app = modal.App.lookup(app_name, create_if_missing=True)
-        self._image = image or modal.Image.debian_slim().pip_install(*pip_packages)
+        image_name = image_name or os.getenv("MODAL_IMAGE")
+        if image:
+            self._image = image
+        elif image_name:
+            self._image = modal.Image.from_registry(image_name)
+        else:
+            self._image = modal.Image.debian_slim().pip_install(*pip_packages)
+        self._skills_dir = (
+            skills_dir or os.getenv("MODAL_SKILLS_DIR") or "/root/.agents/skills"
+        )
         self._timeout = timeout
         self._idle_timeout = idle_timeout
         self._region = region
+
+    def skills_path(self, local_path: str, skills_dir: str) -> str:
+        rel = os.path.relpath(local_path, skills_dir).replace(os.sep, "/")
+        return posixpath.join(self._skills_dir, rel)
 
     def _create_sandbox(self, secrets: Mapping[str, str] | None) -> "modal.Sandbox":
         modal_secrets = [modal.Secret.from_dict(dict(secrets))] if secrets else []

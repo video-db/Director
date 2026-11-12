@@ -64,30 +64,20 @@ def call_echo(text, call_id="call_1"):
     )
 
 
-def fake_collection(video_names):
-    videos = [
-        SimpleNamespace(name=name, id=f"m-{i}", description="", length=1, stream_url="")
-        for i, name in enumerate(video_names)
-    ]
-    return SimpleNamespace(
-        name="default",
-        id="c-1",
-        description="",
-        get_videos=lambda: videos,
-        get_images=lambda: [],
-    )
+def fake_collection(description=""):
+    return SimpleNamespace(name="default", id="c-1", description=description)
 
 
-def make_session(db, sink, video_names=("intro",)):
+def make_session(db, sink, description=""):
     session = Session(
         db=db, sink=sink, session_id="s-1", conv_id="c-1", collection_id="c-1"
     )
-    session.state["collection"] = fake_collection(video_names)
+    session.state["collection"] = fake_collection(description)
     return session
 
 
-def run_turn(db, sink, llm, text="hi", max_iterations=10, video_names=("intro",)):
-    session = make_session(db, sink, video_names)
+def run_turn(db, sink, llm, text="hi", max_iterations=10, description=""):
+    session = make_session(db, sink, description)
     engine = ReasoningEngine(
         session=session,
         llm=llm,
@@ -172,15 +162,15 @@ def test_stops_at_max_iterations(db):
 
 
 def test_context_is_saved_and_system_prompt_refreshed(db):
-    run_turn(db, CollectingSink(), FakeLLM([answer("one")]), video_names=("intro",))
+    run_turn(db, CollectingSink(), FakeLLM([answer("one")]), description="before")
     saved = db.context["s-1"]["reasoning"]
     assert [m["role"] for m in saved] == ["system", "user", "assistant"]
 
     llm = FakeLLM([answer("two")])
-    run_turn(db, CollectingSink(), llm, video_names=("intro", "uploaded later"))
+    run_turn(db, CollectingSink(), llm, description="after")
     sent = llm.calls[0]["messages"]
     assert [m["role"] for m in sent] == ["system", "user", "assistant", "user"]
-    assert "uploaded later" in sent[0]["content"]
+    assert "Collection description: after" in sent[0]["content"]
 
 
 def test_policy_drops_oldest_whole_turns():
