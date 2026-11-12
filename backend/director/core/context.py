@@ -3,10 +3,15 @@ from typing import List
 
 from director.core.prompts import REASONING_SYSTEM_PROMPT
 from director.core.session import ContextMessage, InputMessage, RoleTypes, Session
+from director.core.skills import format_skills_for_prompt, get_skills_dir, load_skills
 
 
 class ContextBuilder:
-    """Prepares the reasoning context for a turn. The system message is rebuilt every turn so the collection listing stays current."""
+    """Prepares the reasoning context for a turn.
+
+    The system message is rebuilt every turn, so skills added or updated in the
+    skills folder show up on the next message.
+    """
 
     def __init__(self, system_prompt: str = REASONING_SYSTEM_PROMPT):
         self.system_prompt = system_prompt
@@ -26,26 +31,27 @@ class ContextBuilder:
         return ctx
 
     def _system_prompt(self, session: Session) -> str:
-        collection = session.state["collection"]
-        if session.video_id:
-            video = session.state["video"]
-            return (
-                self.system_prompt
-                + f"""\nThis is a video in the collection titled {collection.name} collection_id is {collection.id} \nHere is the video refer to this for search, summary and editing \n- title: {video.name}, video_id: {video.id}, media_description: {video.description}, length: {video.length}"""
-            )
-
-        video_titles = "\n".join(
-            f"\n- title: {video.name}, video_id: {video.id}, media_description: {video.description}, length: {video.length}, video_stream: {video.stream_url}"
-            for video in collection.get_videos()
-        )
-        image_titles = "\n".join(
-            f"\n- title: {image.name}, image_id: {image.id}, url: {image.url}"
-            for image in collection.get_images()
-        )
         return (
             self.system_prompt
-            + f"""\nThis is a collection of videos and the collection description is {collection.description} and collection_id is {collection.id} \n\nHere are the videos in this collection user may refer to them for search, summary and editing {video_titles}\n\nHere are the images in this collection {image_titles}"""
+            + self._scope(session)
+            + self._skills(getattr(session, "sandbox", None))
         )
+
+    def _scope(self, session: Session) -> str:
+        """Which collection, and video if any, this chat is about. The media itself is queried with code."""
+        collection = session.state["collection"]
+        scope = f"\n\nThis chat is in the collection titled {collection.name} (collection_id: {collection.id}). Collection description: {collection.description}"
+        if session.video_id:
+            video = session.state["video"]
+            scope += f"\nThe user opened this video: title: {video.name}, video_id: {video.id}, description: {video.description}, length: {video.length}"
+        return scope
+
+    def _skills(self, sandbox) -> str:
+        # Skills are read and run through the executors, so without a sandbox there is nothing to offer.
+        if sandbox is None:
+            return ""
+        skills_dir = get_skills_dir()
+        return format_skills_for_prompt(load_skills(skills_dir), skills_dir, sandbox)
 
 
 class ContextPolicy:

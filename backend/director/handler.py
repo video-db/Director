@@ -1,34 +1,9 @@
 import os
 import logging
 
-from director.agents.frame import FrameAgent
-from director.agents.summarize_video import SummarizeVideoAgent
-from director.agents.download import DownloadAgent
-from director.agents.pricing import PricingAgent
-from director.agents.upload import UploadAgent
-from director.agents.search import SearchAgent
-from director.agents.prompt_clip import PromptClipAgent
-from director.agents.index import IndexAgent
-from director.agents.censor import CensorAgent
-from director.agents.image_generation import ImageGenerationAgent
-from director.agents.audio_generation import AudioGenerationAgent
-from director.agents.video_generation import VideoGenerationAgent
-from director.agents.stream_video import StreamVideoAgent
-from director.agents.subtitle import SubtitleAgent
-from director.agents.slack_agent import SlackAgent
-from director.agents.editing import EditingAgent
-from director.agents.dubbing import DubbingAgent
-from director.agents.text_to_movie import TextToMovieAgent
-from director.agents.composio import ComposioAgent
-from director.agents.transcription import TranscriptionAgent
-from director.agents.comparison import ComparisonAgent
-from director.agents.code_assistant import CodeAssistantAgent
-from director.agents.web_search_agent import WebSearchAgent
-from director.agents.clone_voice import CloneVoiceAgent
-from director.agents.voice_replacement import VoiceReplacementAgent
-from director.agents.code_executor import CodeExecutorAgent
 from director.agents.bash_executor import BashExecutorAgent
-
+from director.agents.code_executor import CodeExecutorAgent
+from director.agents.stream_content import StreamContentAgent
 
 from director.core.session import Session, InputMessage, MsgStatus
 from director.core.reasoning import ReasoningEngine
@@ -50,39 +25,14 @@ class ChatHandler:
         self.db = db
         self.sink = sink or NullSink()
 
-        # Register the agents here
-        self.agents = [
-            SummarizeVideoAgent,
-            UploadAgent,
-            IndexAgent,
-            SearchAgent,
-            PromptClipAgent,
-            FrameAgent,
-            DownloadAgent,
-            CloneVoiceAgent,
-            CensorAgent,
-            ImageGenerationAgent,
-            AudioGenerationAgent,
-            VideoGenerationAgent,
-            StreamVideoAgent,
-            SubtitleAgent,
-            SlackAgent,
-            EditingAgent,
-            DubbingAgent,
-            TranscriptionAgent,
-            TextToMovieAgent,
-            ComposioAgent,
-            ComparisonAgent,
-            CodeAssistantAgent,
-            WebSearchAgent,
-            VoiceReplacementAgent,
-            PricingAgent,
-        ]
-
-        # Code and bash agents only exist when a sandbox is available.
+        # The model writes and runs code, guided by skills. stream_content
+        # shows results in the chat; the executors need a sandbox.
         self.sandbox = get_default_sandbox()
+        self.agents = [StreamContentAgent]
         if self.sandbox:
-            self.agents += [CodeExecutorAgent, BashExecutorAgent]
+            self.agents.append(CodeExecutorAgent)
+            if self.sandbox.supports_bash:
+                self.agents.append(BashExecutorAgent)
 
     def add_videodb_state(self, session):
         from videodb import connect
@@ -122,8 +72,10 @@ class ChatHandler:
             agents = [agent(session=session) for agent in self.agents]
             agents_mapping = {agent.name: agent for agent in agents}
 
-            if input_message.agents:
-                agents = [agents_mapping[name] for name in input_message.agents]
+            # Mentions of agents that no longer exist fall back to all tools.
+            mentioned = [agents_mapping[n] for n in input_message.agents if n in agents_mapping]
+            if mentioned:
+                agents = mentioned
 
             engine = ReasoningEngine(
                 session=session, llm=get_default_llm(), agents=agents

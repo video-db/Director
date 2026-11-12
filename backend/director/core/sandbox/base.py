@@ -40,6 +40,14 @@ class BaseSandboxExecutor(ABC, Generic[H]):
     and guaranteed teardown for free.
     """
 
+    # Whether run_bash works here. Local executors without bash (e.g. Windows
+    # without Git Bash) set this to False and bash_executor is not offered.
+    supports_bash: bool = True
+
+    def skills_path(self, local_path: str, skills_dir: str) -> str:
+        """Where a file under the local skills_dir is visible inside this sandbox."""
+        return local_path
+
     # ---- agent-facing API (shared; don't override) ----
 
     def run_code(

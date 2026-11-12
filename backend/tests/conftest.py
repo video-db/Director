@@ -36,3 +36,12 @@ class MemoryDB(BaseDB):
 @pytest.fixture
 def db():
     return MemoryDB()
+
+
+@pytest.fixture(autouse=True)
+def isolated_skills_dir(tmp_path, monkeypatch):
+    """Point SKILLS_DIR at an empty temp folder so tests never read ~/.agents/skills."""
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    monkeypatch.setenv("SKILLS_DIR", str(skills_dir))
+    return skills_dir
