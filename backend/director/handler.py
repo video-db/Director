@@ -31,6 +31,7 @@ from director.agents.voice_replacement import VoiceReplacementAgent
 from director.core.session import Session, InputMessage, MsgStatus
 from director.core.reasoning import ReasoningEngine
 from director.core.sink import BaseSink, NullSink
+from director.llm import get_default_llm
 from director.db.base import BaseDB
 from director.db import load_db
 from director.tools.videodb_tool import VideoDBTool
@@ -112,14 +113,13 @@ class ChatHandler:
             agents = [agent(session=session) for agent in self.agents]
             agents_mapping = {agent.name: agent for agent in agents}
 
-            res_eng = ReasoningEngine(input_message=input_message, session=session)
             if input_message.agents:
-                for agent_name in input_message.agents:
-                    res_eng.register_agents([agents_mapping[agent_name]])
-            else:
-                res_eng.register_agents(agents)
+                agents = [agents_mapping[name] for name in input_message.agents]
 
-            res_eng.run()
+            engine = ReasoningEngine(
+                session=session, llm=get_default_llm(), agents=agents
+            )
+            engine.run(input_message)
 
         except Exception as e:
             session.output_message.update_status(MsgStatus.error)
