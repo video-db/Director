@@ -30,6 +30,7 @@ from director.agents.voice_replacement import VoiceReplacementAgent
 
 from director.core.session import Session, InputMessage, MsgStatus
 from director.core.reasoning import ReasoningEngine
+from director.core.sink import BaseSink, NullSink
 from director.db.base import BaseDB
 from director.db import load_db
 from director.tools.videodb_tool import VideoDBTool
@@ -41,8 +42,9 @@ logger = logging.getLogger(__name__)
 
 
 class ChatHandler:
-    def __init__(self, db, **kwargs):
+    def __init__(self, db, sink: BaseSink = None, **kwargs):
         self.db = db
+        self.sink = sink or NullSink()
 
         # Register the agents here
         self.agents = [
@@ -100,7 +102,7 @@ class ChatHandler:
     def chat(self, message):
         logger.info(f"ChatHandler input message: {message}")
 
-        session = Session(db=self.db, **message)
+        session = Session(db=self.db, sink=self.sink, **message)
         session.create()
         input_message = InputMessage(db=self.db, **message)
         input_message.publish()

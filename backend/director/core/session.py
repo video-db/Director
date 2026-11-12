@@ -4,9 +4,9 @@ from enum import Enum
 from datetime import datetime
 from typing import Optional, List, Union
 
-from flask_socketio import emit
 from pydantic import BaseModel, Field, ConfigDict
 
+from director.core.sink import BaseSink, NullSink
 from director.db.base import BaseDB
 
 
@@ -216,6 +216,7 @@ class OutputMessage(BaseMessage):
     """Output message from the director. This class is used to create the output message from the director."""
 
     db: BaseDB = Field(exclude=True)
+    sink: BaseSink = Field(default_factory=NullSink, exclude=True)
     msg_type: MsgType = MsgType.output
     status: MsgStatus = MsgStatus.progress
 
@@ -236,11 +237,9 @@ class OutputMessage(BaseMessage):
         self._publish()
 
     def _publish(self):
-        try:
-            emit("chat", self.model_dump(), namespace="/chat")
-        except Exception as e:
-            print(f"Error in emitting message: {str(e)}")
-        self.db.add_or_update_msg_to_conv(**self.model_dump())
+        payload = self.model_dump()
+        self.sink.send("chat", payload)
+        self.db.add_or_update_msg_to_conv(**payload)
 
 
 def format_user_message(message: dict) -> dict:
@@ -313,6 +312,7 @@ class Session:
     def __init__(
         self,
         db: BaseDB,
+        sink: BaseSink = None,
         session_id: str = "",
         conv_id: str = "",
         collection_id: str = None,
@@ -320,6 +320,7 @@ class Session:
         **kwargs,
     ):
         self.db = db
+        self.sink = sink or NullSink()
         self.session_id = session_id
         self.conv_id = conv_id
         self.conversations = []
@@ -329,7 +330,10 @@ class Session:
         self.agent_context = {}
         self.state = {}
         self.output_message = OutputMessage(
-            db=self.db, session_id=self.session_id, conv_id=self.conv_id
+            db=self.db,
+            sink=self.sink,
+            session_id=self.session_id,
+            conv_id=self.conv_id,
         )
         self.edited_context = kwargs.get("edited_context", None)
 
@@ -385,6 +389,7 @@ class Session:
             )
         return OutputMessage(
             db=self.db,
+            sink=self.sink,
             session_id=self.session_id,
             conv_id=self.conv_id,
             **kwargs,
@@ -405,12 +410,6 @@ class Session:
         """Delete the session from the database."""
         return self.db.delete_session(self.session_id)
 
-    def emit_event(self, event: BaseEvent, namespace="/chat"):
-        """Emits a structured WebSocket event to notify all clients about updates."""
-
-        event_payload = event.model_dump()
-
-        try:
-            emit("event", event_payload, namespace=namespace)
-        except Exception:
-            pass
+    def emit_event(self, event: BaseEvent):
+        """Emits a structured event to notify all clients about updates."""
+        self.sink.send("event", event.model_dump())
