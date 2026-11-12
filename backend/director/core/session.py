@@ -329,6 +329,7 @@ class Session:
         self.reasoning_context = []
         self.agent_context = {}
         self.state = {}
+        self.sandbox = None
         self.output_message = OutputMessage(
             db=self.db,
             sink=self.sink,

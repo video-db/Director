@@ -26,10 +26,13 @@ from director.agents.code_assistant import CodeAssistantAgent
 from director.agents.web_search_agent import WebSearchAgent
 from director.agents.clone_voice import CloneVoiceAgent
 from director.agents.voice_replacement import VoiceReplacementAgent
+from director.agents.code_executor import CodeExecutorAgent
+from director.agents.bash_executor import BashExecutorAgent
 
 
 from director.core.session import Session, InputMessage, MsgStatus
 from director.core.reasoning import ReasoningEngine
+from director.core.sandbox import get_default_sandbox
 from director.core.sink import BaseSink, NullSink
 from director.llm import get_default_llm
 from director.db.base import BaseDB
@@ -76,6 +79,11 @@ class ChatHandler:
             PricingAgent,
         ]
 
+        # Code and bash agents only exist when a sandbox is available.
+        self.sandbox = get_default_sandbox()
+        if self.sandbox:
+            self.agents += [CodeExecutorAgent, BashExecutorAgent]
+
     def add_videodb_state(self, session):
         from videodb import connect
 
@@ -104,6 +112,7 @@ class ChatHandler:
         logger.info(f"ChatHandler input message: {message}")
 
         session = Session(db=self.db, sink=self.sink, **message)
+        session.sandbox = self.sandbox
         session.create()
         input_message = InputMessage(db=self.db, **message)
         input_message.publish()
