@@ -53,18 +53,17 @@ describe("chat store", () => {
     expect(chat.sessionId).toBe("missing");
   });
 
-  it("sends a message with tagged agents and shows a loader until the reply", () => {
+  it("sends a message and shows a loader until the reply", () => {
     const chat = useChatStore();
     chat.connect();
     const id = chat.startNewSession();
-    chat.tagAgent("search");
     chat.addMessage([{ type: "text", text: "hi" }]);
 
     const sent = emit.mock.calls[0];
     expect(sent[0]).toBe("chat");
-    expect(sent[1]).toMatchObject({ session_id: id, agents: ["search"] });
+    expect(sent[1]).toMatchObject({ session_id: id });
+    expect(sent[1]).not.toHaveProperty("agents");
     expect(chat.chatLoading).toBe(true);
-    expect(chat.taggedAgents).toEqual([]);
 
     const convId = sent[1].conv_id;
     handlers.chat({

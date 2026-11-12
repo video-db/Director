@@ -4,24 +4,12 @@ from flask import Blueprint, request, current_app as app
 from werkzeug.utils import secure_filename
 
 from director.db import load_db
-from director.handler import ChatHandler, SessionHandler, VideoDBHandler, ConfigHandler
+from director.handler import SessionHandler, VideoDBHandler, ConfigHandler
 
 
-agent_bp = Blueprint("agent", __name__, url_prefix="/agent")
 session_bp = Blueprint("session", __name__, url_prefix="/session")
 videodb_bp = Blueprint("videodb", __name__, url_prefix="/videodb")
 config_bp = Blueprint("config", __name__, url_prefix="/config")
-
-
-@agent_bp.route("/", methods=["GET"], strict_slashes=False)
-def agent():
-    """
-    Handle the agent request
-    """
-    chat_handler = ChatHandler(
-        db=load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"]))
-    )
-    return chat_handler.agents_list()
 
 
 @session_bp.route("/", methods=["GET"], strict_slashes=False)

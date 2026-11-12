@@ -94,7 +94,7 @@
             <span
               class="vdb-c-w-1/2 vdb-c-text-lg vdb-c-font-semibold md:vdb-c-text-xl"
             >
-              See agents in action:
+              See Director in action:
             </span>
 
             <div class="vdb-c-flex vdb-c-items-center vdb-c-gap-16">

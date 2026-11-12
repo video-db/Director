@@ -3,29 +3,6 @@
 Routes are defined in the `routes` folder.
 
 
-## Agent routes
-
-### GET /agent
-
-Return the agent information
-
-```json
-[
-    {
-        "description": "This is an agent to summarize the given video of VideoDB.",
-        "name": "summary"
-    },
-    {
-        "description": "Get the download URLs of the VideoDB generated streams.",
-        "name": "download"
-    },
-    {
-        "description": "Agent to get information about the VideoDB pricing and usage.",
-        "name": "pricing"
-    }
-]
-```
-
 ## Session routes
 
 ### GET /session

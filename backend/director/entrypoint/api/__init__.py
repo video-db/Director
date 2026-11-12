@@ -11,7 +11,7 @@ from flask import Flask
 from flask_socketio import SocketIO
 from logging.config import dictConfig
 
-from director.entrypoint.api.routes import agent_bp, session_bp, videodb_bp, config_bp
+from director.entrypoint.api.routes import session_bp, videodb_bp, config_bp
 from director.entrypoint.api.socket_io import ChatNamespace
 
 from dotenv import load_dotenv
@@ -52,7 +52,6 @@ def create_app(app_config: object):
         from director.entrypoint.api import errors
 
     # register blueprints
-    app.register_blueprint(agent_bp)
     app.register_blueprint(session_bp)
     app.register_blueprint(videodb_bp)
     app.register_blueprint(config_bp)

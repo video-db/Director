@@ -127,59 +127,6 @@
           </div>
         </div>
 
-        <!-- Explore Agents -->
-        <div
-          v-if="section === 'agents'"
-          class="sidebar-section vdb-c-flex vdb-c-flex-col vdb-c-gap-4 vdb-c-rounded-lg vdb-c-border vdb-c-border-transparent"
-          :style="{
-            'max-height': `calc(100% / ${visibleSections.length})`,
-          }"
-        >
-          <button
-            @click="toggleExploreAgents()"
-            :class="[
-              'vdb-c-flex vdb-c-w-full vdb-c-items-center vdb-c-justify-between vdb-c-rounded-lg vdb-c-px-12 vdb-c-py-6 vdb-c-font-medium vdb-c-text-pam vdb-c-transition-all vdb-c-duration-300 hover:vdb-c-bg-roy',
-            ]"
-          >
-            <div class="vdb-c-flex vdb-c-items-center vdb-c-gap-8">
-              <AgentIcon class="vdb-c-mr-8" />
-              <span class="vdb-c-font-semibold vdb-c-leading-5"
-                >Explore Agents</span
-              >
-            </div>
-            <div class="vdb-c-p-4">
-              <ChevronDown
-                :class="[
-                  'vdb-c-h-16 vdb-c-w-16 vdb-c-transition-transform vdb-c-duration-300',
-                  { 'vdb-c-rotate-180': showExploreAgents },
-                ]"
-                stroke-color="#464646"
-                :stroke-width="2"
-              />
-            </div>
-          </button>
-          <div
-            v-if="status !== 'inactive' && showExploreAgents"
-            class="vdb-c-overflow-y-scroll vdb-c-rounded-lg vdb-c-px-8 vdb-c-py-4"
-            style="scrollbar-gutter: stable"
-          >
-            <template v-for="(agent, index) in agents" :key="index">
-              <div
-                @click="
-                  $emit('agent-click', agent);
-                  closeSidebar();
-                "
-                :class="[
-                  'vdb-c-ml-18 vdb-c-cursor-pointer vdb-c-truncate vdb-c-rounded-lg vdb-c-border vdb-c-border-transparent vdb-c-bg-white vdb-c-p-8 vdb-c-text-sm vdb-c-font-medium vdb-c-text-black vdb-c-transition-all vdb-c-duration-75 hover:vdb-c-bg-[#FFF5EC]',
-                ]"
-              >
-                <span class="vdb-c-text-orange"> @ </span>
-                <span> {{ agent.name }} </span>
-              </div>
-            </template>
-          </div>
-        </div>
-
         <!-- Sessions -->
         <div
           v-if="section === 'sessions'"
@@ -329,11 +276,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import Button from "../../buttons/Button.vue";
 
-import AgentIcon from "../../icons/Agent.vue";
 import ChatIcon from "../../icons/Chat.vue";
 import ChevronDown from "../../icons/ChevronDown.vue";
 import CollectionIcon from "../../icons/Collection.vue";
@@ -347,10 +293,6 @@ const props = defineProps({
     required: true,
   },
   collections: {
-    type: Array,
-    required: true,
-  },
-  agents: {
     type: Array,
     required: true,
   },
@@ -382,32 +324,22 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  initialExploreAgentsOpen: {
-    type: Boolean,
-    default: true,
-  },
   initialSessionsOpen: {
     type: Boolean,
     default: true,
   },
   sidebarSections: {
     type: Array,
-    default: () => ["collections", "agents", "sessions"],
+    default: () => ["collections", "sessions"],
     validator: (value) => {
-      return value.every((item) =>
-        ["collections", "agents", "sessions"].includes(item),
-      );
+      return value.every((item) => ["collections", "sessions"].includes(item));
     },
   },
 });
 
-const showExploreAgents = ref(true);
 const showSessions = ref(true);
 const showCollections = ref(true);
-const isExploreAgentsFocused = ref(false);
-const exploreAgentsTimeout = ref(null);
 const userClickedSessions = ref(false);
-const userClickedExploreAgents = ref(false);
 const userClickedCollections = ref(false);
 const hoveredSession = ref(null);
 const isMobile = ref(window?.innerWidth < 1024);
@@ -423,7 +355,6 @@ const emit = defineEmits([
   "session-click",
   "delete-session",
   "collection-click",
-  "agent-click",
   "create-collection",
   "delete-collection",
 ]);
@@ -434,12 +365,6 @@ const closeSidebar = () => {
   }
 };
 
-const toggleExploreAgents = (value) => {
-  userClickedExploreAgents.value = true;
-  showExploreAgents.value =
-    value !== undefined ? value : !showExploreAgents.value;
-};
-
 const toggleSessions = (value) => {
   userClickedSessions.value = true;
   showSessions.value = value !== undefined ? value : !showSessions.value;
@@ -447,19 +372,6 @@ const toggleSessions = (value) => {
 
 const toggleSidebar = () => {
   isOpen.value = !isOpen.value;
-};
-
-const triggerExploreAgentsFocusAnimation = () => {
-  if (exploreAgentsTimeout.value) {
-    clearTimeout(exploreAgentsTimeout.value);
-  }
-  isExploreAgentsFocused.value = false;
-  nextTick(() => {
-    isExploreAgentsFocused.value = true;
-    exploreAgentsTimeout.value = setTimeout(() => {
-      isExploreAgentsFocused.value = false;
-    }, 1000);
-  });
 };
 
 const computedSelectedCollection = computed(() => {
@@ -479,59 +391,13 @@ watch(
   { immediate: true },
 );
 
-watch(
-  () => props.initialExploreAgentsOpen,
-  (newValue) => {
-    if (!userClickedExploreAgents.value) {
-      showExploreAgents.value = newValue;
-    }
-  },
-  { immediate: true },
-);
-
-watch(showExploreAgents, (newValue) => {
-  if (newValue) {
-    // triggerExploreAgentsFocusAnimation();
-  }
-});
-
 defineExpose({
-  toggleExploreAgents,
   toggleSessions,
-  triggerExploreAgentsFocusAnimation,
   toggleSidebar,
 });
 </script>
 
 <style>
-.vdb-c-explore-agents-animation {
-  animation: exploreAgentsFade 1s ease-out;
-}
-
-.vdb-c-explore-agents-animation button {
-  animation: exploreAgentButtonFade 1s ease-out;
-}
-
-@keyframes exploreAgentsFade {
-  0% {
-    border-color: #ff7e32;
-    background-color: #fff5ec;
-  }
-  100% {
-    border-color: transparent;
-    background-color: transparent;
-  }
-}
-
-@keyframes exploreAgentButtonFade {
-  0% {
-    background-color: #ffe9d3;
-  }
-  100% {
-    background-color: transparent;
-  }
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.5s ease;

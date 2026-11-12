@@ -12,18 +12,15 @@
       :config="sidebarConfig"
       :show-selected-collection="route.name !== 'chat'"
       :initial-sessions-open="!collections.isFreshUser"
-      :initial-explore-agents-open="!collections.isFreshUser"
       :selected-session="chat.sessionId ?? ''"
       :add-dummy-session="route.name === 'home'"
       :selected-collection="collections.activeCollectionId ?? 'default'"
-      :agents="agents.agents"
       :sessions="sessions.sessions"
       :collections="collections.collections"
       @create-new-session="router.push({ name: 'home' })"
       @create-collection="ui.showCreateCollection = true"
       @delete-session="ui.pendingDelete = { kind: 'session', id: $event }"
       @delete-collection="deleteCollection"
-      @agent-click="handleAgentClick"
       @session-click="
         router.push({ name: 'chat', params: { sessionId: $event } })
       "
@@ -81,13 +78,11 @@
         }"
       >
         <ChatInput
-          :agents="agents.agents"
           :placeholder="chatInputPlaceholder"
           :context-data="
             collections.activeVideo ?? collections.activeCollection ?? undefined
           "
           @on-submit="send"
-          @tag-agent="chat.tagAgent($event.name)"
         />
       </div>
     </main>
@@ -171,17 +166,17 @@ import DeleteCollectionErrorModal from "@/components/modals/DeleteCollectionErro
 import UploadModal from "@/components/modals/UploadModal.vue";
 import { useChatActions } from "@/composables/useChatActions";
 import { chatInputPlaceholder, headerConfig, sidebarConfig } from "@/config";
-import { useAgentsStore } from "@/stores/agents";
 import { useChatStore } from "@/stores/chat";
+import { useConfigStore } from "@/stores/config";
 import { useCollectionsStore } from "@/stores/collections";
 import { useSessionsStore } from "@/stores/sessions";
 import { useUiStore } from "@/stores/ui";
-import type { Agent, Collection, UploadRequest } from "@/types";
+import type { Collection, UploadRequest } from "@/types";
 
 const route = useRoute();
 const router = useRouter();
-const agents = useAgentsStore();
 const chat = useChatStore();
+const config = useConfigStore();
 const collections = useCollectionsStore();
 const sessions = useSessionsStore();
 const ui = useUiStore();
@@ -193,7 +188,7 @@ const headerRef = ref<HTMLElement | null>(null);
 const isScrolled = ref(false);
 const deleteCollectionError = ref<string | null>(null);
 
-const isSetupComplete = computed(() => agents.isSetupComplete);
+const isSetupComplete = computed(() => config.isSetupComplete);
 const isHome = computed(() => route.name === "home");
 const videoName = computed(() =>
   route.name === "video" || route.name === "chat"
@@ -209,7 +204,6 @@ watch(
     chat.connect();
     collections.load();
     sessions.load();
-    agents.loadAgents();
   },
   { immediate: true },
 );
@@ -249,12 +243,6 @@ watch(
   () => chat.sessionLoading,
   (loading) => !loading && scrollToBottom(),
 );
-
-function handleAgentClick(agent: Agent) {
-  if (chat.chatLoading) return;
-  chat.tagAgent(agent.name);
-  send({ text: `@${agent.name} ` });
-}
 
 function openActiveCollection() {
   if (!collections.activeCollectionId) return;

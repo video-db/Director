@@ -68,15 +68,15 @@ const uploadCard = {
   action: "chat",
   icon: QueryIcon,
 };
-const agentsCard = {
-  content: "What are the pre-built agents I can use right now?",
+const capabilitiesCard = {
+  content: "What can you do with my videos?",
   type: "primary",
   action: "chat",
 };
 
 const actionCards = computed(() => [
   uploadCard,
-  agentsCard,
+  capabilitiesCard,
   !collections.isFreshUser && collections.videos?.length
     ? {
         content: "Categorize all videos in this collection",
@@ -85,7 +85,7 @@ const actionCards = computed(() => [
         icon: CollectionIcon,
       }
     : {
-        content: "Show me how the search agent works? ",
+        content: "How do I search for a moment inside my videos?",
         type: "primary",
         action: "chat",
         icon: SearchIcon,
