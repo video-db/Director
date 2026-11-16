@@ -21,10 +21,12 @@ load_dotenv()
 socketio = SocketIO()
 
 
-def _allowed_origins(value: str):
-    if value.strip() == "*":
-        return "*"
-    return [origin.strip() for origin in value.split(",") if origin.strip()]
+def _allowed_origins(value):
+    # SERVER_ALLOWED_ORIGINS arrives as a string, or as a list when it is JSON.
+    if isinstance(value, str):
+        value = value.split(",")
+    origins = [str(origin).strip() for origin in value if str(origin).strip()]
+    return "*" if origins == ["*"] else origins
 
 
 def create_app(app_config: object):

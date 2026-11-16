@@ -1,17 +1,19 @@
 import ast
 import builtins
+import dis
 import enum
 import inspect
 import logging
-import re
-import types
 from functools import lru_cache
 
 from director.agents.base import AgentResponse, AgentStatus
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_IMPORT_ROOT = "videodb"
+ALLOWED_IMPORT_MODULE = "videodb.editor"
+
+# If these are missing the SDK changed shape and the allow-lists can't be trusted.
+REQUIRED_SDK_NAMES = {"Timeline", "Track", "Clip", "add_track", "add_clip", "generate_stream"}  # fmt: skip
 
 # Everything else (open, eval, exec, getattr, ...) is unavailable to generated code.
 SAFE_BUILTIN_NAMES = (
@@ -23,8 +25,8 @@ SAFE_BUILTIN_NAMES = (
 
 # list, dict, str and enum attributes that Timeline code commonly uses.
 COMMON_ATTRIBUTES = {
-    "append", "extend", "items", "keys", "values", "get", "join", "lower",
-    "upper", "strip", "split", "replace", "value",
+    "append", "extend", "items", "keys", "values", "join", "lower", "upper",
+    "strip", "split", "replace", "value",
 }  # fmt: skip
 
 
@@ -32,86 +34,109 @@ class UnsafeCodeError(ValueError):
     """Generated code uses something outside the Timeline subset."""
 
 
-def _is_allowed_module(name: str) -> bool:
-    return name == ALLOWED_IMPORT_ROOT or name.startswith(ALLOWED_IMPORT_ROOT + ".")
-
-
 @lru_cache(maxsize=1)
-def _allowed_attributes() -> frozenset:
-    """Public members, enum values and instance attributes of the videodb.editor classes."""
+def _sdk_surface() -> tuple:
+    """(importable class names, allowed attribute names) read from videodb.editor.
+
+    Imports are limited to the classes the module defines, so its own imports
+    (json, upload helpers) are out of reach. Attributes are the public members,
+    enum values and instance attributes of those classes.
+    """
     from videodb import editor
 
-    names = set(COMMON_ATTRIBUTES)
-    for cls in vars(editor).values():
-        if not inspect.isclass(cls) or cls.__module__ != editor.__name__:
-            continue
-        names.update(vars(cls))
+    classes = {
+        name: cls
+        for name, cls in vars(editor).items()
+        if inspect.isclass(cls)
+        and cls.__module__ == editor.__name__
+        and not name.startswith("_")
+    }
+    attributes = set(COMMON_ATTRIBUTES)
+    for cls in classes.values():
+        attributes.update(vars(cls))
         if issubclass(cls, enum.Enum):
-            names.update(cls.__members__)
-        else:
-            names.update(re.findall(r"self\.(\w+)", inspect.getsource(cls)))
+            attributes.update(cls.__members__)
+            continue
+        # Instance attributes, read from bytecode so no source files are needed.
+        for member in vars(cls).values():
+            if inspect.isfunction(member):
+                attributes.update(
+                    op.argval
+                    for op in dis.get_instructions(member)
+                    if op.opname == "STORE_ATTR"
+                )
     # Timeline keeps the connection it was given; generated code never needs it back.
-    names.discard("connection")
-    return frozenset(name for name in names if not name.startswith("_"))
+    attributes.discard("connection")
+    attributes = {name for name in attributes if not name.startswith("_")}
+
+    missing = REQUIRED_SDK_NAMES - classes.keys() - attributes
+    if missing:
+        raise RuntimeError(f"videodb.editor is missing {sorted(missing)}")
+    return frozenset(classes), frozenset(attributes)
 
 
 class TimelineConnection:
     """The only part of the VideoDB connection that generated code can reach.
 
-    Timeline needs `post` on two fixed paths. The real connection, its HTTP
-    session and the API key stay in the closure.
+    Timeline posts to two editor paths and, for a large timeline, asks for an
+    upload URL in its collection. The real connection, its HTTP session and the
+    API key stay in the closure.
     """
 
-    __slots__ = ("post",)
+    __slots__ = ("post", "get", "collection_id")
 
     def __init__(self, conn):
         from videodb._constants import ApiPath
 
-        allowed_paths = {ApiPath.editor, f"{ApiPath.editor}/{ApiPath.download}"}
+        collection_id = getattr(conn, "collection_id", "default")
+        post_paths = {ApiPath.editor, f"{ApiPath.editor}/{ApiPath.download}"}
+        get_paths = {f"{ApiPath.collection}/{collection_id}/upload_url"}
 
         def post(path, data=None):
-            if path not in allowed_paths:
+            if path not in post_paths:
                 raise PermissionError(f"API path '{path}' is not allowed")
             return conn.post(path=path, data=data)
 
+        def get(path, params=None):
+            if path not in get_paths:
+                raise PermissionError(f"API path '{path}' is not allowed")
+            return conn.get(path=path, params=params)
+
         self.post = post
+        self.get = get
+        self.collection_id = collection_id
 
 
 def validate_code(code: str) -> None:
     """Reject code that does more than build a Timeline with the videodb SDK."""
+    classes, attributes = _sdk_surface()
     for node in ast.walk(ast.parse(code)):
         if isinstance(node, ast.Import):
-            raise UnsafeCodeError("use 'from videodb... import ...' for imports")
+            raise UnsafeCodeError("use 'from videodb.editor import ...' for imports")
         if isinstance(node, ast.ImportFrom):
-            if node.level or not _is_allowed_module(node.module or ""):
+            if node.level or node.module != ALLOWED_IMPORT_MODULE:
                 raise UnsafeCodeError(f"import from '{node.module}' is not allowed")
-            if any(alias.name == "*" for alias in node.names):
-                raise UnsafeCodeError("wildcard imports are not allowed")
+            for alias in node.names:
+                if alias.name not in classes:
+                    raise UnsafeCodeError(f"import of '{alias.name}' is not allowed")
+        elif isinstance(node, ast.ClassDef):
+            raise UnsafeCodeError("class definitions are not allowed")
         elif isinstance(node, ast.Name) and node.id.startswith("_"):
             raise UnsafeCodeError(f"name '{node.id}' is not allowed")
-        elif (
-            isinstance(node, ast.Attribute) and node.attr not in _allowed_attributes()
-        ):
+        elif isinstance(node, ast.Attribute) and node.attr not in attributes:
             raise UnsafeCodeError(f"attribute '{node.attr}' is not allowed")
 
 
-def _import_videodb_only(name, globals=None, locals=None, fromlist=(), level=0):
-    if level or not _is_allowed_module(name):
+def _import_editor_only(name, globals=None, locals=None, fromlist=(), level=0):
+    classes, _ = _sdk_surface()
+    if level or name != ALLOWED_IMPORT_MODULE or not set(fromlist or ()) <= classes:
         raise ImportError(f"import of '{name}' is not allowed")
-    module = builtins.__import__(name, globals, locals, fromlist, level)
-    for item in fromlist or ():
-        value = getattr(module, item, None)
-        # Submodules of videodb re-export os, requests and friends.
-        if isinstance(value, types.ModuleType) and not _is_allowed_module(
-            value.__name__
-        ):
-            raise ImportError(f"import of '{item}' from '{name}' is not allowed")
-    return module
+    return builtins.__import__(name, globals, locals, fromlist, level)
 
 
 def _safe_builtins() -> dict:
     safe = {name: getattr(builtins, name) for name in SAFE_BUILTIN_NAMES}
-    safe["__import__"] = _import_videodb_only
+    safe["__import__"] = _import_editor_only
     return safe
 
 
@@ -288,7 +313,7 @@ class CodeExecutor:
 
     def _generate_video_only_fallback(self, original_code: str) -> str:
         import re
-
+        
         pattern = r"VideoAsset\(([^)]*)\)"
 
         def add_volume_zero(match):
