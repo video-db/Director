@@ -17,6 +17,8 @@ from functools import lru_cache
 
 ALLOWED_IMPORT_MODULE = "videodb.editor"
 
+MEMORY_LIMIT_BYTES = 2 * 1024**3
+
 # If these are missing the SDK changed shape and the allow-lists can't be trusted.
 REQUIRED_SDK_NAMES = {"Timeline", "Track", "Clip", "add_track", "add_clip", "generate_stream"}  # fmt: skip
 
@@ -158,16 +160,28 @@ def run(code: str, conn) -> str:
     return str(stream_url) if stream_url else None
 
 
+def _limit_memory() -> None:
+    """Cap this process's address space where the platform enforces it (Linux)."""
+    try:
+        import resource
+
+        resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT_BYTES,) * 2)
+    except (ImportError, ValueError, OSError):
+        pass
+
+
 def main() -> None:
     request = json.load(sys.stdin)
-    # stdout carries the result, so anything the code prints goes to stderr.
-    result_stream, sys.stdout = sys.stdout, sys.stderr
+    # stdout carries the result, so anything the code prints is discarded.
+    result_stream, sys.stdout = sys.stdout, open(os.devnull, "w")
+    _limit_memory()
     try:
         import videodb
 
         conn = videodb.connect(
             api_key=os.environ["VIDEO_DB_API_KEY"], base_url=request["base_url"]
         )
+        conn.collection_id = request["collection_id"]
         result = {"stream_url": run(request["code"], conn)}
     except Exception as e:
         result = {"error": str(e), "error_type": type(e).__name__}
