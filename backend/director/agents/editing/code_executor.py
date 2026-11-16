@@ -1,12 +1,76 @@
+import ast
+import builtins
 import logging
+import types
 
 from director.agents.base import AgentResponse, AgentStatus
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_IMPORT_ROOT = "videodb"
+
+# Everything else (open, eval, exec, getattr, ...) is unavailable to generated code.
+SAFE_BUILTIN_NAMES = (
+    "abs", "all", "any", "bool", "dict", "enumerate", "float", "int",
+    "isinstance", "len", "list", "max", "min", "print", "range", "round",
+    "set", "sorted", "str", "sum", "tuple", "zip",
+    "Exception", "KeyError", "IndexError", "TypeError", "ValueError",
+)  # fmt: skip
+
+BLOCKED_ATTRIBUTES = {"format", "format_map"}
+
+
+class UnsafeCodeError(ValueError):
+    """Generated code uses something outside the Timeline subset."""
+
+
+def _is_allowed_module(name: str) -> bool:
+    return name == ALLOWED_IMPORT_ROOT or name.startswith(ALLOWED_IMPORT_ROOT + ".")
+
+
+def validate_code(code: str) -> None:
+    """Reject code that does more than build a Timeline with the videodb SDK."""
+    for node in ast.walk(ast.parse(code)):
+        if isinstance(node, ast.Import):
+            raise UnsafeCodeError("use 'from videodb... import ...' for imports")
+        if isinstance(node, ast.ImportFrom):
+            if node.level or not _is_allowed_module(node.module or ""):
+                raise UnsafeCodeError(f"import from '{node.module}' is not allowed")
+            if any(alias.name == "*" for alias in node.names):
+                raise UnsafeCodeError("wildcard imports are not allowed")
+        elif isinstance(node, ast.Name) and node.id.startswith("_"):
+            raise UnsafeCodeError(f"name '{node.id}' is not allowed")
+        elif isinstance(node, ast.Attribute) and (
+            node.attr.startswith("_") or node.attr in BLOCKED_ATTRIBUTES
+        ):
+            raise UnsafeCodeError(f"attribute '{node.attr}' is not allowed")
+
+
+def _import_videodb_only(name, globals=None, locals=None, fromlist=(), level=0):
+    if level or not _is_allowed_module(name):
+        raise ImportError(f"import of '{name}' is not allowed")
+    module = builtins.__import__(name, globals, locals, fromlist, level)
+    for item in fromlist or ():
+        value = getattr(module, item, None)
+        # Submodules of videodb re-export os, requests and friends.
+        if isinstance(value, types.ModuleType) and not _is_allowed_module(
+            value.__name__
+        ):
+            raise ImportError(f"import of '{item}' from '{name}' is not allowed")
+    return module
+
+
+def _safe_builtins() -> dict:
+    safe = {name: getattr(builtins, name) for name in SAFE_BUILTIN_NAMES}
+    safe["__import__"] = _import_videodb_only
+    return safe
+
 
 class CodeExecutor:
-    """Executes Timeline Python code safely."""
+    """Runs generated Timeline code after checking it only uses the videodb SDK.
+
+    The check narrows what generated code can reach; it is not a sandbox.
+    """
 
     def __init__(self, session):
         self.session = session
@@ -17,9 +81,11 @@ class CodeExecutor:
             if not conn:
                 raise ValueError("No VideoDB connection available in session")
 
+            validate_code(code)
+
             exec_globals = {
                 "conn": conn,
-                "__builtins__": __builtins__,
+                "__builtins__": _safe_builtins(),
             }
             exec_locals = {}
 

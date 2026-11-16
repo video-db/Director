@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN [ ! -f director.db ] && python director/db/sqlite/initialize.py || echo "Database already initialized."
 
+# Inside a container the server must listen on all interfaces to be published.
+ENV SERVER_HOST=0.0.0.0
+
 EXPOSE 8000 
 
 CMD ["python", "director/entrypoint/api/server.py"]

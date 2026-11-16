@@ -49,8 +49,10 @@ class BaseAppConfig:
     """Logging configuration for the app."""
     DB_TYPE: str = os.getenv("DB_TYPE", "sqlite")
     """Database type for the app."""
-    HOST: str = "0.0.0.0"
-    """Host for the app."""
+    HOST: str = "127.0.0.1"
+    """Host for the app. The API has no authentication, so it listens on loopback only by default."""
+    ALLOWED_ORIGINS: str = "http://localhost:8080,http://127.0.0.1:8080"
+    """Comma separated browser origins that may call the API and the chat socket."""
     PORT: int = 8000
     """Port for the app."""
     ENV_PREFIX: str = "SERVER"
