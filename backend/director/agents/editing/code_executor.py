@@ -313,7 +313,7 @@ class CodeExecutor:
 
     def _generate_video_only_fallback(self, original_code: str) -> str:
         import re
-        
+
         pattern = r"VideoAsset\(([^)]*)\)"
 
         def add_volume_zero(match):
