@@ -1,12 +1,90 @@
+import json
 import logging
+import os
+import subprocess
+import sys
+import time
 
 from director.agents.base import AgentResponse, AgentStatus
+from director.agents.editing import code_runner
 
 logger = logging.getLogger(__name__)
 
+# Seconds one code_executor call may take, across retries. The videodb SDK
+# waits up to 500 seconds for a render, so this has to stay above that.
+EXECUTION_TIMEOUT = 600
+
+# The runner gets the VideoDB key and what a process needs to start and reach
+# the network. LLM keys, DB URLs and the rest of the server's environment stay out.
+PASSTHROUGH_ENV = (
+    "PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT",
+    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE",
+)  # fmt: skip
+
+TIMEOUT_MESSAGE = f"Generated code did not finish within {EXECUTION_TIMEOUT} seconds"
+
+NATIVE_ERRORS = {"NameError": NameError, "ValueError": ValueError}
+
+
+class GeneratedCodeError(Exception):
+    """An error raised inside the runner process, with its original type name."""
+
+    def __init__(self, message: str, error_type: str):
+        super().__init__(message)
+        self.error_type = error_type
+
+
+def run_in_subprocess(code: str, conn, deadline: float) -> str:
+    """Run generated code in a separate process and return its stream_url.
+
+    `deadline` is a time.monotonic() value; the process is killed when it passes.
+    """
+    timeout = deadline - time.monotonic()
+    if timeout <= 0:
+        raise TimeoutError(TIMEOUT_MESSAGE)
+    env = {key: os.environ[key] for key in PASSTHROUGH_ENV if key in os.environ}
+    env["VIDEO_DB_API_KEY"] = conn.api_key
+    try:
+        completed = subprocess.run(
+            # -I keeps the runner's own directory and PYTHON* variables off sys.path.
+            [sys.executable, "-I", code_runner.__file__],
+            input=json.dumps(
+                {
+                    "code": code,
+                    "base_url": conn.base_url,
+                    "collection_id": conn.collection_id,
+                }
+            ),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise TimeoutError(TIMEOUT_MESSAGE) from None
+
+    try:
+        result = json.loads(completed.stdout)
+    except ValueError:
+        raise RuntimeError(
+            f"Code runner exited with code {completed.returncode}: "
+            f"{completed.stderr.strip()[-500:]}"
+        ) from None
+
+    if "error" in result:
+        error_type = result["error_type"]
+        if error_type in NATIVE_ERRORS:
+            raise NATIVE_ERRORS[error_type](result["error"])
+        raise GeneratedCodeError(result["error"], error_type)
+    return result["stream_url"]
+
 
 class CodeExecutor:
-    """Executes Timeline Python code safely."""
+    """Checks generated Timeline code, then runs it in a separate process.
+
+    The check limits the code to the videodb.editor classes. The process gets a
+    time limit and none of the server's secrets except the VideoDB key.
+    """
 
     def __init__(self, session):
         self.session = session
@@ -17,14 +95,10 @@ class CodeExecutor:
             if not conn:
                 raise ValueError("No VideoDB connection available in session")
 
-            exec_globals = {
-                "conn": conn,
-                "__builtins__": __builtins__,
-            }
-            exec_locals = {}
+            code_runner.validate_code(code)
 
             logger.info("Executing generated code.")
-            stream_url = self._execute_with_retry(code, exec_globals, exec_locals)
+            stream_url = self._execute_with_retry(code, conn)
 
             if not stream_url:
                 raise ValueError("Generated code did not produce a stream_url variable")
@@ -88,7 +162,7 @@ class CodeExecutor:
                 data={
                     "code": code,
                     "error": str(e),
-                    "error_type": type(e).__name__,
+                    "error_type": getattr(e, "error_type", type(e).__name__),
                     "execution_success": False,
                 },
                 message=f"Error executing code: {str(e)}",
@@ -98,16 +172,14 @@ class CodeExecutor:
     def _execute_with_retry(
         self,
         code: str,
-        exec_globals: dict,
-        exec_locals: dict,
+        conn,
         max_retries: int = 3,
     ) -> str:
-        import time
+        deadline = time.monotonic() + EXECUTION_TIMEOUT
 
         for attempt in range(max_retries):
             try:
-                exec(code, exec_globals, exec_locals)
-                stream_url = exec_locals.get("stream_url")
+                stream_url = run_in_subprocess(code, conn, deadline)
 
                 if stream_url:
                     logger.info(f"Code execution successful on attempt {attempt + 1}")
@@ -142,8 +214,9 @@ class CodeExecutor:
                     )
                     try:
                         video_only_code = self._generate_video_only_fallback(code)
-                        exec(video_only_code, exec_globals, exec_locals)
-                        fallback_url = exec_locals.get("stream_url")
+                        fallback_url = run_in_subprocess(
+                            video_only_code, conn, deadline
+                        )
                         if fallback_url:
                             logger.info("Video-only fallback successful")
                             return fallback_url

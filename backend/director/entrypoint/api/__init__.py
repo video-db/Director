@@ -21,6 +21,14 @@ load_dotenv()
 socketio = SocketIO()
 
 
+def _allowed_origins(value):
+    # SERVER_ALLOWED_ORIGINS arrives as a string, or as a list when it is JSON.
+    if isinstance(value, str):
+        value = value.split(",")
+    origins = [str(origin).strip() for origin in value if str(origin).strip()]
+    return "*" if origins == ["*"] else origins
+
+
 def create_app(app_config: object):
     """
     Create a Flask app using the app factory pattern.
@@ -33,12 +41,13 @@ def create_app(app_config: object):
     # Set the app config
     app.config.from_object(app_config)
     app.config.from_prefixed_env(app_config.ENV_PREFIX)
-    CORS(app)
+    origins = _allowed_origins(app.config["ALLOWED_ORIGINS"])
+    CORS(app, origins=origins)
 
     # Init the socketio and attach it to the app
     socketio.init_app(
         app,
-        cors_allowed_origins="*",
+        cors_allowed_origins=origins,
         logger=True,
         engineio_logger=True,
         reconnection=False if app.config["DEBUG"] else True,
