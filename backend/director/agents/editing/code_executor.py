@@ -1,7 +1,11 @@
 import ast
 import builtins
+import enum
+import inspect
 import logging
+import re
 import types
+from functools import lru_cache
 
 from director.agents.base import AgentResponse, AgentStatus
 
@@ -17,7 +21,11 @@ SAFE_BUILTIN_NAMES = (
     "Exception", "KeyError", "IndexError", "TypeError", "ValueError",
 )  # fmt: skip
 
-BLOCKED_ATTRIBUTES = {"format", "format_map"}
+# list, dict, str and enum attributes that Timeline code commonly uses.
+COMMON_ATTRIBUTES = {
+    "append", "extend", "items", "keys", "values", "get", "join", "lower",
+    "upper", "strip", "split", "replace", "value",
+}  # fmt: skip
 
 
 class UnsafeCodeError(ValueError):
@@ -26,6 +34,47 @@ class UnsafeCodeError(ValueError):
 
 def _is_allowed_module(name: str) -> bool:
     return name == ALLOWED_IMPORT_ROOT or name.startswith(ALLOWED_IMPORT_ROOT + ".")
+
+
+@lru_cache(maxsize=1)
+def _allowed_attributes() -> frozenset:
+    """Public members, enum values and instance attributes of the videodb.editor classes."""
+    from videodb import editor
+
+    names = set(COMMON_ATTRIBUTES)
+    for cls in vars(editor).values():
+        if not inspect.isclass(cls) or cls.__module__ != editor.__name__:
+            continue
+        names.update(vars(cls))
+        if issubclass(cls, enum.Enum):
+            names.update(cls.__members__)
+        else:
+            names.update(re.findall(r"self\.(\w+)", inspect.getsource(cls)))
+    # Timeline keeps the connection it was given; generated code never needs it back.
+    names.discard("connection")
+    return frozenset(name for name in names if not name.startswith("_"))
+
+
+class TimelineConnection:
+    """The only part of the VideoDB connection that generated code can reach.
+
+    Timeline needs `post` on two fixed paths. The real connection, its HTTP
+    session and the API key stay in the closure.
+    """
+
+    __slots__ = ("post",)
+
+    def __init__(self, conn):
+        from videodb._constants import ApiPath
+
+        allowed_paths = {ApiPath.editor, f"{ApiPath.editor}/{ApiPath.download}"}
+
+        def post(path, data=None):
+            if path not in allowed_paths:
+                raise PermissionError(f"API path '{path}' is not allowed")
+            return conn.post(path=path, data=data)
+
+        self.post = post
 
 
 def validate_code(code: str) -> None:
@@ -40,8 +89,8 @@ def validate_code(code: str) -> None:
                 raise UnsafeCodeError("wildcard imports are not allowed")
         elif isinstance(node, ast.Name) and node.id.startswith("_"):
             raise UnsafeCodeError(f"name '{node.id}' is not allowed")
-        elif isinstance(node, ast.Attribute) and (
-            node.attr.startswith("_") or node.attr in BLOCKED_ATTRIBUTES
+        elif (
+            isinstance(node, ast.Attribute) and node.attr not in _allowed_attributes()
         ):
             raise UnsafeCodeError(f"attribute '{node.attr}' is not allowed")
 
@@ -84,7 +133,7 @@ class CodeExecutor:
             validate_code(code)
 
             exec_globals = {
-                "conn": conn,
+                "conn": TimelineConnection(conn),
                 "__builtins__": _safe_builtins(),
             }
             exec_locals = {}
