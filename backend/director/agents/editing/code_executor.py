@@ -1,149 +1,74 @@
-import ast
-import builtins
-import dis
-import enum
-import inspect
+import json
 import logging
-from functools import lru_cache
+import os
+import subprocess
+import sys
 
 from director.agents.base import AgentResponse, AgentStatus
+from director.agents.editing import code_runner
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_IMPORT_MODULE = "videodb.editor"
+EXECUTION_TIMEOUT = 300
 
-# If these are missing the SDK changed shape and the allow-lists can't be trusted.
-REQUIRED_SDK_NAMES = {"Timeline", "Track", "Clip", "add_track", "add_clip", "generate_stream"}  # fmt: skip
-
-# Everything else (open, eval, exec, getattr, ...) is unavailable to generated code.
-SAFE_BUILTIN_NAMES = (
-    "abs", "all", "any", "bool", "dict", "enumerate", "float", "int",
-    "isinstance", "len", "list", "max", "min", "print", "range", "round",
-    "set", "sorted", "str", "sum", "tuple", "zip",
-    "Exception", "KeyError", "IndexError", "TypeError", "ValueError",
+# The runner gets the VideoDB key and what a process needs to start and reach
+# the network. LLM keys, DB URLs and the rest of the server's environment stay out.
+PASSTHROUGH_ENV = (
+    "PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT",
+    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE",
 )  # fmt: skip
 
-# list, dict, str and enum attributes that Timeline code commonly uses.
-COMMON_ATTRIBUTES = {
-    "append", "extend", "items", "keys", "values", "join", "lower", "upper",
-    "strip", "split", "replace", "value",
-}  # fmt: skip
+NATIVE_ERRORS = {"NameError": NameError, "ValueError": ValueError}
 
 
-class UnsafeCodeError(ValueError):
-    """Generated code uses something outside the Timeline subset."""
+class GeneratedCodeError(Exception):
+    """An error raised inside the runner process, with its original type name."""
+
+    def __init__(self, message: str, error_type: str):
+        super().__init__(message)
+        self.error_type = error_type
 
 
-@lru_cache(maxsize=1)
-def _sdk_surface() -> tuple:
-    """(importable class names, allowed attribute names) read from videodb.editor.
+def run_in_subprocess(code: str, conn, timeout: int = EXECUTION_TIMEOUT) -> str:
+    """Run generated code in a separate process and return its stream_url."""
+    env = {key: os.environ[key] for key in PASSTHROUGH_ENV if key in os.environ}
+    env["VIDEO_DB_API_KEY"] = conn.api_key
+    try:
+        completed = subprocess.run(
+            # -I keeps the runner's own directory and PYTHON* variables off sys.path.
+            [sys.executable, "-I", code_runner.__file__],
+            input=json.dumps({"code": code, "base_url": conn.base_url}),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise TimeoutError(
+            f"Generated code did not finish within {timeout} seconds"
+        ) from None
 
-    Imports are limited to the classes the module defines, so its own imports
-    (json, upload helpers) are out of reach. Attributes are the public members,
-    enum values and instance attributes of those classes.
-    """
-    from videodb import editor
+    try:
+        result = json.loads(completed.stdout)
+    except ValueError:
+        raise RuntimeError(
+            f"Code runner exited with code {completed.returncode}: "
+            f"{completed.stderr.strip()[-500:]}"
+        ) from None
 
-    classes = {
-        name: cls
-        for name, cls in vars(editor).items()
-        if inspect.isclass(cls)
-        and cls.__module__ == editor.__name__
-        and not name.startswith("_")
-    }
-    attributes = set(COMMON_ATTRIBUTES)
-    for cls in classes.values():
-        attributes.update(vars(cls))
-        if issubclass(cls, enum.Enum):
-            attributes.update(cls.__members__)
-            continue
-        # Instance attributes, read from bytecode so no source files are needed.
-        for member in vars(cls).values():
-            if inspect.isfunction(member):
-                attributes.update(
-                    op.argval
-                    for op in dis.get_instructions(member)
-                    if op.opname == "STORE_ATTR"
-                )
-    # Timeline keeps the connection it was given; generated code never needs it back.
-    attributes.discard("connection")
-    attributes = {name for name in attributes if not name.startswith("_")}
-
-    missing = REQUIRED_SDK_NAMES - classes.keys() - attributes
-    if missing:
-        raise RuntimeError(f"videodb.editor is missing {sorted(missing)}")
-    return frozenset(classes), frozenset(attributes)
-
-
-class TimelineConnection:
-    """The only part of the VideoDB connection that generated code can reach.
-
-    Timeline posts to two editor paths and, for a large timeline, asks for an
-    upload URL in its collection. The real connection, its HTTP session and the
-    API key stay in the closure.
-    """
-
-    __slots__ = ("post", "get", "collection_id")
-
-    def __init__(self, conn):
-        from videodb._constants import ApiPath
-
-        collection_id = getattr(conn, "collection_id", "default")
-        post_paths = {ApiPath.editor, f"{ApiPath.editor}/{ApiPath.download}"}
-        get_paths = {f"{ApiPath.collection}/{collection_id}/upload_url"}
-
-        def post(path, data=None):
-            if path not in post_paths:
-                raise PermissionError(f"API path '{path}' is not allowed")
-            return conn.post(path=path, data=data)
-
-        def get(path, params=None):
-            if path not in get_paths:
-                raise PermissionError(f"API path '{path}' is not allowed")
-            return conn.get(path=path, params=params)
-
-        self.post = post
-        self.get = get
-        self.collection_id = collection_id
-
-
-def validate_code(code: str) -> None:
-    """Reject code that does more than build a Timeline with the videodb SDK."""
-    classes, attributes = _sdk_surface()
-    for node in ast.walk(ast.parse(code)):
-        if isinstance(node, ast.Import):
-            raise UnsafeCodeError("use 'from videodb.editor import ...' for imports")
-        if isinstance(node, ast.ImportFrom):
-            if node.level or node.module != ALLOWED_IMPORT_MODULE:
-                raise UnsafeCodeError(f"import from '{node.module}' is not allowed")
-            for alias in node.names:
-                if alias.name not in classes:
-                    raise UnsafeCodeError(f"import of '{alias.name}' is not allowed")
-        elif isinstance(node, ast.ClassDef):
-            raise UnsafeCodeError("class definitions are not allowed")
-        elif isinstance(node, ast.Name) and node.id.startswith("_"):
-            raise UnsafeCodeError(f"name '{node.id}' is not allowed")
-        elif isinstance(node, ast.Attribute) and node.attr not in attributes:
-            raise UnsafeCodeError(f"attribute '{node.attr}' is not allowed")
-
-
-def _import_editor_only(name, globals=None, locals=None, fromlist=(), level=0):
-    classes, _ = _sdk_surface()
-    if level or name != ALLOWED_IMPORT_MODULE or not set(fromlist or ()) <= classes:
-        raise ImportError(f"import of '{name}' is not allowed")
-    return builtins.__import__(name, globals, locals, fromlist, level)
-
-
-def _safe_builtins() -> dict:
-    safe = {name: getattr(builtins, name) for name in SAFE_BUILTIN_NAMES}
-    safe["__import__"] = _import_editor_only
-    return safe
+    if "error" in result:
+        error_type = result["error_type"]
+        if error_type in NATIVE_ERRORS:
+            raise NATIVE_ERRORS[error_type](result["error"])
+        raise GeneratedCodeError(result["error"], error_type)
+    return result["stream_url"]
 
 
 class CodeExecutor:
-    """Runs generated Timeline code after checking it only uses the videodb SDK.
+    """Checks generated Timeline code, then runs it in a separate process.
 
-    The check narrows what generated code can reach; it is not a sandbox.
+    The check limits the code to the videodb.editor classes. The process gets a
+    time limit and none of the server's secrets except the VideoDB key.
     """
 
     def __init__(self, session):
@@ -155,16 +80,10 @@ class CodeExecutor:
             if not conn:
                 raise ValueError("No VideoDB connection available in session")
 
-            validate_code(code)
-
-            exec_globals = {
-                "conn": TimelineConnection(conn),
-                "__builtins__": _safe_builtins(),
-            }
-            exec_locals = {}
+            code_runner.validate_code(code)
 
             logger.info("Executing generated code.")
-            stream_url = self._execute_with_retry(code, exec_globals, exec_locals)
+            stream_url = self._execute_with_retry(code, conn)
 
             if not stream_url:
                 raise ValueError("Generated code did not produce a stream_url variable")
@@ -228,7 +147,7 @@ class CodeExecutor:
                 data={
                     "code": code,
                     "error": str(e),
-                    "error_type": type(e).__name__,
+                    "error_type": getattr(e, "error_type", type(e).__name__),
                     "execution_success": False,
                 },
                 message=f"Error executing code: {str(e)}",
@@ -238,16 +157,14 @@ class CodeExecutor:
     def _execute_with_retry(
         self,
         code: str,
-        exec_globals: dict,
-        exec_locals: dict,
+        conn,
         max_retries: int = 3,
     ) -> str:
         import time
 
         for attempt in range(max_retries):
             try:
-                exec(code, exec_globals, exec_locals)
-                stream_url = exec_locals.get("stream_url")
+                stream_url = run_in_subprocess(code, conn)
 
                 if stream_url:
                     logger.info(f"Code execution successful on attempt {attempt + 1}")
@@ -282,8 +199,7 @@ class CodeExecutor:
                     )
                     try:
                         video_only_code = self._generate_video_only_fallback(code)
-                        exec(video_only_code, exec_globals, exec_locals)
-                        fallback_url = exec_locals.get("stream_url")
+                        fallback_url = run_in_subprocess(video_only_code, conn)
                         if fallback_url:
                             logger.info("Video-only fallback successful")
                             return fallback_url
