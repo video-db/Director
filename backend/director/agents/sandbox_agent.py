@@ -27,6 +27,8 @@ class SandboxAgent(BaseAgent):
             )
 
         title = progress_message or "Running code"
+        if self.approved_by:
+            title = f"{title} · {self.approved_by}"
         self.output_message.actions.append(title)
         self.output_message.content.append(
             TextContent(

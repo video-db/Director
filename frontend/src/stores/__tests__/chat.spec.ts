@@ -85,4 +85,54 @@ describe("chat store", () => {
     handlers.chat({ session_id: "other", conv_id: "1", msg_id: "2" });
     expect(chat.isEmpty).toBe(true);
   });
+
+  it("sends the permission mode and reopens a session in its saved mode", async () => {
+    const chat = useChatStore();
+    chat.startNewSession();
+    chat.setMode("ask");
+    chat.addMessage([{ type: "text", text: "hi" }]);
+    expect(emit.mock.calls[0][1]).toMatchObject({ mode: "ask" });
+
+    getSession.mockResolvedValue({
+      session_id: "s2",
+      created_at: 1,
+      metadata: { permissions: { mode: "read_only" } },
+      conversation: [],
+    });
+    await chat.openSession("s2");
+    expect(chat.mode).toBe("read_only");
+  });
+
+  it("answers an approval card over the socket", () => {
+    const chat = useChatStore();
+    const card = {
+      type: "approval",
+      approval_id: "call_1",
+      preview: "v.delete()",
+      language: "python",
+      reason: "Deletes data.",
+      options: ["once", "deny"],
+      state: "pending",
+    } as const;
+    const live = {
+      session_id: "s1",
+      conv_id: "1",
+      msg_id: "2",
+      msg_type: "output",
+      sender: "assistant",
+      content: [{ ...card }],
+    } as any;
+
+    chat.answerApproval(live, live.content[0], "deny", "keep them");
+
+    expect(emit).toHaveBeenCalledWith("approval", {
+      session_id: "s1",
+      conv_id: "1",
+      msg_id: "2",
+      approval_id: "call_1",
+      decision: "deny",
+      note: "keep them",
+    });
+    expect(live.content[0].state).toBe("sending");
+  });
 });

@@ -1,3 +1,4 @@
+import json
 import logging
 
 from abc import ABC, abstractmethod
@@ -5,6 +6,7 @@ from pydantic import BaseModel
 
 from openai_function_calling import FunctionInferrer
 
+from director.core.permissions import CallInfo
 from director.core.session import Session, OutputMessage
 
 logger = logging.getLogger(__name__)
@@ -25,6 +27,11 @@ class AgentResponse(BaseModel):
 
 class BaseAgent(ABC):
     """Interface for all agents. All agents should inherit from this class."""
+
+    # True when the agent never changes anything; it then runs in every mode.
+    read_only: bool = False
+    # How this call was approved, shown on its output (set by the engine).
+    approved_by: str = ""
 
     def __init__(self, session: Session, **kwargs):
         self.session: Session = session
@@ -51,6 +58,15 @@ class BaseAgent(ABC):
             ]
 
         return parameters
+
+    def inspect(self, **arguments) -> CallInfo:
+        """Describe a call before it runs, for the permission check. Executors override this."""
+        return CallInfo(
+            preview=json.dumps(arguments, indent=2, default=str),
+            language="json",
+            read_only=self.read_only,
+            key=self.agent_name,
+        )
 
     def to_llm_format(self):
         """Convert the agent to LLM tool format."""

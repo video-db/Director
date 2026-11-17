@@ -44,6 +44,10 @@ class BaseSandboxExecutor(ABC, Generic[H]):
     # without Git Bash) set this to False and bash_executor is not offered.
     supports_bash: bool = True
 
+    # Whether code here is kept away from the user's own files. The safety check
+    # is stricter when it isn't.
+    isolated: bool = False
+
     def skills_path(self, local_path: str, skills_dir: str) -> str:
         """Where a file under the local skills_dir is visible inside this sandbox."""
         return local_path

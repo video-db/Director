@@ -111,7 +111,8 @@ const message = computed(() => {
 // the turn is done, is the reply.
 const isMainReponse = computed(() => {
   if (props.content.agent_name !== "assistant") return false;
-  if (message.value?.status === "progress") return false;
+  if (["progress", "awaiting_approval"].includes(message.value?.status))
+    return false;
   const texts = (message.value?.content ?? []).filter(
     (c) => c.agent_name === "assistant",
   );

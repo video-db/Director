@@ -6,7 +6,13 @@ export type MsgStatus =
   | "error"
   | "not_generated"
   | "overlimit"
-  | "sessionlimit";
+  | "sessionlimit"
+  | "awaiting_approval";
+
+// How much Director may do without asking (backend/director/core/permissions.py).
+export type PermissionMode = "read_only" | "ask" | "auto" | "full";
+
+export type ApprovalDecision = "once" | "chat" | "deny";
 
 export type MsgType = "input" | "output" | "system";
 
@@ -63,6 +69,26 @@ export interface ContentBase {
   [key: string]: unknown;
 }
 
+// A tool call waiting for, or showing, the user's decision.
+export interface ApprovalContent extends ContentBase {
+  type: "approval";
+  approval_id: string;
+  preview: string;
+  language: string;
+  reason: string;
+  options: ApprovalDecision[];
+  state:
+    | "pending"
+    | "sending"
+    | "running"
+    | "approved"
+    | "denied"
+    | "skipped"
+    | "interrupted";
+  decided_by?: string | null;
+  note?: string | null;
+}
+
 export interface Message {
   session_id: string;
   conv_id: string;
@@ -77,6 +103,8 @@ export interface Message {
   collection_id?: string | null;
   video_id?: string | null;
   clientLoading?: boolean;
+  // Permission mode, sent with input messages.
+  mode?: PermissionMode;
 }
 
 /** conv_id → msg_id → message */
@@ -93,6 +121,7 @@ export interface Session {
 
 export interface SessionDetail extends Session {
   conversation?: Message[];
+  metadata?: { permissions?: { mode?: PermissionMode } } | null;
 }
 
 export interface UploadRequest {
