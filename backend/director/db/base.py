@@ -44,6 +44,53 @@ class BaseDB(ABC):
         pass
 
     @abstractmethod
+    def get_message(self, msg_id: str) -> dict:
+        """Get one conversation message by msg_id, or None."""
+        pass
+
+    @abstractmethod
+    def get_awaiting_output(self, session_id: str) -> dict:
+        """The session's output message that is waiting for approvals, or None."""
+        pass
+
+    @abstractmethod
+    def claim_resume(self, msg_id: str) -> bool:
+        """Move a message from awaiting_approval to progress. True only for the one caller that did it."""
+        pass
+
+    @abstractmethod
+    def update_session_metadata(self, session_id: str, patch: dict) -> None:
+        """Merge top-level keys into the session's metadata."""
+        pass
+
+    @abstractmethod
+    def create_approval(self, **approval) -> None:
+        """Save a pending approval for a tool call."""
+        pass
+
+    @abstractmethod
+    def resolve_approval(
+        self, approval_id: str, session_id: str, status: str, decision: str, note: str = None
+    ) -> dict:
+        """Answer a pending approval. Returns the row only to the first caller; None if it wasn't pending."""
+        pass
+
+    @abstractmethod
+    def set_approval_result(self, approval_id: str, result: str, status: str) -> None:
+        """Store the tool output, or the denial, that goes back to the model."""
+        pass
+
+    @abstractmethod
+    def skip_pending(self, msg_id: str, skipped_result: str, interrupted_result: str) -> None:
+        """Close a message's open approvals: pending ones become skipped, unfinished running ones interrupted."""
+        pass
+
+    @abstractmethod
+    def get_approvals(self, msg_id: str, statuses: tuple = None) -> list:
+        """A message's approvals in creation order, optionally filtered by status."""
+        pass
+
+    @abstractmethod
     def health_check(self) -> bool:
         """Check if the database is healthy."""
         pass

@@ -19,6 +19,12 @@ class ContextBuilder:
     def build(
         self, session: Session, input_message: InputMessage
     ) -> List[ContextMessage]:
+        ctx = self.rebuild(session)
+        ctx.append(ContextMessage(content=input_message.content, role=RoleTypes.user))
+        return ctx
+
+    def rebuild(self, session: Session) -> List[ContextMessage]:
+        """The saved context with a fresh system prompt, for resuming a paused turn."""
         system = ContextMessage(
             content=self._system_prompt(session), role=RoleTypes.system
         )
@@ -27,7 +33,6 @@ class ContextBuilder:
             ctx[0] = system
         else:
             ctx.insert(0, system)
-        ctx.append(ContextMessage(content=input_message.content, role=RoleTypes.user))
         return ctx
 
     def _system_prompt(self, session: Session) -> str:
