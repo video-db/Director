@@ -57,11 +57,33 @@
 
         <!-- Send Button -->
         <div
-          class="vdb-c-flex vdb-c-items-center"
+          class="vdb-c-flex vdb-c-items-center vdb-c-gap-8"
           :class="{
             'vdb-c-self-end': isExpanded,
           }"
         >
+          <label class="vdb-c-relative vdb-c-flex vdb-c-items-center">
+            <span class="vdb-c-sr-only">Permission mode</span>
+            <select
+              :value="mode"
+              :title="modeHint"
+              class="vdb-c-cursor-pointer vdb-c-appearance-none vdb-c-rounded-full vdb-c-bg-kilvish-200 vdb-c-py-8 vdb-c-pl-12 vdb-c-pr-28 vdb-c-text-caption1 vdb-c-font-medium vdb-c-text-kilvish-800 vdb-c-outline-none hover:vdb-c-bg-kilvish-300"
+              @change="chat.setMode($event.target.value)"
+            >
+              <option
+                v-for="option in MODE_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+            <ChevronDown
+              class="vdb-c-pointer-events-none vdb-c-absolute vdb-c-right-10"
+              :stroke-width="2"
+              :stroke-color="'#475160'"
+            />
+          </label>
           <button
             :disabled="isInputDisabled"
             class="vdb-c-font-sans vdb-c-hidden vdb-c-h-40 vdb-c-items-center vdb-c-justify-center vdb-c-rounded-full vdb-c-px-12 vdb-c-py-8 vdb-c-text-sm vdb-c-font-bold vdb-c-uppercase vdb-c-text-white vdb-c-transition md:vdb-c-flex"
@@ -103,6 +125,7 @@ import { computed, nextTick, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useChatStore } from "@/stores/chat";
 import ChatEnterIcon from "../icons/ChatEnter.vue";
+import ChevronDown from "../icons/ChevronDown.vue";
 import PaperClipIcon from "../icons/PaperClip.vue";
 import SendIcon from "../icons/Send.vue";
 import ChatInputImagePreview from "./elements/ChatInputImagePreview.vue";
@@ -120,7 +143,33 @@ const props = defineProps({
 });
 
 const chat = useChatStore();
-const { chatInput, chatLoading } = storeToRefs(chat);
+const { chatInput, chatLoading, mode } = storeToRefs(chat);
+
+const MODE_OPTIONS = [
+  {
+    value: "read_only",
+    label: "Read-only",
+    hint: "Looks at your media and reads files. Asks before changing anything.",
+  },
+  {
+    value: "ask",
+    label: "Ask",
+    hint: "Asks before every code or command run.",
+  },
+  {
+    value: "auto",
+    label: "Auto",
+    hint: "Runs on its own after a safety check. Asks before deleting or anything risky.",
+  },
+  {
+    value: "full",
+    label: "Full access",
+    hint: "Never asks. Blocked commands stay blocked.",
+  },
+];
+const modeHint = computed(
+  () => MODE_OPTIONS.find((o) => o.value === mode.value)?.hint ?? "",
+);
 // Reactive array; mutated in place, never reassigned.
 const chatAttachments = chat.chatAttachments;
 

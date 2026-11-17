@@ -99,14 +99,13 @@ const props = defineProps({
   },
 });
 
-
 const isUser = computed(() => props.message.msg_type === "input");
 const isAssistant = computed(() => props.message.msg_type === "output");
 const isSystem = computed(() => props.message.msg_type === "system");
 
 const finalStatus = computed(() => {
-  if (props.message.status === "error") {
-    return "error";
+  if (["error", "awaiting_approval"].includes(props.message.status)) {
+    return props.message.status;
   }
   const assistantContent = props.message?.content?.find(
     (c) => c.agent_name === "assistant",
