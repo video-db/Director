@@ -8,10 +8,9 @@
 [![Add to Claude](https://img.shields.io/badge/Add%20to%20Claude-VideoDB-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://videodb.io/claude?ref=director)
 [![Add to ChatGPT](https://img.shields.io/badge/Add%20to%20ChatGPT-VideoDB-10A37F?style=for-the-badge)](https://videodb.io/chatgpt?ref=director)
 <!-- videodb-agents-badges:end -->
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![Website][website-shield]][website-url]
 [![Discord][discord-shield]][discord-url]
+[![Website][website-shield]][website-url]
+[![Stargazers][stars-shield]][stars-url]
 
 <!-- PROJECT LOGO -->
 <img src="https://github.com/user-attachments/assets/78f5eead-d390-4b0b-a8bc-0017e6827c98" alt="logo">
@@ -298,8 +297,6 @@ Any contributions you make are **greatly appreciated**. Here's the process:
 [discord-url]: https://discord.com/invite/py9P639jGz
 [stars-shield]: https://img.shields.io/github/stars/video-db/Director.svg?style=for-the-badge
 [stars-url]: https://github.com/video-db/Director/stargazers
-[issues-shield]: https://img.shields.io/github/issues/video-db/Director.svg?style=for-the-badge
-[issues-url]: https://github.com/video-db/Director/issues
 [website-shield]: https://img.shields.io/website?url=https%3A%2F%2Fvideodb.io%2F&style=for-the-badge&label=videodb.io
 [website-url]: https://videodb.io/
 
