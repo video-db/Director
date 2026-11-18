@@ -1,6 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* The player's CSS ships an unlayered Tailwind v3 reset, which would beat every
+   layered utility here. Its own layer sits above our base, below our utilities. */
+@layer theme, base, player, components, utilities;
+@import "tailwindcss";
+@import "@videodb/player-vue/dist/style.css" layer(player);
+@import "tw-animate-css";
+@import "./lib/tokens.css";
+@import "./styles/markdown.css";
 
 html,
 body,
@@ -10,7 +15,5 @@ body,
 }
 
 body {
-  font-family: Inter, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  @apply bg-background-neutral-primary text-text-neutral-primary font-sans antialiased;
 }

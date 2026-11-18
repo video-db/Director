@@ -1,44 +1,42 @@
 <template>
-  <div class="vdb-c-relative vdb-c-rounded-20 vdb-c-bg-white">
-    <LoadingMessage
-      :status="content.status"
-      :message="content.status_message"
-      :is-last-conv="isLastConv"
+  <div class="flex w-full flex-col gap-12 text-left">
+    <LoadingMessage :status="content.status ?? 'progress'" :message="content.status_message" />
+
+    <SearchListItem
+      v-if="content.status === 'success' && results.length"
+      :search-results="results"
+      :is-contractable="results.length > 1"
     />
-    <div v-if="content.status === 'success'">
-      <search-list-item
-        :search-results="content.search_results"
-        :is-contractable="content.search_results.length > 1"
-      />
-    </div>
-    <div v-else-if="content.status === 'progress'">
-      <search-list-item-loader />
-    </div>
+
+    <Card v-else-if="content.status === 'progress'" variant="outline" size="sm">
+      <CardContent class="flex flex-col gap-16 sm:flex-row">
+        <div class="flex flex-col gap-8 sm:w-2/5 sm:shrink-0">
+          <Skeleton class="aspect-video w-full rounded-sm" />
+          <Skeleton class="h-14 w-3/4" />
+          <Skeleton class="h-12 w-1/3" />
+        </div>
+        <div class="flex flex-1 flex-col gap-12">
+          <Skeleton v-for="i in 4" :key="i" class="h-14 w-full" />
+        </div>
+      </CardContent>
+    </Card>
   </div>
 </template>
 
-<script setup>
-import SearchListItem from "./search/SearchListItem.vue";
+<script setup lang="ts">
+import { computed } from "vue";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ContentBase } from "@/types";
+
 import LoadingMessage from "./elements/LoadingMessage.vue";
-import SearchListItemLoader from "./search/SearchListItemLoader.vue";
+import SearchListItem, { type SearchResult } from "./search/SearchListItem.vue";
 
-const props = defineProps({
-  content: {
-    type: Object,
-    required: true,
-  },
-  isLastConv: {
-    type: Boolean,
-    default: false,
-  },
-});
-const getArr = () => {
-  const arr = [];
-  for (let i = 0; i < 2; i++) {
-    arr.push(i + 1);
-  }
-  return arr;
-};
+const props = defineProps<{
+  content: ContentBase & { search_results?: SearchResult[] };
+  isLastConv?: boolean;
+}>();
+
+const results = computed(() => props.content.search_results ?? []);
 </script>
-
-<style></style>

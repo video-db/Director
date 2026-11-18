@@ -1,127 +1,117 @@
 <template>
-  <div
-    class="vdb-c-relative vdb-c-flex vdb-c-w-full vdb-c-flex-col vdb-c-gap-8 vdb-c-py-14 vdb-c-text-left"
-  >
-    <LoadingMessage
-      :status="content.status"
-      :message="content.status_message"
-      :is-last-conv="isLastConv"
-    />
-    <transition name="fade" mode="out-in">
-      <div
-        v-if="content.status === 'success' && content.video.stream_url"
-        class="vdb-c-w-full vdb-c-py-6"
-      >
-        <div
-          :class="
-            isFullScreen
-              ? 'vdb-c-fixed vdb-c-inset-0 vdb-c-z-50 vdb-c-flex vdb-c-h-full vdb-c-w-full vdb-c-flex-col vdb-c-items-center vdb-c-justify-center vdb-c-overflow-y-hidden vdb-c-bg-black-64'
-              : 'vdb-c-full xl:vdb-c-1/2 vdb-c-overflow-hidden vdb-c-rounded-20 sm:vdb-c-w-3/4 lg:vdb-c-w-3/5 xl:vdb-c-w-1/2'
-          "
-        >
-          <VideoDBPlayer
-            :class="isFullScreen ? 'vdb-c-h-screen vdb-c-w-screen' : ''"
-            :stream-url="content.video.stream_url"
-            :default-controls="false"
-            :default-overlay="false"
-            @fullScreenChange="handleFullScreenChange"
-          >
-            <template #overlay>
-              <BigCenterButton
-                class="vdb-c-absolute vdb-c-left-1/2 vdb-c-top-1/2 vdb-c-h-32 vdb-c-w-32 md:vdb-c-h-48 md:vdb-c-w-48"
-              />
-            </template>
-            <template #controls>
-              <div class="vdb-p-pt-0 vdb-c-p-20">
-                <div class="sm:vdb-p-mx-8 vdb-c-mb-8 md:vdb-c-mb-12">
-                  <ProgressBar :stream-url="content.video.stream_url" />
-                </div>
-                <div class="vdb-c-flex vdb-c-w-full vdb-c-justify-between">
-                  <div
-                    class="vdb-c-z-10 vdb-c-ml-0 vdb-c-flex vdb-c-items-center"
-                  >
-                    <PlayPauseButton />
-                    <VolumeControlButton />
-                    <TimeCode />
-                  </div>
+  <div class="flex w-full flex-col gap-12 text-left">
+    <LoadingMessage :status="content.status ?? 'progress'" :message="content.status_message" />
 
-                  <FullScreenButton class="" />
-                </div>
-              </div>
-            </template>
-          </VideoDBPlayer>
-        </div>
-      </div>
-      <div v-else-if="content.status === 'progress'">
-        <div
-          class="vdb-c-full xl:vdb-c-1/2 vdb-c-animate-pulse vdb-c-overflow-hidden vdb-c-rounded-20 sm:vdb-c-w-3/4 lg:vdb-c-w-3/5 xl:vdb-c-w-1/2"
-        >
-          <div class="vdb-c-relative vdb-c-w-full" style="padding-top: 56.25%">
-            <div
-              class="vdb-c-absolute vdb-c-inset-0 vdb-c-flex vdb-c-items-center vdb-c-justify-center vdb-c-bg-gray-200"
-            ></div>
-          </div>
-        </div>
-      </div>
+    <div v-if="content.status === 'success' && video?.stream_url" class="flex w-full max-w-xl flex-col gap-8">
       <div
-        v-else-if="content.status === 'not_generated'"
-        class="vdb-c-flex vdb-c-flex-col"
-      ></div>
-    </transition>
+        ref="frame"
+        :class="
+          isFullScreen
+            ? 'flex size-full items-center justify-center bg-background-neutral-inverse-primary'
+            : 'overflow-hidden rounded-md border border-border-neutral-primary'
+        "
+      >
+        <VideoDBPlayer
+          :class="isFullScreen ? 'size-full' : ''"
+          :stream-url="video.stream_url"
+          :default-controls="false"
+          :default-overlay="false"
+          @full-screen-change="toggleFullScreen"
+        >
+          <template #overlay>
+            <BigCenterButton class="absolute top-1/2 left-1/2 size-48" />
+          </template>
+          <template #controls>
+            <div class="flex flex-col gap-8 p-16">
+              <ProgressBar :stream-url="video.stream_url" />
+              <div class="flex w-full items-center justify-between">
+                <div class="z-10 flex items-center">
+                  <PlayPauseButton />
+                  <VolumeControlButton />
+                  <TimeCode />
+                </div>
+                <FullScreenButton />
+              </div>
+            </div>
+          </template>
+        </VideoDBPlayer>
+      </div>
+
+      <div v-if="video.name || canOpen" class="flex items-center gap-8">
+        <div class="flex min-w-0 flex-1 flex-col gap-2">
+          <p class="truncate text-sm font-medium text-text-neutral-primary">{{ video.name || "Untitled video" }}</p>
+          <p v-if="video.length" class="text-xs text-text-neutral-tertiary">{{ formatDuration(video.length) }}</p>
+        </div>
+        <IconButton v-if="video.id" icon="content_copy" label="Copy video ID" size="sm" @click="copyId" />
+        <IconButton v-if="canOpen" icon="open_in_new" label="Open video" size="sm" @click="open" />
+      </div>
+    </div>
+
+    <Skeleton v-else-if="content.status === 'progress'" class="aspect-video w-full max-w-xl rounded-md" />
   </div>
 </template>
 
-<script setup>
-import { ref } from "vue";
+<script setup lang="ts">
+
 import {
-  VideoDBPlayer,
-  TimeCode,
   BigCenterButton,
-  VolumeControlButton,
-  PlayPauseButton,
   FullScreenButton,
+  PlayPauseButton,
   ProgressBar,
+  TimeCode,
+  VideoDBPlayer,
+  VolumeControlButton,
 } from "@videodb/player-vue";
-import "@videodb/player-vue/dist/style.css";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+
+import { formatDuration } from "@/components/ui/duration-label";
+import { IconButton } from "@/components/ui/icon-button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
+import { useOpenVideo } from "@/composables/useOpenVideo";
+import type { ContentBase, Video } from "@/types";
+
 import LoadingMessage from "./elements/LoadingMessage.vue";
 
-const props = defineProps({
-  content: {
-    type: Object,
-    required: true,
-  },
-  isLastConv: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = defineProps<{
+  content: ContentBase & { video?: Partial<Video> };
+  isLastConv?: boolean;
+}>();
 
+const { toast } = useToast();
+const openVideo = useOpenVideo();
+
+const video = computed(() => props.content.video);
+const canOpen = computed(
+  () => !!video.value?.external_url || !!(video.value?.id && video.value?.collection_id),
+);
+
+function open() {
+  if (video.value) openVideo(video.value as Video);
+}
+
+async function copyId() {
+  try {
+    await navigator.clipboard.writeText(video.value?.id ?? "");
+    toast.success("Copied the video ID");
+  } catch {
+    toast.error("Couldn't copy the video ID");
+  }
+}
+
+// Fullscreen goes on this player's own frame, so other players on the page stay put.
+const frame = ref<HTMLElement>();
 const isFullScreen = ref(false);
 
-const handleFullScreenChange = () => {
-  isFullScreen.value = !isFullScreen.value;
-  if (isFullScreen.value) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-};
+function toggleFullScreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else frame.value?.requestFullscreen();
+}
+
+function onFullScreenChange() {
+  isFullScreen.value = !!frame.value && document.fullscreenElement === frame.value;
+}
+
+onMounted(() => document.addEventListener("fullscreenchange", onFullScreenChange));
+onBeforeUnmount(() => document.removeEventListener("fullscreenchange", onFullScreenChange));
 </script>
-
-<style lang="scss">
-.video-js .vjs-big-play-button {
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.1s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

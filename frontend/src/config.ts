@@ -1,33 +1,16 @@
-import type { Component } from "vue";
-
-import DirectorIcon from "@/components/icons/Director.vue";
-import ExternalLink from "@/components/icons/ExternalLink.vue";
-
 export const backendUrl: string =
   import.meta.env.VITE_APP_BACKEND_URL || "http://127.0.0.1:8000";
 export const socketUrl = `${backendUrl}/chat`;
 
-export interface SidebarLink {
-  href: string;
-  text: string;
-  icon?: Component;
-  target?: string;
-}
-
-export const sidebarConfig = {
-  enabled: true,
-  icon: DirectorIcon as Component,
-  links: [
-    {
-      href: "https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw",
-      text: "Watch Demos",
-      icon: ExternalLink,
-    },
-    { href: "https://console.videodb.io", text: "VideoDB Console" },
-  ] as SidebarLink[],
-};
-
-export const headerConfig = { uploadButton: true };
+// Material Symbols names.
+export const sidebarLinks = [
+  {
+    href: "https://www.youtube.com/playlist?list=PLhxAMFLSSK039xl1UgcZmoFLnb-qNRYQw",
+    text: "Watch demos",
+    icon: "play_circle",
+  },
+  { href: "https://console.videodb.io", text: "VideoDB Console", icon: "open_in_new" },
+];
 
 export const chatInputPlaceholder = "Ask Director";
 

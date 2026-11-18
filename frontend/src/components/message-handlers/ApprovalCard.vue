@@ -1,82 +1,56 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-  <div class="vdb-c-py-8 vdb-c-text-left">
-    <div class="vdb-c-rounded-12 vdb-c-bg-kilvish-100 vdb-c-p-16">
-      <p
-        class="vdb-c-text-subheader vdb-c-font-semibold vdb-c-text-kilvish-900"
-      >
-        {{ title }}
-      </p>
-      <!-- Reasons can come from the safety check's LLM, so they're rendered as text, never HTML. -->
-      <p
-        v-if="content.reason"
-        class="vdb-c-mt-4 vdb-c-text-body vdb-c-text-kilvish-700"
-      >
-        <template v-for="(part, i) in reasonParts" :key="i">
-          <code
-            v-if="i % 2"
-            class="vdb-c-rounded-4 vdb-c-bg-kilvish-200 vdb-c-px-4"
-            >{{ part }}</code
-          >
-          <template v-else>{{ part }}</template>
-        </template>
-      </p>
-
-      <div
-        class="markdown-body approval-preview vdb-c-mt-12 vdb-c-overflow-hidden"
-        v-html="previewHtml"
-      ></div>
-
-      <div v-if="content.state === 'pending'" class="vdb-c-mt-12">
-        <div
-          v-if="!denying"
-          class="vdb-c-flex vdb-c-flex-wrap vdb-c-items-center vdb-c-gap-16"
-        >
-          <Button variant="primary" @click="answer('once')">Allow once</Button>
-          <button
-            v-if="content.options.includes('chat')"
-            class="vdb-c-text-subheader vdb-c-font-medium vdb-c-text-kilvish-900 hover:vdb-c-underline"
-            @click="answer('chat')"
-          >
-            Allow for this chat
-          </button>
-          <button
-            class="vdb-c-text-subheader vdb-c-font-medium vdb-c-text-red-dark hover:vdb-c-underline"
-            @click="denying = true"
-          >
-            Deny
-          </button>
+  <Card variant="outline" size="sm" class="text-left">
+    <CardContent class="flex flex-col gap-12">
+      <div class="flex items-start gap-8">
+        <Icon name="shield" :size="20" class="mt-2 shrink-0 text-icon-brand-primary" />
+        <div class="flex min-w-0 flex-col gap-4">
+          <p class="text-sm font-semibold text-text-neutral-primary">{{ title }}</p>
+          <!-- Reasons can come from the safety check's LLM, so they're rendered as text, never HTML. -->
+          <p v-if="content.reason" class="text-sm text-text-neutral-secondary">
+            <template v-for="(part, i) in reasonParts" :key="i">
+              <code v-if="i % 2" class="rounded-xxs bg-background-neutral-secondary px-4 font-mono text-xs">{{ part }}</code>
+              <template v-else>{{ part }}</template>
+            </template>
+          </p>
         </div>
-
-        <form
-          v-else
-          class="vdb-c-flex vdb-c-flex-wrap vdb-c-items-center vdb-c-gap-12"
-          @submit.prevent="answer('deny', note)"
-        >
-          <input
-            ref="noteRef"
-            v-model="note"
-            type="text"
-            maxlength="2000"
-            placeholder="What should Director do instead? (optional)"
-            class="vdb-c-min-w-[0] vdb-c-flex-1 vdb-c-rounded-8 vdb-c-border vdb-c-border-kilvish-400 vdb-c-bg-white vdb-c-px-12 vdb-c-py-8 vdb-c-text-body vdb-c-text-kilvish-900 vdb-c-outline-none focus:vdb-c-border-kilvish-600"
-          />
-          <Button variant="primary" type="submit">Deny</Button>
-          <button
-            type="button"
-            class="vdb-c-text-subheader vdb-c-font-medium vdb-c-text-kilvish-700 hover:vdb-c-underline"
-            @click="denying = false"
-          >
-            Cancel
-          </button>
-        </form>
       </div>
 
-      <p v-else class="vdb-c-mt-12 vdb-c-text-body" :class="stateClass">
-        {{ stateText }}
-      </p>
-    </div>
-  </div>
+      <div class="markdown-body [&_pre]:m-0 [&_pre]:max-h-320" v-html="previewHtml" />
+
+      <template v-if="content.state === 'pending'">
+        <div v-if="!denying" class="flex flex-wrap items-center gap-8">
+          <Button hierarchy="primary" size="sm" icon="check" @click="answer('once')">Allow once</Button>
+          <Button v-if="content.options.includes('chat')" hierarchy="secondary" size="sm" @click="answer('chat')">
+            Allow for this chat
+          </Button>
+          <Button hierarchy="tertiary" size="sm" destructive @click="denying = true">Deny</Button>
+        </div>
+
+        <form v-else class="flex flex-wrap items-center gap-8" @submit.prevent="answer('deny', note)">
+          <Input
+            ref="noteRef"
+            v-model="note"
+            size="sm"
+            maxlength="2000"
+            placeholder="What should Director do instead? (optional)"
+            aria-label="Note for Director"
+            class="min-w-0 flex-1"
+          />
+          <Button hierarchy="primary" size="sm" destructive type="submit">Deny</Button>
+          <Button hierarchy="tertiary" size="sm" type="button" @click="denying = false">Cancel</Button>
+        </form>
+      </template>
+
+      <Marker v-else>
+        <MarkerIcon>
+          <Spinner v-if="content.state === 'sending' || content.state === 'running'" size="sm" decorative />
+          <Icon v-else :name="stateIcon" :size="16" />
+        </MarkerIcon>
+        <MarkerContent :class="{ 'text-text-error-primary': content.state === 'denied' }">{{ stateText }}</MarkerContent>
+      </Marker>
+    </CardContent>
+  </Card>
 </template>
 
 <script setup lang="ts">
@@ -85,7 +59,12 @@ import Prism from "prismjs";
 import "prismjs/components/prism-python";
 import "prismjs/components/prism-bash";
 
-import Button from "@/components/buttons/Button.vue";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
+import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker";
+import { Spinner } from "@/components/ui/spinner";
 import { useChatStore } from "@/stores/chat";
 import type { ApprovalContent, ApprovalDecision } from "@/types";
 
@@ -98,12 +77,12 @@ const props = defineProps<{
 const chat = useChatStore();
 const denying = ref(false);
 const note = ref("");
-const noteRef = ref<HTMLInputElement | null>(null);
+const noteRef = ref<{ $el?: HTMLElement } | null>(null);
 
 watch(denying, async (open) => {
   if (open) {
     await nextTick();
-    noteRef.value?.focus();
+    noteRef.value?.$el?.querySelector("input")?.focus();
   }
 });
 
@@ -151,10 +130,8 @@ const stateText = computed(() => {
   }
 });
 
-const stateClass = computed(() =>
-  props.content.state === "denied"
-    ? "vdb-c-text-red-dark"
-    : "vdb-c-text-kilvish-700",
+const stateIcon = computed(() =>
+  props.content.state === "approved" ? "check_circle" : props.content.state === "denied" ? "block" : "remove_circle",
 );
 
 function answer(decision: ApprovalDecision, text?: string) {
@@ -171,11 +148,3 @@ function escapeHtml(text: string) {
     .replace(/>/g, "&gt;");
 }
 </script>
-
-<style>
-.approval-preview pre {
-  margin: 0;
-  max-height: 320px;
-  overflow: auto;
-}
-</style>
