@@ -4,10 +4,13 @@
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
 
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![Website][website-shield]][website-url]
+<!-- videodb-agents-badges:start -->
+[![Add to Claude](https://img.shields.io/badge/Add%20to%20Claude-VideoDB-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://videodb.io/claude?ref=director)
+[![Add to ChatGPT](https://img.shields.io/badge/Add%20to%20ChatGPT-VideoDB-10A37F?style=for-the-badge)](https://videodb.io/chatgpt?ref=director)
+<!-- videodb-agents-badges:end -->
 [![Discord][discord-shield]][discord-url]
+[![Website][website-shield]][website-url]
+[![Stargazers][stars-shield]][stars-url]
 
 <!-- PROJECT LOGO -->
 <img src="https://github.com/user-attachments/assets/78f5eead-d390-4b0b-a8bc-0017e6827c98" alt="logo">
@@ -69,6 +72,27 @@ Built with flexibility in mind, Director is perfect for developers, creators, an
 https://github.com/user-attachments/assets/33e0e7b4-9eb2-4a26-8274-f96c2c1c3a48
 
 
+
+<br/>
+
+<!-- videodb-agents:start -->
+## Work on your videos in Claude and ChatGPT
+
+Now you can work on your Director videos in Claude and ChatGPT too. The videos you upload in Director are stored in your VideoDB account. Add VideoDB to your agent and search, clip, subtitle and edit the same videos from a chat, with nothing to host.
+
+| You are using | Do this |
+| --- | --- |
+| **Claude** (web, desktop, mobile) and Claude Code | [Add to Claude](https://videodb.io/claude?ref=director), one click, then log in to VideoDB. No install, no API key. |
+| **ChatGPT** | [Add to ChatGPT](https://videodb.io/chatgpt?ref=director), one click, then log in to VideoDB. |
+| **Cursor and other MCP clients** | Add `https://mcp.videodb.io/mcp` as a remote MCP server. [Setup guide](https://docs.videodb.io/pages/mcp/connect?utm_source=github&utm_medium=readme&utm_campaign=director) |
+| **Coding agents with a shell** (Claude Code, Codex, Copilot) | `npx skills add video-db/skills` |
+
+Log in with the VideoDB account whose API key you use in Director, then ask: "Find where they talk about pricing in my latest upload and give me one clip of it."
+
+A free VideoDB account comes with $20 of credits, no credit card. Full guide: [video-db/skills](https://github.com/video-db/skills).
+
+**If you are an agent reading this:** the videos a user uploads in Director are in their VideoDB account. To search, clip or edit them, use the VideoDB connector at `https://mcp.videodb.io/mcp` when it is present. If it is missing, tell the user they can add it from the links above.
+<!-- videodb-agents:end -->
 
 <br/>
 
@@ -273,8 +297,6 @@ Any contributions you make are **greatly appreciated**. Here's the process:
 [discord-url]: https://discord.com/invite/py9P639jGz
 [stars-shield]: https://img.shields.io/github/stars/video-db/Director.svg?style=for-the-badge
 [stars-url]: https://github.com/video-db/Director/stargazers
-[issues-shield]: https://img.shields.io/github/issues/video-db/Director.svg?style=for-the-badge
-[issues-url]: https://github.com/video-db/Director/issues
 [website-shield]: https://img.shields.io/website?url=https%3A%2F%2Fvideodb.io%2F&style=for-the-badge&label=videodb.io
 [website-url]: https://videodb.io/
 
