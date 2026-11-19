@@ -11,10 +11,16 @@ from director.handler import ChatHandler
 class ChatNamespace(Namespace):
     """Chat namespace for socket.io"""
 
-    def on_chat(self, message):
-        """Handle chat messages"""
-        chat_handler = ChatHandler(
+    def _handler(self) -> ChatHandler:
+        return ChatHandler(
             db=load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"])),
             sink=SocketIOSink(),
         )
-        chat_handler.chat(message)
+
+    def on_chat(self, message):
+        """Handle chat messages"""
+        self._handler().chat(message)
+
+    def on_approval(self, payload):
+        """The user's answer to an approval card: {session_id, msg_id, approval_id, decision, note?}."""
+        self._handler().approve(payload)

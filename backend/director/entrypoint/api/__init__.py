@@ -6,6 +6,8 @@ Create an application factory function, which will be used to create a new app i
 docs: https://flask.palletsprojects.com/en/2.3.x/patterns/appfactories/
 """
 
+import re
+
 from flask_cors import CORS
 from flask import Flask
 from flask_socketio import SocketIO
@@ -20,6 +22,26 @@ load_dotenv()
 
 socketio = SocketIO()
 
+# Without SERVER_ALLOWED_ORIGINS, only pages served from this machine may call the API.
+LOOPBACK_ORIGIN = r"^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
+
+
+def allowed_origins(value) -> list:
+    """SERVER_ALLOWED_ORIGINS as a list; it arrives as a string, or a list when it is JSON."""
+    if isinstance(value, str):
+        value = value.split(",")
+    return [str(origin).strip() for origin in value or [] if str(origin).strip()]
+
+
+def origin_check(origins: list):
+    """The CORS rule for both Flask and the chat socket."""
+    if "*" in origins:
+        return "*", "*"
+    if not origins:
+        loopback = re.compile(LOOPBACK_ORIGIN)
+        return [LOOPBACK_ORIGIN], lambda origin: bool(origin and loopback.match(origin))
+    return origins, origins
+
 
 def create_app(app_config: object):
     """
@@ -33,12 +55,15 @@ def create_app(app_config: object):
     # Set the app config
     app.config.from_object(app_config)
     app.config.from_prefixed_env(app_config.ENV_PREFIX)
-    CORS(app)
+    http_origins, socket_origins = origin_check(
+        allowed_origins(app.config["ALLOWED_ORIGINS"])
+    )
+    CORS(app, origins=http_origins)
 
     # Init the socketio and attach it to the app
     socketio.init_app(
         app,
-        cors_allowed_origins="*",
+        cors_allowed_origins=socket_origins,
         logger=True,
         engineio_logger=True,
         reconnection=False if app.config["DEBUG"] else True,

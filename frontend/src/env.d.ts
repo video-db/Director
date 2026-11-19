@@ -7,3 +7,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// prismjs ships without types.
+declare module "prismjs";

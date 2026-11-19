@@ -6,6 +6,7 @@ from typing import Optional, List, Union
 
 from pydantic import BaseModel, Field, ConfigDict
 
+from director.core.permissions import Permissions
 from director.core.sink import BaseSink, NullSink
 from director.db.base import BaseDB
 
@@ -28,6 +29,7 @@ class MsgStatus(str, Enum):
     not_generated = "not_generated"
     overlimit = "overlimit"
     sessionlimit = "sessionlimit"
+    awaiting_approval = "awaiting_approval"
 
 
 class MsgType(str, Enum):
@@ -45,6 +47,7 @@ class ContentType(str, Enum):
     videos = "videos"
     image = "image"
     search_results = "search_results"
+    approval = "approval"
 
 
 class EventType(str, Enum):
@@ -171,6 +174,24 @@ class SearchResultsContent(BaseContent):
     type: ContentType = ContentType.search_results
 
 
+class ApprovalContent(BaseContent):
+    """A tool call waiting for, or showing, the user's decision."""
+
+    type: ContentType = ContentType.approval
+    approval_id: str
+    preview: str
+    language: str = "text"
+    reason: str = ""
+    options: List[str] = ["once", "chat", "deny"]
+    # pending | running | approved | denied | skipped | interrupted
+    state: str = "pending"
+    # How it was decided, e.g. "Approved by you for this chat".
+    decided_by: Optional[str] = None
+    note: Optional[str] = None
+    # What "Always allow" would save, shown on the button.
+    rule: Optional[str] = None
+
+
 class BaseMessage(BaseModel):
     """Base message class for the input/output message. All the input/output messages will be inherited from this class."""
 
@@ -193,6 +214,7 @@ class BaseMessage(BaseModel):
             VideoContent,
             VideosContent,
             SearchResultsContent,
+            ApprovalContent,
         ]
     ] = []
     status: MsgStatus = MsgStatus.success
@@ -317,6 +339,7 @@ class Session:
         conv_id: str = "",
         collection_id: str = None,
         video_id: str = None,
+        output_message: "OutputMessage" = None,
         **kwargs,
     ):
         self.db = db
@@ -330,7 +353,8 @@ class Session:
         self.agent_context = {}
         self.state = {}
         self.sandbox = None
-        self.output_message = OutputMessage(
+        # Resuming a paused turn passes its output message, so the reply continues in the same bubble.
+        self.output_message = output_message or OutputMessage(
             db=self.db,
             sink=self.sink,
             session_id=self.session_id,
@@ -339,6 +363,15 @@ class Session:
         self.edited_context = kwargs.get("edited_context", None)
 
         self.get_context_messages()
+        self.permissions = Permissions.from_metadata(
+            (self.db.get_session(self.session_id) or {}).get("metadata")
+        )
+
+    def save_permissions(self):
+        """Persist the mode, "Allow for this chat" keys and judge counters on the session row."""
+        self.db.update_session_metadata(
+            self.session_id, {"permissions": self.permissions.to_dict()}
+        )
 
     def save_context_messages(self):
         """Save the reasoning context messages to the database."""

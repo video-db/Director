@@ -1,0 +1,5 @@
+export { default as Tooltip } from './Tooltip.vue'
+export { default as TooltipContent } from './TooltipContent.vue'
+export { default as TooltipProvider } from './TooltipProvider.vue'
+export { TooltipTrigger } from 'reka-ui'
+export * from './variants'

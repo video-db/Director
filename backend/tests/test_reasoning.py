@@ -27,6 +27,9 @@ class FakeLLM:
 
 
 class EchoAgent(BaseAgent):
+    # These tests cover the loop; permissions are tested in test_approvals.py.
+    read_only = True
+
     def __init__(self, session=None, **kwargs):
         self.agent_name = "echo"
         self.description = "Echoes the given text."

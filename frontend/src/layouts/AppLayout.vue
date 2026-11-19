@@ -1,174 +1,106 @@
 <template>
-  <section
-    class="vdb-c-flex vdb-c-h-full vdb-c-w-full vdb-c-overflow-hidden vdb-c-bg-white"
-  >
-    <Sidebar
-      v-if="sidebarConfig.enabled"
-      ref="sidebarRef"
-      :status="isSetupComplete ? 'active' : 'inactive'"
-      :new-session-button-status="
-        isSetupComplete && route.name !== 'home' ? 'active' : 'inactive'
-      "
-      :config="sidebarConfig"
-      :show-selected-collection="route.name !== 'chat'"
-      :initial-sessions-open="!collections.isFreshUser"
-      :selected-session="chat.sessionId ?? ''"
-      :add-dummy-session="route.name === 'home'"
-      :selected-collection="collections.activeCollectionId ?? 'default'"
-      :sessions="sessions.sessions"
-      :collections="collections.collections"
-      @create-new-session="router.push({ name: 'home' })"
-      @create-collection="ui.showCreateCollection = true"
-      @delete-session="ui.pendingDelete = { kind: 'session', id: $event }"
-      @delete-collection="deleteCollection"
-      @session-click="
-        router.push({ name: 'chat', params: { sessionId: $event } })
-      "
-      @collection-click="
-        router.push({ name: 'collection', params: { collectionId: $event } })
-      "
-    />
+  <SidebarProvider class="h-dvh">
+    <AppSidebar :ready="ready" @delete-collection="deleteCollection" />
 
-    <!-- min-w-[0px] here and on the scroll section: flex items otherwise
-         can't shrink below their widest content, so a long code line would
-         widen the whole page instead of scrolling inside its block. -->
-    <main
-      class="vdb-c-relative vdb-c-flex vdb-c-h-full vdb-c-min-w-[0px] vdb-c-flex-1 vdb-c-flex-col vdb-c-justify-between vdb-c-bg-white vdb-c-shadow-2"
-    >
+    <SidebarInset class="flex h-dvh min-w-0 flex-col overflow-hidden">
+      <AppHeader v-if="route.name !== 'setup'" :ready="ready" />
+
+      <!-- min-w-0: flex items can't shrink below their widest content otherwise,
+           so a long code line would widen the page instead of scrolling. -->
       <div
-        class="vdb-c-chat-parent vdb-c-relative vdb-c-flex vdb-c-flex-1 vdb-c-items-center vdb-c-justify-center vdb-c-overflow-hidden vdb-c-px-12 md:vdb-c-px-[30px]"
+        class="relative min-h-0 min-w-0 flex-1"
+        :class="route.name === 'chat' ? 'flex flex-col' : 'overflow-y-auto'"
       >
-        <section
-          ref="scrollRef"
-          class="vdb-c-flex vdb-c-h-full vdb-c-max-h-full vdb-c-w-full vdb-c-min-w-[0px] vdb-c-flex-col vdb-c-items-center vdb-c-overflow-x-auto vdb-c-overflow-y-auto"
-          @scroll="isScrolled = ($event.target as HTMLElement).scrollTop > 0"
-        >
-          <div
-            ref="headerRef"
-            class="vdb-c-sticky vdb-c-top-0 vdb-c-z-40 vdb-c-flex vdb-c-w-full vdb-c-items-center vdb-c-justify-center vdb-c-bg-white"
-          >
-            <Header
-              v-if="route.name !== 'setup'"
-              :is-sidebar-enabled="sidebarConfig.enabled"
-              :collection-name="collections.activeCollection?.name"
-              :video-name="videoName ?? undefined"
-              :header-state="isHome ? 'primary' : 'secondary'"
-              :header-config="headerConfig"
-              class="vdb-c-header vdb-c-w-full vdb-c-transition-shadow"
-              :class="{
-                'vdb-c-pl-16 vdb-c-pr-24 md:vdb-c-pl-32 md:vdb-c-pr-60 2xl:vdb-c-pl-60 2xl:vdb-c-pr-80':
-                  isHome,
-                'vdb-c-border-b-2 vdb-c-border-roy':
-                  route.name === 'collection',
-                'header-shadow': isScrolled && route.name === 'chat',
-              }"
-              @toggle-sidebar="sidebarRef?.toggleSidebar()"
-              @upload-button-click="ui.showUploadDialog = true"
-              @collection-click="openActiveCollection"
-            />
-          </div>
-
-          <RouterView />
-        </section>
-        <UploadNotifications />
+        <RouterView />
       </div>
 
       <div
-        v-if="route.name !== 'not-found'"
-        class="vdb-c-chat-input-container vdb-c-transition-all vdb-c-duration-300 vdb-c-ease-in-out"
-        :class="{
-          'vdb-c-pointer-events-none vdb-c-opacity-20': !isSetupComplete,
-        }"
+        v-if="route.name !== 'not-found' && route.name !== 'setup'"
+        class="shrink-0 px-16 pb-16 pt-8 md:px-24"
       >
         <ChatInput
+          class="mx-auto max-w-760"
           :placeholder="chatInputPlaceholder"
-          :context-data="
-            collections.activeVideo ?? collections.activeCollection ?? undefined
-          "
+          :disabled="!ready"
           @on-submit="send"
         />
       </div>
-    </main>
+    </SidebarInset>
 
-    <NotificationCenter />
-
-    <ConfirmModal
-      :heading-text="deleteCopy.heading"
-      :description-text="deleteCopy.description"
-      action-button-text="Delete"
-      cancel-button-text="Cancel"
-      :show-dialog="!!ui.pendingDelete"
-      @cancel-delete="ui.pendingDelete = null"
-      @confirm-delete="confirmDelete"
+    <ConfirmationDialog
+      :open="!!ui.pendingDelete"
+      :title="deleteCopy.title"
+      :description="deleteCopy.description"
+      confirm-label="Delete"
+      confirm-icon="delete"
+      @update:open="(v) => !v && (ui.pendingDelete = null)"
+      @confirm="confirmDelete"
     />
 
-    <CreateCollectionModal
-      :show-dialog="ui.showCreateCollection"
-      @cancel="ui.showCreateCollection = false"
+    <CreateCollectionDialog
+      v-model:open="ui.showCreateCollection"
       @create="createCollection"
     />
 
-    <DeleteCollectionErrorModal
-      :is-visible="!!deleteCollectionError"
-      @close-modal="deleteCollectionError = null"
-    >
-      <template #description>
-        <div>
-          This collection contains
-          <span
-            v-if="
-              ['audios', 'images', 'videos'].includes(deleteCollectionError!)
-            "
-            >{{ deleteCollectionError }}
-          </span>
-          <span v-else> media </span>. If you wish to delete this collection,
-          kindly
-          <span v-if="deleteCollectionError === 'videos'">
-            remove all the media individually or</span
-          >
-          use this
-          <a
-            class="vdb-c-underline"
-            href="https://colab.research.google.com/github/video-db/videodb-cookbook/blob/main/guides/Cleanup.ipynb"
-            target="_blank"
-          >
-            notebook</a
-          >
-          to cleanup the media first.
-        </div>
-      </template>
-    </DeleteCollectionErrorModal>
+    <Dialog :open="!!notEmptyKind" @update:open="(v) => !v && (notEmptyKind = null)">
+      <DialogContent>
+        <DialogHeader title="This collection isn't empty" />
+        <DialogBody>
+          <p class="text-sm text-text-neutral-secondary">
+            It still has {{ notEmptyKind }}. Remove them first<template v-if="notEmptyKind === 'videos'">, one at a time or</template>
+            with the
+            <a
+              class="font-medium text-text-brand-primary underline underline-offset-2"
+              href="https://colab.research.google.com/github/video-db/videodb-cookbook/blob/main/guides/Cleanup.ipynb"
+              target="_blank"
+              rel="noopener noreferrer"
+              >cleanup notebook</a
+            >, then delete the collection.
+          </p>
+        </DialogBody>
+        <DialogFooter>
+          <Button hierarchy="primary" @click="notEmptyKind = null">Got it</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <UploadModal
-      :show-upload-dialog="ui.showUploadDialog"
-      :default-selected-collection-id="
-        collections.activeCollectionId ?? undefined
-      "
+    <PermissionRulesDialog v-model:open="ui.showPermissionRules" />
+
+    <UploadDialog
+      v-model:open="ui.showUploadDialog"
       :collections="collections.collections"
+      :default-collection-id="collections.activeCollectionId ?? undefined"
       @upload="handleUpload"
-      @cancel-upload="ui.showUploadDialog = false"
     />
-  </section>
+
+    <Toaster />
+  </SidebarProvider>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { uploadMedia } from "@/api/collections";
 import ChatInput from "@/components/chat/ChatInput.vue";
-import Header from "@/components/chat/elements/Header.vue";
-import NotificationCenter from "@/components/chat/elements/NotificationCenter.vue";
-import Sidebar from "@/components/chat/elements/Sidebar.vue";
-import UploadNotifications from "@/components/chat/elements/UploadNotifications.vue";
-import CheckIcon from "@/components/icons/Check.vue";
-import DeleteIcon from "@/components/icons/Delete3.vue";
-import ConfirmModal from "@/components/modals/ConfirmModal.vue";
-import CreateCollectionModal from "@/components/modals/CreateCollectionModal.vue";
-import DeleteCollectionErrorModal from "@/components/modals/DeleteCollectionErrorModal.vue";
-import UploadModal from "@/components/modals/UploadModal.vue";
+import AppHeader from "@/components/layout/AppHeader.vue";
+import AppSidebar from "@/components/layout/AppSidebar.vue";
+import CreateCollectionDialog from "@/components/modals/CreateCollectionDialog.vue";
+import PermissionRulesDialog from "@/components/modals/PermissionRulesDialog.vue";
+import UploadDialog from "@/components/modals/UploadDialog.vue";
+import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+} from "@/components/ui/dialog";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Toaster, useToast } from "@/components/ui/toast";
 import { useChatActions } from "@/composables/useChatActions";
-import { chatInputPlaceholder, headerConfig, sidebarConfig } from "@/config";
+import { chatInputPlaceholder } from "@/config";
 import { useChatStore } from "@/stores/chat";
 import { useConfigStore } from "@/stores/config";
 import { useCollectionsStore } from "@/stores/collections";
@@ -183,32 +115,28 @@ const config = useConfigStore();
 const collections = useCollectionsStore();
 const sessions = useSessionsStore();
 const ui = useUiStore();
+const { toast } = useToast();
 const { send } = useChatActions();
 
-const sidebarRef = ref<InstanceType<typeof Sidebar> | null>(null);
-const scrollRef = ref<HTMLElement | null>(null);
-const headerRef = ref<HTMLElement | null>(null);
-const isScrolled = ref(false);
-const deleteCollectionError = ref<string | null>(null);
-
-const isSetupComplete = computed(() => config.isSetupComplete);
-const isHome = computed(() => route.name === "home");
-const videoName = computed(() =>
-  route.name === "video" || route.name === "chat"
-    ? (collections.activeVideo?.name ?? null)
-    : null,
-);
+const ready = computed(() => config.isSetupComplete);
+const notEmptyKind = ref<string | null>(null);
 
 // Load app data once the backend is ready.
 watch(
-  isSetupComplete,
-  (ready) => {
-    if (!ready) return;
+  ready,
+  (isReady) => {
+    if (!isReady) return;
     chat.connect();
     collections.load();
     sessions.load();
+    config.loadPermissions();
   },
   { immediate: true },
+);
+
+watch(
+  () => config.permissions,
+  (permissions) => permissions && chat.applyPermissions(permissions),
 );
 
 // The video the chat is about drives the header and composer context.
@@ -219,55 +147,15 @@ watch(
   },
 );
 
-// Keeps `.last-conv-height` below the sticky header.
-const headerObserver = new ResizeObserver(([entry]) => {
-  document.documentElement.style.setProperty(
-    "--header-height",
-    `${entry.contentRect.height}px`,
-  );
-});
-watch(headerRef, (el, old) => {
-  if (old) headerObserver.unobserve(old);
-  if (el) headerObserver.observe(el);
-});
-onUnmounted(() => headerObserver.disconnect());
-
-function scrollToBottom() {
-  nextTick(() => {
-    const el = scrollRef.value;
-    el?.scroll({ top: el.scrollHeight - 50, behavior: "smooth" });
-  });
-}
-watch(
-  () => chat.chatLoading,
-  (loading) => loading && scrollToBottom(),
-);
-watch(
-  () => chat.sessionLoading,
-  (loading) => !loading && scrollToBottom(),
-);
-
-function openActiveCollection() {
-  if (!collections.activeCollectionId) return;
-  router.push({
-    name: "collection",
-    params: { collectionId: collections.activeCollectionId },
-  });
-}
-
 // --- Deletes ---
 const deleteCopy = computed(() => {
   const kind = ui.pendingDelete?.kind;
   if (kind === "session") {
-    return {
-      heading: "Delete Session",
-      description: "Are you sure you want to delete this session?",
-    };
+    return { title: "Delete this chat?", description: "The chat and its messages are removed for good." };
   }
-  const label = kind ? kind[0].toUpperCase() + kind.slice(1) : "";
   return {
-    heading: `Delete ${label}`,
-    description: `Are you sure you want to delete this ${kind}? This action cannot be undone.`,
+    title: `Delete this ${kind ?? "item"}?`,
+    description: `The ${kind ?? "item"} is removed from the collection. This can't be undone.`,
   };
 });
 
@@ -278,45 +166,30 @@ async function confirmDelete() {
 
   if (pending.kind === "session") {
     if (pending.id === chat.sessionId) router.push({ name: "home" });
-    sessions.remove(pending.id).catch(() => {
-      ui.notify("Error deleting session", { type: "error", icon: DeleteIcon });
-    });
+    sessions.remove(pending.id).catch(() => toast.error("Couldn't delete the chat"));
     return;
   }
 
-  const label = pending.kind[0].toUpperCase() + pending.kind.slice(1);
   try {
     await collections.deleteMedia(pending.kind, pending.media);
-    ui.notify(`${label} deleted successfully.`, {
-      type: "error",
-      icon: DeleteIcon,
-    });
+    toast.success(`Deleted the ${pending.kind}`);
   } catch {
-    ui.notify(`Error deleting ${pending.kind}`, {
-      type: "error",
-      icon: DeleteIcon,
-    });
+    toast.error(`Couldn't delete the ${pending.kind}`);
   }
 }
 
 async function deleteCollection(collection: Collection) {
   try {
     await collections.remove(collection.id);
-    ui.notify("Collection deleted successfully.", {
-      type: "error",
-      icon: DeleteIcon,
-    });
-    if (route.params.collectionId === collection.id) {
-      router.push({ name: "home" });
-    }
+    toast.success(`Deleted ${collection.name}`);
+    if (route.params.collectionId === collection.id) router.push({ name: "home" });
   } catch (error) {
     const message = (error as Error).message;
-    const match = message.match(/non-zero (videos|audios|images)/);
     if (message.includes("Your collection has non-zero")) {
-      deleteCollectionError.value = match?.[1] ?? "media";
+      notEmptyKind.value = message.match(/non-zero (videos|audios|images)/)?.[1] ?? "media";
       return;
     }
-    ui.notify("Failed to delete collection", { type: "error" });
+    toast.error("Couldn't delete the collection");
   }
 }
 
@@ -324,68 +197,27 @@ async function createCollection(form: { name: string; description?: string }) {
   ui.showCreateCollection = false;
   try {
     await collections.create(form.name, form.description || " ");
-    ui.notify("Collection has been created successfully!", {
-      type: "success",
-      icon: CheckIcon,
-    });
+    toast.success(`Created ${form.name}`);
   } catch {
-    ui.notify("Failed to create collection", { type: "error" });
+    toast.error("Couldn't create the collection");
   }
 }
 
-async function handleUpload(upload: UploadRequest) {
+function handleUpload(upload: UploadRequest) {
   ui.showUploadDialog = false;
   const name =
     upload.sourceType === "file"
       ? (upload.source as File).name
       : (upload.source as { url: string }).url;
-  const id = ui.startUpload(name);
-  try {
-    await uploadMedia(upload);
-    ui.finishUpload(id, "success");
-    if (upload.collectionId === collections.activeCollectionId) {
-      collections.refetchAll();
-    }
-  } catch {
-    ui.finishUpload(id, "error");
-  }
+  toast
+    .promise(uploadMedia(upload), {
+      loading: `Uploading ${name}`,
+      success: `Uploaded ${name}`,
+      error: `Couldn't upload ${name}`,
+    })
+    .then(() => {
+      if (upload.collectionId === collections.activeCollectionId) collections.refetchAll();
+    })
+    .catch(() => {});
 }
 </script>
-
-<style>
-.header-shadow {
-  box-shadow:
-    0 12px 26px rgba(0, 0, 0, 0.06),
-    0 47px 47px rgba(0, 0, 0, 0.05),
-    0 105px 63px rgba(0, 0, 0, 0.03),
-    0 186px 75px rgba(0, 0, 0, 0.01),
-    0 291px 82px rgba(0, 0, 0, 0);
-}
-
-.vdb-c-message-container::-webkit-scrollbar {
-  width: 8px;
-}
-.vdb-c-message-container::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-.vdb-c-message-container::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
-}
-
-.last-conv-height {
-  min-height: calc(100% - var(--header-height));
-}
-
-@keyframes rotating {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-.vdb-c-rotating {
-  animation: rotating 2s linear infinite;
-}
-</style>

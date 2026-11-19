@@ -132,8 +132,18 @@ class SQLiteDB(BaseDB):
 
         self.cursor.execute(
             """
-        INSERT OR REPLACE INTO conversations (session_id, conv_id, msg_id, msg_type, agents, actions, content, status, created_at, updated_at, metadata)
+        INSERT INTO conversations (session_id, conv_id, msg_id, msg_type, agents, actions, content, status, created_at, updated_at, metadata)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(msg_id) DO UPDATE SET
+            session_id = excluded.session_id,
+            conv_id = excluded.conv_id,
+            msg_type = excluded.msg_type,
+            agents = excluded.agents,
+            actions = excluded.actions,
+            content = excluded.content,
+            status = excluded.status,
+            updated_at = excluded.updated_at,
+            metadata = excluded.metadata
         """,
             (
                 session_id,
@@ -167,6 +177,156 @@ class SQLiteDB(BaseDB):
                 conv_dict["metadata"] = json.loads(conv_dict["metadata"])
                 conversations.append(conv_dict)
         return conversations
+
+    @staticmethod
+    def _message(row) -> dict:
+        message = dict(row)
+        for key in ("agents", "actions", "content", "metadata"):
+            message[key] = json.loads(message[key]) if message[key] else None
+        return message
+
+    def get_message(self, msg_id: str) -> dict:
+        self.cursor.execute("SELECT * FROM conversations WHERE msg_id = ?", (msg_id,))
+        row = self.cursor.fetchone()
+        return self._message(row) if row else None
+
+    def get_awaiting_output(self, session_id: str) -> dict:
+        self.cursor.execute(
+            "SELECT * FROM conversations WHERE session_id = ? AND status = 'awaiting_approval' "
+            "ORDER BY created_at DESC LIMIT 1",
+            (session_id,),
+        )
+        row = self.cursor.fetchone()
+        return self._message(row) if row else None
+
+    def claim_resume(self, msg_id: str) -> bool:
+        self.cursor.execute(
+            "UPDATE conversations SET status = 'progress', updated_at = ? "
+            "WHERE msg_id = ? AND status = 'awaiting_approval'",
+            (int(time.time()), msg_id),
+        )
+        self.conn.commit()
+        return self.cursor.rowcount == 1
+
+    def update_session_metadata(self, session_id: str, patch: dict) -> None:
+        self.cursor.execute(
+            "SELECT metadata FROM sessions WHERE session_id = ?", (session_id,)
+        )
+        row = self.cursor.fetchone()
+        metadata = json.loads(row[0]) if row and row[0] else {}
+        metadata.update(patch)
+        self.cursor.execute(
+            "UPDATE sessions SET metadata = ?, updated_at = ? WHERE session_id = ?",
+            (json.dumps(metadata), int(time.time()), session_id),
+        )
+        self.conn.commit()
+
+    def create_approval(self, **approval) -> None:
+        self.cursor.execute(
+            """
+        INSERT INTO approvals (approval_id, session_id, conv_id, msg_id, agent, arguments, reason, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+        """,
+            (
+                approval["approval_id"],
+                approval["session_id"],
+                approval["conv_id"],
+                approval["msg_id"],
+                approval["agent"],
+                json.dumps(approval["arguments"]),
+                approval.get("reason"),
+                approval.get("created_at") or int(time.time()),
+            ),
+        )
+        self.conn.commit()
+
+    def resolve_approval(
+        self,
+        approval_id: str,
+        session_id: str,
+        status: str,
+        decision: str,
+        note: str = None,
+    ) -> dict:
+        self.cursor.execute(
+            "UPDATE approvals SET status = ?, decision = ?, note = ?, resolved_at = ? "
+            "WHERE approval_id = ? AND session_id = ? AND status = 'pending'",
+            (status, decision, note, int(time.time()), approval_id, session_id),
+        )
+        self.conn.commit()
+        if self.cursor.rowcount != 1:
+            return None
+        self.cursor.execute(
+            "SELECT * FROM approvals WHERE approval_id = ?", (approval_id,)
+        )
+        return self._approval(self.cursor.fetchone())
+
+    def set_approval_result(self, approval_id: str, result: str, status: str) -> None:
+        self.cursor.execute(
+            "UPDATE approvals SET result = ?, status = ? WHERE approval_id = ?",
+            (result, status, approval_id),
+        )
+        self.conn.commit()
+
+    def skip_pending(
+        self, msg_id: str, skipped_result: str, interrupted_result: str
+    ) -> None:
+        now = int(time.time())
+        self.cursor.execute(
+            "UPDATE approvals SET status = 'skipped', result = ?, resolved_at = ? "
+            "WHERE msg_id = ? AND status = 'pending'",
+            (skipped_result, now, msg_id),
+        )
+        self.cursor.execute(
+            "UPDATE approvals SET status = 'interrupted', result = ? "
+            "WHERE msg_id = ? AND status = 'running' AND result IS NULL",
+            (interrupted_result, msg_id),
+        )
+        self.conn.commit()
+
+    def get_approvals(self, msg_id: str, statuses: tuple = None) -> list:
+        query = "SELECT * FROM approvals WHERE msg_id = ?"
+        params = [msg_id]
+        if statuses:
+            query += f" AND status IN ({', '.join('?' for _ in statuses)})"
+            params += list(statuses)
+        self.cursor.execute(query + " ORDER BY created_at, rowid", params)
+        return [self._approval(row) for row in self.cursor.fetchall()]
+
+    @staticmethod
+    def _approval(row) -> dict:
+        approval = dict(row)
+        approval["arguments"] = json.loads(approval["arguments"])
+        return approval
+
+    def add_permission_rule(self, **rule) -> None:
+        self.cursor.execute(
+            "INSERT OR IGNORE INTO permission_rules (rule_id, agent, pattern, action, approval_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                rule["rule_id"],
+                rule["agent"],
+                rule["pattern"],
+                rule["action"],
+                rule.get("approval_id"),
+                rule.get("created_at") or int(time.time()),
+            ),
+        )
+        self.conn.commit()
+
+    def get_permission_rules(self, action: str = None) -> list:
+        query = "SELECT * FROM permission_rules"
+        params = []
+        if action:
+            query += " WHERE action = ?"
+            params.append(action)
+        self.cursor.execute(query + " ORDER BY created_at, rowid", params)
+        return [dict(row) for row in self.cursor.fetchall()]
+
+    def delete_permission_rule(self, rule_id: str) -> bool:
+        self.cursor.execute("DELETE FROM permission_rules WHERE rule_id = ?", (rule_id,))
+        self.conn.commit()
+        return self.cursor.rowcount > 0
 
     def get_context_messages(self, session_id: str) -> list:
         """Get context messages for a session.
@@ -248,6 +408,7 @@ class SQLiteDB(BaseDB):
         :return: True if the session was deleted, False otherwise.
         """
         failed_components = []
+        self.cursor.execute("DELETE FROM approvals WHERE session_id = ?", (session_id,))
         if not self.delete_conversation(session_id):
             failed_components.append("conversation")
         if not self.delete_context(session_id):
@@ -266,11 +427,11 @@ class SQLiteDB(BaseDB):
                 SELECT COUNT(name)
                 FROM sqlite_master
                 WHERE type='table'
-                AND name IN ('sessions', 'conversations', 'context_messages');
+                AND name IN ('sessions', 'conversations', 'context_messages', 'approvals', 'permission_rules');
             """
             self.cursor.execute(query)
             table_count = self.cursor.fetchone()[0]
-            if table_count < 3:
+            if table_count < 5:
                 logger.info("Tables not found. Initializing SQLite DB...")
                 initialize_sqlite(self.db_path)
             return True
