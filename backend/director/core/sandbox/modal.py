@@ -39,6 +39,9 @@ class ModalSandboxExecutor(BaseSandboxExecutor["modal.Sandbox"]):
     at MODAL_SKILLS_DIR; without it, a slim image with only videodb is used.
     """
 
+    isolated = True
+    skills_location = "image"
+
     def __init__(
         self,
         *,

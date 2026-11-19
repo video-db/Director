@@ -21,7 +21,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,8 @@ DEFAULT_SKILLS_DIR = "~/.agents/skills"
 
 # Director's VideoDB work depends on this skill; it is checked on every turn.
 VIDEODB_SKILL = "videodb"
-VIDEODB_SKILL_INSTALL = "npx skills add video-db/skills --skill videodb -g -y"
+VIDEODB_SKILL_SOURCE = "video-db/skills"
+VIDEODB_SKILL_INSTALL = f"npx skills add {VIDEODB_SKILL_SOURCE} --skill {VIDEODB_SKILL} -g -y"
 
 SKILL_FILENAME = "SKILL.md"
 MAX_NAME_LENGTH = 64
@@ -126,17 +127,17 @@ def _validate(name: str, parent_dir_name: str, description: str) -> List[str]:
     return errs
 
 
-def _load_one(skill_dir: str) -> Optional[Skill]:
+def check_skill(skill_dir: str) -> Tuple[Optional[Skill], Optional[str]]:
+    """Load one skill folder: (skill, None), or (None, why it can't be used)."""
     file_path = os.path.join(skill_dir, SKILL_FILENAME)
     if not os.path.isfile(file_path):
-        return None
+        return None, f"No {SKILL_FILENAME}"
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             raw = f.read()
     except OSError as e:
-        logger.warning("Failed to read skill %s: %s", file_path, e)
-        return None
+        return None, f"Can't read {SKILL_FILENAME}: {e}"
 
     fm = _parse_frontmatter(raw)
     parent = os.path.basename(skill_dir)
@@ -144,19 +145,28 @@ def _load_one(skill_dir: str) -> Optional[Skill]:
     description = str(fm.get("description") or "").strip()
 
     if not description:
-        logger.warning("Skill %s: missing required 'description' — skipping", file_path)
-        return None
+        return None, f"{SKILL_FILENAME} has no description in its frontmatter"
 
     for err in _validate(name, parent, description):
         logger.warning("Skill %s: %s", file_path, err)
 
-    return Skill(
-        name=name,
-        description=description,
-        file_path=file_path,
-        base_dir=skill_dir,
-        disable_model_invocation=bool(fm.get("disable-model-invocation", False)),
+    return (
+        Skill(
+            name=name,
+            description=description,
+            file_path=file_path,
+            base_dir=skill_dir,
+            disable_model_invocation=bool(fm.get("disable-model-invocation", False)),
+        ),
+        None,
     )
+
+
+def _load_one(skill_dir: str) -> Optional[Skill]:
+    skill, problem = check_skill(skill_dir)
+    if problem and os.path.isfile(os.path.join(skill_dir, SKILL_FILENAME)):
+        logger.warning("Skill %s: %s — skipping", skill_dir, problem)
+    return skill
 
 
 def get_skills_dir() -> str:

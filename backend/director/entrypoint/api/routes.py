@@ -248,3 +248,110 @@ def upload_video(collection_id):
 def config_check():
     config_handler = ConfigHandler()
     return config_handler.check()
+
+
+def _config_handler() -> ConfigHandler:
+    return ConfigHandler(db=load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"])))
+
+
+@config_bp.route("/permissions", methods=["GET"])
+def get_permissions():
+    """The mode picker's options for this server's sandbox."""
+    return ConfigHandler().permissions()
+
+
+@config_bp.route("/permission-rules", methods=["GET"])
+def get_permission_rules():
+    """The "Always allow" rules every chat uses."""
+    return {"rules": _config_handler().get_permission_rules()}
+
+
+@config_bp.route("/permission-rules/<rule_id>", methods=["DELETE"])
+def delete_permission_rule(rule_id):
+    if not _config_handler().delete_permission_rule(rule_id):
+        return {"message": "Rule not found"}, 404
+    return {"message": "Rule removed"}
+
+
+skills_bp = Blueprint("skills", __name__, url_prefix="/skills")
+
+
+def _library_or_error(manage: bool = False):
+    """The skill library, or an error response when managing skills is off here."""
+    from director.core.sandbox import get_default_sandbox
+    from director.skill_library import get_library, manage_problem
+
+    problem = manage_problem(get_default_sandbox(), os.getenv("SERVER_HOST", app.config["HOST"]))
+    if manage and problem:
+        return None, problem, ({"message": problem}, 403)
+    return get_library(), problem, None
+
+
+def _skill_call(fn):
+    from director.skill_library import SkillError
+
+    try:
+        return fn()
+    except SkillError as e:
+        return {"message": str(e)}, 400
+
+
+@skills_bp.route("", methods=["GET"], strict_slashes=False)
+def list_skills():
+    library, problem, _ = _library_or_error()
+    return library.overview(problem)
+
+
+@skills_bp.route("/source", methods=["GET"])
+def skills_source():
+    """Whether the skills CLI can run here. Slow the first time, since npx may download it."""
+    library, _, error = _library_or_error(manage=True)
+    return error or library.source_status()
+
+
+@skills_bp.route("/installed/<name>", methods=["GET"])
+def read_skill(name):
+    library, _, _ = _library_or_error()
+    return _skill_call(lambda: {"name": name, "content": library.read(name)})
+
+
+@skills_bp.route("/search", methods=["GET"])
+def search_skills():
+    library, _, error = _library_or_error(manage=True)
+    return error or _skill_call(lambda: {"results": library.search(request.args.get("q", ""))})
+
+
+@skills_bp.route("/preview", methods=["GET"])
+def preview_skill():
+    library, _, error = _library_or_error(manage=True)
+    source, skill = request.args.get("source", ""), request.args.get("skill", "")
+    return error or _skill_call(
+        lambda: {"source": source, "skill": skill, "content": library.preview(source, skill)}
+    )
+
+
+@skills_bp.route("/install", methods=["POST"])
+def install_skill():
+    library, _, error = _library_or_error(manage=True)
+    body = request.get_json(silent=True) or {}
+    return error or _skill_call(
+        lambda: (library.install(body.get("source", ""), body.get("skill", "")), 202)
+    )
+
+
+@skills_bp.route("/installed/<name>/update", methods=["POST"])
+def update_skill(name):
+    library, _, error = _library_or_error(manage=True)
+    return error or _skill_call(lambda: (library.update(name), 202))
+
+
+@skills_bp.route("/installed/<name>", methods=["DELETE"])
+def remove_skill(name):
+    library, _, error = _library_or_error(manage=True)
+    return error or _skill_call(lambda: (library.remove(name), {"message": f"Removed {name}"})[1])
+
+
+@skills_bp.route("/jobs/<job_id>", methods=["GET"])
+def skill_job(job_id):
+    library, _, _ = _library_or_error()
+    return _skill_call(lambda: library.job(job_id))

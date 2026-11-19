@@ -1,0 +1,17 @@
+{
+  "$schema": "https://shadcn-vue.com/schema.json",
+  "style": "new-york",
+  "tailwind": {
+    "css": "src/style.css",
+    "baseColor": "neutral"
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib"
+  },
+  "registries": {
+    "@videodb": "https://videodb-component-library.vercel.app/r/vue/{name}.json"
+  }
+}

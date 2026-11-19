@@ -3,11 +3,13 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import * as api from "@/api/config";
-import type { ConfigStatus } from "@/types";
+import type { ConfigStatus, PermissionsConfig } from "@/types";
 
 export const useConfigStore = defineStore("config", () => {
   const configStatus = ref<ConfigStatus | null>(null);
   const backendUnreachable = ref(false);
+  // Null until loaded; the mode picker then offers only what the server allows.
+  const permissions = ref<PermissionsConfig | null>(null);
 
   const isSetupComplete = computed(
     () =>
@@ -32,8 +34,18 @@ export const useConfigStore = defineStore("config", () => {
     return pending;
   }
 
+  async function loadPermissions() {
+    try {
+      permissions.value = await api.getPermissions();
+    } catch {
+      // Keep the picker as it is; the server still caps the mode it receives.
+    }
+  }
+
   return {
     configStatus,
+    permissions,
+    loadPermissions,
     backendUnreachable,
     isSetupComplete,
     loadConfig,

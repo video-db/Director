@@ -1,46 +1,46 @@
 <template>
-  <div
-    v-if="chat.sessionLoading"
-    class="vdb-c-flex vdb-c-w-full vdb-c-flex-1 vdb-c-items-center vdb-c-justify-center"
-  >
-    <EllipsesLoading />
+  <div v-if="chat.sessionLoading" class="flex flex-1 items-center justify-center">
+    <Spinner size="lg" label="Loading chat" />
   </div>
 
-  <div
-    v-else-if="chat.isEmpty"
-    class="vdb-c-flex vdb-c-w-full vdb-c-flex-1 vdb-c-flex-col vdb-c-items-center vdb-c-justify-center vdb-c-gap-8 vdb-c-text-center"
-  >
-    <p class="vdb-c-text-lg vdb-c-font-semibold vdb-c-text-kilvish-900">
-      Nothing here yet
-    </p>
-    <p class="vdb-c-text-sm vdb-c-text-vdb-darkishgrey">
-      Ask Director something below to start this chat.
-    </p>
+  <div v-else-if="chat.isEmpty" class="flex flex-1 items-center justify-center p-24">
+    <EmptyState
+      icon="chat_bubble"
+      title="Nothing here yet"
+      description="Ask Director something below to start this chat."
+    />
   </div>
 
-  <template v-else>
+  <MessageScroller
+    v-else
+    ref="scroller"
+    class="min-h-0 flex-1"
+    content-class="mx-auto flex w-full max-w-760 flex-col gap-32 px-16 py-24 md:px-24"
+    :busy="chat.chatLoading"
+  >
     <ChatMessageContainer
       v-for="(key, i) in convIds"
       :key="key"
       :conversation="chat.conversations[key]"
       :search-term="chat.chatInput"
       :is-last-conv="i === convIds.length - 1"
-      class="vdb-c-px-30 vdb-c-transition-all vdb-c-duration-300 vdb-c-ease-in-out md:vdb-c-px-60"
-      :class="{ 'last-conv-height': i === convIds.length - 1 }"
     />
-  </template>
+  </MessageScroller>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import ChatMessageContainer from "@/components/chat/ChatMessageContainer.vue";
-import EllipsesLoading from "@/components/chat/elements/EllipsesLoading.vue";
+import { EmptyState } from "@/components/ui/empty-state";
+import { MessageScroller } from "@/components/ui/message-scroller";
+import { Spinner } from "@/components/ui/spinner";
 import { useChatStore } from "@/stores/chat";
 
 const route = useRoute();
 const chat = useChatStore();
+const scroller = ref<InstanceType<typeof MessageScroller>>();
 
 const convIds = computed(() => Object.keys(chat.conversations));
 
@@ -48,5 +48,15 @@ watch(
   () => route.params.sessionId as string,
   (id) => id && chat.openSession(id),
   { immediate: true },
+);
+
+// A new message from the user brings the thread to the bottom.
+watch(
+  () => chat.chatLoading,
+  async (loading) => {
+    if (!loading) return;
+    await nextTick();
+    scroller.value?.scrollToBottom();
+  },
 );
 </script>

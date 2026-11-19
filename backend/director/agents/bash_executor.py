@@ -1,5 +1,8 @@
 from director.agents.base import AgentResponse
 from director.agents.sandbox_agent import SandboxAgent
+from director.core.call_checks import inspect_bash
+from director.core.permissions import CallInfo
+from director.core.skills import get_skills_dir
 
 BASH_EXECUTOR_PARAMETERS = {
     "type": "object",
@@ -36,6 +39,9 @@ class BashExecutorAgent(SandboxAgent):
         )
         self.parameters = BASH_EXECUTOR_PARAMETERS
         super().__init__(session=session, **kwargs)
+
+    def inspect(self, command: str = "", **kwargs) -> CallInfo:
+        return inspect_bash(command, get_skills_dir())
 
     def run(
         self,

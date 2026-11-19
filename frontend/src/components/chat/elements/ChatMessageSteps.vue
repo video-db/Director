@@ -1,132 +1,57 @@
 <template>
-  <div class="vdb-c-flex vdb-c-flex-col vdb-c-gap-16">
-    <button
-      @click="toggleExpand"
-      class="vdb-c-focus:outline-none vdb-c-flex vdb-c-items-center vdb-c-gap-8"
+  <Collapsible v-model:open="open" class="flex flex-col gap-8">
+    <CollapsibleTrigger
+      class="group flex w-fit items-center gap-4 rounded-xxs text-sm font-medium text-text-neutral-secondary outline-none hover:text-text-neutral-primary focus-visible:shadow-focus-ring"
     >
-      <ChevronDown
-        :class="{ 'vdb-c-rotate-180 vdb-c-transform': isExpanded }"
-        :stroke-width="2"
-        :stroke-color="'#343E4F'"
+      <Spinner v-if="status === 'progress'" size="sm" decorative class="mr-4" />
+      Director's log
+      <span class="font-normal text-text-neutral-tertiary">· {{ steps.length || 1 }} {{ steps.length === 1 ? "step" : "steps" }}</span>
+      <Icon
+        name="keyboard_arrow_down"
+        :size="16"
+        class="transition-transform group-data-[state=open]:rotate-180"
       />
-      <span class="vdb-c-font-medium vdb-c-text-black">Director's Log</span>
-    </button>
-    <transition
-      enter-active-class="vdb-c-transition-all vdb-c-duration-300 vdb-c-ease-out"
-      enter-from-class="vdb-c-transform vdb-c-scale-95 vdb-c-opacity-0"
-      enter-to-class="vdb-c-transform vdb-c-scale-100 vdb-c-opacity-100"
-      leave-active-class="vdb-c-transition-all vdb-c-duration-300 vdb-c-ease-in"
-      leave-from-class="vdb-c-transform vdb-c-scale-100 vdb-c-opacity-100"
-      leave-to-class="vdb-c-transform vdb-c-scale-95 vdb-c-opacity-0"
-    >
-      <div
-        v-if="isExpanded"
-        class="vdb-c-shadow-sm vdb-c-overflow-hidden vdb-c-rounded-md vdb-c-bg-white"
-      >
-        <div
-          class="vdb-c-flex vdb-c-flex-col vdb-c-gap-12 vdb-c-overflow-y-auto"
-        >
-          <div
-            v-for="(step, index) in displaySteps"
-            :key="index"
-            class="vdb-c-flex vdb-c-items-center vdb-c-gap-8"
-          >
-            <span
-              class="vdb-c-flex vdb-c-h-20 vdb-c-w-20 vdb-c-items-center vdb-c-justify-center"
-            >
-              <span
-                v-if="index !== displaySteps.length - 1"
-                class="vdb-c-text-[#D9D9D9]"
-                >|</span
-              >
-              <div
-                v-else
-                class="vdb-c-block vdb-c-h-1/2 vdb-c-w-10 vdb-c-rounded-full"
-                :class="
-                  status === 'progress'
-                    ? 'vdb-c-animate-pulse vdb-c-bg-orange-500'
-                    : status === 'success'
-                      ? 'vdb-c-bg-[#0AA910]'
-                      : 'vdb-c-bg-[#0075FF]'
-                "
-              ></div>
-            </span>
-            <span
-              class="vdb-c-flex-grow"
-              :class="{
-                'vdb-c-font-semibold vdb-c-text-[#0075FF]':
-                  status !== 'success' && index === displaySteps.length - 1,
-                'vdb-c-font-semibold vdb-c-text-green':
-                  status === 'success' && index === displaySteps.length - 1,
-                'vdb-c-font-medium vdb-c-text-kilvish-800': !(
-                  status === 'success' && index === displaySteps.length - 1
-                ),
-              }"
-              v-html="
-                step.replace(
-                  /@(\w+)/g,
-                  '<span class=\'vdb-c-text-orange-500\'>@$1</span>',
-                )
-              "
-            >
-            </span>
-          </div>
-        </div>
+    </CollapsibleTrigger>
+    <CollapsibleContent>
+      <div class="flex flex-col gap-4 border-l border-border-neutral-primary pl-12">
+        <LogStep
+          v-for="(step, i) in displaySteps"
+          :key="i"
+          :label="step"
+          :status="stepStatus(i)"
+        />
       </div>
-    </transition>
-  </div>
+    </CollapsibleContent>
+  </Collapsible>
 </template>
 
-<script setup>
-import { ref, computed, watch } from "vue";
-import ChevronDown from "../../icons/ChevronDown.vue";
+<script setup lang="ts">
+import { computed, ref, watch } from "vue";
 
-const props = defineProps({
-  steps: {
-    type: Array,
-    default: () => [],
-  },
-  status: {
-    type: String,
-    default: "progress",
-  },
-  expanded: {
-    type: Boolean,
-    default: false,
-  },
-});
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Icon } from "@/components/ui/icon";
+import { LogStep } from "@/components/ui/log-step";
+import { Spinner } from "@/components/ui/spinner";
 
-const isExpanded = ref(props.expanded);
+const props = withDefaults(
+  defineProps<{ steps?: string[]; status?: string; expanded?: boolean }>(),
+  { steps: () => [], status: "progress", expanded: false },
+);
 
+const open = ref(props.expanded);
+// Collapses once the turn finishes; the user can reopen it.
 watch(
   () => props.expanded,
-  (newValue) => {
-    if (!newValue) {
-      isExpanded.value = false;
-    }
+  (v) => {
+    if (!v) open.value = false;
   },
 );
 
-const toggleExpand = () => {
-  isExpanded.value = !isExpanded.value;
-};
+const displaySteps = computed(() => (props.steps.length ? props.steps : ["Thinking"]));
 
-const displaySteps = computed(() => {
-  if (props.steps.length === 0) {
-    return ["Thinking"];
-  }
-  if (props.status === "success") {
-    return [...props.steps, "Final cut ready!"];
-  }
-  return props.steps;
-});
+function stepStatus(i: number): "running" | "done" | "failed" {
+  if (i < displaySteps.value.length - 1) return "done";
+  if (props.status === "progress") return "running";
+  return props.status === "error" ? "failed" : "done";
+}
 </script>
-
-<style scoped>
-.vdb-c-text-orange-500 {
-  color: #f97316;
-}
-.vdb-c-text-green-500 {
-  color: #22c55e;
-}
-</style>

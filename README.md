@@ -210,13 +210,19 @@ For specific tasks:
 
 Director works by writing and running code. It has three tools: `code_executor` runs Python with a connected VideoDB client, `bash_executor` runs shell commands, and `stream_content` shows videos, images and search results in the chat. Skills teach it how to use them.
 
-**Skills.** A skill is a folder with a `SKILL.md` file in the open [Agent Skills](https://agentskills.io/specification) format. Director reads every skill in `SKILLS_DIR` (default `~/.agents/skills`) on each message, so installing or updating a skill takes effect on the next message, with no restart. Director lists each skill's name and description to the model, which reads the full `SKILL.md` when a task needs it. To teach Director something new, add a skill folder there.
+**Skills.** A skill is a folder with a `SKILL.md` file in the open [Agent Skills](https://agentskills.io/specification) format. Director reads every skill in `SKILLS_DIR` (default `~/.agents/skills`) on each message, so installing or updating a skill takes effect on the next message, with no restart. Director lists each skill's name and description to the model, which reads the full `SKILL.md` when a task needs it. To teach Director something new, add a skill folder there, or use the **Skills** page: it lists installed skills (and why a broken one can't be used), previews any SKILL.md, and searches, previews, installs, updates and removes skills from [skills.sh](https://skills.sh) through the `skills` CLI (`SKILLS_CLI`, default `npx --yes skills`, which needs Node.js 22.20 or later). Installs go through a temporary folder and are copied into `SKILLS_DIR`, so the CLI never touches your other agents' skill folders. Skills added outside Director are listed but left alone. Installing is turned off when the server is reachable from other machines unless `DIRECTOR_SKILLS_MANAGE=1`, and on Modal, whose skills come from `MODAL_IMAGE`.
 
 **Sandbox.** `SANDBOX_PROVIDER` decides where the code runs:
 
-- `local` (default) runs it on your machine, using your installed tools and your skills folder directly. There is no isolation, so the code can do anything your user account can.
+- `local` (default) runs it on your machine, using your installed tools and your skills folder directly. Each run gets its own temp folder as its home, and on macOS (Seatbelt) and Linux (bubblewrap, `apt install bubblewrap`) it is sandboxed: it can write only to that folder, and it can't read your home folder except your skills and tools, your credentials (`~/.ssh`, `~/.aws`, the keychain) or Director's `.env`. Where neither is available, for example Windows or a container without user namespaces, the code runs as your user, so chats default to Ask mode and Full access is off unless `DIRECTOR_ALLOW_FULL_LOCAL=1`.
 - `modal` runs each call in a fresh [Modal](https://modal.com) container. Run `pip install modal`, then `modal setup`. Set `MODAL_IMAGE` to your own image that already contains your skills at `MODAL_SKILLS_DIR` (default `/root/.agents/skills`). Director does not copy skills into the image.
 - `none` turns off code, bash and skills.
+
+**Network.** Sandboxed code can reach any host by default. Set `SANDBOX_NETWORK=allowlist` to allow only the hosts in `SANDBOX_ALLOWED_HOSTS` (default `api.videodb.io,*.videodb.io`). Requests then go through Director's proxy, and a blocked host is reported in the run's output.
+
+**Permissions.** The mode picker next to Send decides what runs without asking: Read-only, Ask, Auto or Full access. Approval cards offer "Allow once", "Allow for this chat" and, for narrow commands, "Always allow". Always-allowed actions apply to every chat and are listed, and removable, under **Always-allowed actions** in the sidebar.
+
+**Server.** The API has no authentication, so it listens on `127.0.0.1` and accepts browser requests only from pages served on localhost. Set `SERVER_HOST` and `SERVER_ALLOWED_ORIGINS` to serve it elsewhere, and put it behind a proxy that authenticates users.
 
 On Windows, `bash_executor` needs `bash` on the `PATH` (for example from Git Bash). Without it, Director uses `code_executor` only.
 

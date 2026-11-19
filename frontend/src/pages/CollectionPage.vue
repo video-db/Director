@@ -1,18 +1,13 @@
 <template>
-  <div class="vdb-c-w-full vdb-c-py-16">
+  <div class="mx-auto w-full max-w-1120 px-16 py-24 md:px-24">
     <CollectionView
       :collection-id="collectionId"
       :collection-data="collections.activeCollection ?? undefined"
       :collection-videos="collections.videos ?? undefined"
       :collection-audios="collections.audios ?? undefined"
       :collection-images="collections.images ?? undefined"
-      :get-image-url="collections.generateImageUrl"
-      :get-audio-url="collections.generateAudioUrl"
-      class="vdb-c-w-full vdb-c-transition-opacity vdb-c-duration-300 vdb-c-ease-in-out"
       @video-click="openVideo"
-      @delete-video="ui.pendingDelete = { kind: 'video', media: $event }"
-      @delete-audio="ui.pendingDelete = { kind: 'audio', media: $event }"
-      @delete-image="ui.pendingDelete = { kind: 'image', media: $event }"
+      @delete="(m) => (ui.pendingDelete = { kind: m.type ?? 'video', media: m })"
     />
   </div>
 </template>

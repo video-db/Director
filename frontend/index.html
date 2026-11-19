@@ -7,10 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300,0..1,0&display=swap"
       rel="stylesheet"
     />
     <title>Director</title>
+    <!-- video.js otherwise injects unlayered size rules (300x150) that beat the player's layered CSS. -->
+    <script>window.VIDEOJS_NO_DYNAMIC_STYLE = true;</script>
   </head>
   <body>
     <div id="app"></div>
