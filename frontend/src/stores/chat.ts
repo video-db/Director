@@ -7,10 +7,13 @@ import * as collectionsApi from "@/api/collections";
 import { getSession } from "@/api/sessions";
 import { useChatSocket } from "@/composables/useChatSocket";
 import type {
+  ApprovalContent,
+  ApprovalDecision,
   ContentBase,
   Conversations,
   ImageAttachment,
   Message,
+  PermissionMode,
 } from "@/types";
 import { useCollectionsStore } from "./collections";
 import { useSessionsStore } from "./sessions";
@@ -24,6 +27,9 @@ export const useChatStore = defineStore("chat", () => {
   const videoId = ref<string | null>(null);
   const conversations = reactive<Conversations>({});
   const sessionLoading = ref(false);
+
+  // Sent with every message; a session reopens in the mode it was last used in.
+  const mode = ref<PermissionMode>(readModePreference());
 
   const chatInput = ref("");
   const chatAttachments = reactive<ImageAttachment[]>([]);
@@ -65,6 +71,8 @@ export const useChatStore = defineStore("chat", () => {
       const data = await getSession(id);
       if (sessionId.value !== id) return;
       videoId.value = data.video_id || null;
+      const savedMode = data.metadata?.permissions?.mode;
+      if (savedMode) mode.value = savedMode;
       if (data.collection_id) collections.setActive(data.collection_id);
       for (const message of data.conversation ?? []) {
         const convId = String(message.conv_id);
@@ -95,10 +103,38 @@ export const useChatStore = defineStore("chat", () => {
       collection_id: collections.activeCollectionId,
       video_id: videoId.value,
       content,
+      mode: mode.value,
     };
     conversations[convId] = { [msgId]: message };
     useChatSocket().socket.emit("chat", message);
     addClientLoading(convId);
+  }
+
+  function setMode(value: PermissionMode) {
+    mode.value = value;
+    try {
+      localStorage.setItem(MODE_KEY, value);
+    } catch {
+      // Storage blocked: the choice still applies to this tab.
+    }
+  }
+
+  // The answer to an approval card. The server's next chat update replaces the card's state.
+  function answerApproval(
+    message: Message,
+    card: ApprovalContent,
+    decision: ApprovalDecision,
+    note?: string,
+  ) {
+    useChatSocket().socket.emit("approval", {
+      session_id: message.session_id,
+      conv_id: message.conv_id,
+      msg_id: message.msg_id,
+      approval_id: card.approval_id,
+      decision,
+      note: note || null,
+    });
+    card.state = "sending";
   }
 
   function addClientLoading(convId: string) {
@@ -194,5 +230,21 @@ export const useChatStore = defineStore("chat", () => {
     openSession,
     addMessage,
     connect,
+    mode,
+    setMode,
+    answerApproval,
   };
 });
+
+const MODE_KEY = "director.permissionMode";
+const MODES: PermissionMode[] = ["read_only", "ask", "auto", "full"];
+
+function readModePreference(): PermissionMode {
+  try {
+    const saved = localStorage.getItem(MODE_KEY) as PermissionMode | null;
+    if (saved && MODES.includes(saved)) return saved;
+  } catch {
+    // Storage blocked.
+  }
+  return "auto";
+}

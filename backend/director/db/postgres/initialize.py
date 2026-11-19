@@ -46,6 +46,26 @@ CREATE TABLE IF NOT EXISTS context_messages (
 """
 
 
+CREATE_APPROVALS_TABLE = """
+CREATE TABLE IF NOT EXISTS approvals (
+    approval_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    conv_id TEXT NOT NULL,
+    msg_id TEXT NOT NULL,
+    agent TEXT NOT NULL,
+    arguments JSONB NOT NULL,
+    reason TEXT,
+    status TEXT NOT NULL,
+    decision TEXT,
+    note TEXT,
+    result TEXT,
+    created_at BIGINT,
+    resolved_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS approvals_msg ON approvals (msg_id, status);
+"""
+
+
 def initialize_postgres():
     """Initialize the PostgreSQL database by creating the necessary tables."""
 
@@ -68,6 +88,7 @@ def initialize_postgres():
         cursor.execute(CREATE_SESSIONS_TABLE)
         cursor.execute(CREATE_CONVERSATIONS_TABLE)
         cursor.execute(CREATE_CONTEXT_MESSAGES_TABLE)
+        cursor.execute(CREATE_APPROVALS_TABLE)
         conn.commit()
         logger.info("PostgreSQL tables created successfully")
     except Exception as e:

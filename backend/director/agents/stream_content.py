@@ -57,6 +57,9 @@ STREAM_CONTENT_PARAMETERS = {
 
 
 class StreamContentAgent(BaseAgent):
+    # Only shows results in the chat.
+    read_only = True
+
     """Shows videos, images, search results and text in the chat."""
 
     def __init__(self, session=None, **kwargs):

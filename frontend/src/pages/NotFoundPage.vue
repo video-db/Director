@@ -1,16 +1,21 @@
 <template>
-  <div
-    class="vdb-c-flex vdb-c-w-full vdb-c-flex-1 vdb-c-flex-col vdb-c-items-center vdb-c-justify-center vdb-c-gap-16 vdb-c-text-center"
-  >
-    <p class="vdb-c-text-xl vdb-c-font-semibold vdb-c-text-kilvish-900">
-      Page not found
-    </p>
-    <RouterLink :to="{ name: 'home' }">
-      <Button variant="secondary">Back to home</Button>
-    </RouterLink>
+  <div class="mx-auto flex min-h-full w-full max-w-640 flex-col justify-center px-16 py-40 md:px-24">
+    <EmptyState
+      icon="explore_off"
+      :level="2"
+      title="Page not found"
+      description="The page you're looking for doesn't exist or has moved."
+    >
+      <Button :as="RouterLink" :to="{ name: 'home' }" hierarchy="secondary" icon="home">
+        Back to home
+      </Button>
+    </EmptyState>
   </div>
 </template>
 
 <script setup lang="ts">
-import Button from "@/components/buttons/Button.vue";
+import { RouterLink } from "vue-router";
+
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 </script>

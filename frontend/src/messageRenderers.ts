@@ -1,5 +1,6 @@
 import type { Component } from "vue";
 
+import ApprovalCard from "@/components/message-handlers/ApprovalCard.vue";
 import ChatSearchResults from "@/components/message-handlers/ChatSearchResults.vue";
 import ChatVideo from "@/components/message-handlers/ChatVideo.vue";
 import ChatVideos from "@/components/message-handlers/ChatVideos.vue";
@@ -13,4 +14,5 @@ export const messageRenderers: Record<string, Component> = {
   text: TextResponse,
   search_results: ChatSearchResults,
   image: ImageHandler,
+  approval: ApprovalCard,
 };

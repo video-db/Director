@@ -1,5 +1,7 @@
 from director.agents.base import AgentResponse
 from director.agents.sandbox_agent import SandboxAgent
+from director.core.call_checks import inspect_python
+from director.core.permissions import CallInfo
 
 # Prepended to every run so `conn` is ready without boilerplate.
 CODE_PRELUDE = """\
@@ -44,6 +46,9 @@ class CodeExecutorAgent(SandboxAgent):
         )
         self.parameters = CODE_EXECUTOR_PARAMETERS
         super().__init__(session=session, **kwargs)
+
+    def inspect(self, code: str = "", **kwargs) -> CallInfo:
+        return inspect_python(code)
 
     def run(
         self, code: str, progress_message: str = "", *args, **kwargs

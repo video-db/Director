@@ -1,0 +1,43 @@
+/* Director's replies, rendered from markdown. Token colours only. */
+@layer components {
+  .markdown-body {
+    @apply min-w-0 text-md text-text-neutral-primary wrap-break-word;
+  }
+  .markdown-body > * + * {
+    @apply mt-12;
+  }
+  .markdown-body h1 { @apply mt-24 text-h6 font-semibold; }
+  .markdown-body h2 { @apply mt-20 text-lg font-semibold; }
+  .markdown-body h3,
+  .markdown-body h4 { @apply mt-16 text-md font-semibold; }
+  .markdown-body strong { @apply font-semibold; }
+  .markdown-body a {
+    @apply font-medium text-text-brand-primary underline underline-offset-2;
+  }
+  .markdown-body ul { @apply list-disc pl-24; }
+  .markdown-body ol { @apply list-decimal pl-24; }
+  .markdown-body ul ul { @apply list-[circle]; }
+  .markdown-body li + li,
+  .markdown-body li > ul,
+  .markdown-body li > ol { @apply mt-4; }
+  .markdown-body blockquote {
+    @apply border-l-2 border-border-neutral-strong pl-12 text-text-neutral-secondary;
+  }
+  .markdown-body hr { @apply my-20 border-border-neutral-primary; }
+  .markdown-body :not(pre) > code {
+    @apply rounded-xxs bg-background-neutral-secondary px-4 py-2 font-mono text-sm;
+  }
+  .markdown-body pre {
+    @apply overflow-x-auto rounded-sm border border-border-neutral-primary bg-background-neutral-subtle p-12 font-mono text-sm;
+  }
+  .markdown-body pre code { @apply bg-transparent p-0; }
+  .markdown-body table {
+    @apply block w-full overflow-x-auto border-collapse text-sm;
+  }
+  .markdown-body th,
+  .markdown-body td {
+    @apply border border-border-neutral-primary px-12 py-8 text-left;
+  }
+  .markdown-body th { @apply bg-background-neutral-subtle font-semibold; }
+  .markdown-body img { @apply max-w-full rounded-sm; }
+}

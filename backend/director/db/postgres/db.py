@@ -142,6 +142,105 @@ class PostgresDB(BaseDB):
                 conversations.append(conv_dict)
         return conversations
 
+    def get_message(self, msg_id: str) -> dict:
+        self.cursor.execute("SELECT * FROM conversations WHERE msg_id = %s", (msg_id,))
+        row = self.cursor.fetchone()
+        return dict(row) if row else None
+
+    def get_awaiting_output(self, session_id: str) -> dict:
+        self.cursor.execute(
+            "SELECT * FROM conversations WHERE session_id = %s AND status = 'awaiting_approval' "
+            "ORDER BY created_at DESC LIMIT 1",
+            (session_id,),
+        )
+        row = self.cursor.fetchone()
+        return dict(row) if row else None
+
+    def claim_resume(self, msg_id: str) -> bool:
+        self.cursor.execute(
+            "UPDATE conversations SET status = 'progress', updated_at = %s "
+            "WHERE msg_id = %s AND status = 'awaiting_approval'",
+            (int(time.time()), msg_id),
+        )
+        self.conn.commit()
+        return self.cursor.rowcount == 1
+
+    def update_session_metadata(self, session_id: str, patch: dict) -> None:
+        self.cursor.execute(
+            "UPDATE sessions SET metadata = COALESCE(metadata, '{}'::jsonb) || %s::jsonb, "
+            "updated_at = %s WHERE session_id = %s",
+            (json.dumps(patch), int(time.time()), session_id),
+        )
+        self.conn.commit()
+
+    def create_approval(self, **approval) -> None:
+        self.cursor.execute(
+            """
+            INSERT INTO approvals (approval_id, session_id, conv_id, msg_id, agent, arguments, reason, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending', %s)
+            """,
+            (
+                approval["approval_id"],
+                approval["session_id"],
+                approval["conv_id"],
+                approval["msg_id"],
+                approval["agent"],
+                json.dumps(approval["arguments"]),
+                approval.get("reason"),
+                approval.get("created_at") or int(time.time()),
+            ),
+        )
+        self.conn.commit()
+
+    def resolve_approval(
+        self,
+        approval_id: str,
+        session_id: str,
+        status: str,
+        decision: str,
+        note: str = None,
+    ) -> dict:
+        self.cursor.execute(
+            "UPDATE approvals SET status = %s, decision = %s, note = %s, resolved_at = %s "
+            "WHERE approval_id = %s AND session_id = %s AND status = 'pending' RETURNING *",
+            (status, decision, note, int(time.time()), approval_id, session_id),
+        )
+        row = self.cursor.fetchone()
+        self.conn.commit()
+        return dict(row) if row else None
+
+    def set_approval_result(self, approval_id: str, result: str, status: str) -> None:
+        self.cursor.execute(
+            "UPDATE approvals SET result = %s, status = %s WHERE approval_id = %s",
+            (result, status, approval_id),
+        )
+        self.conn.commit()
+
+    def skip_pending(
+        self, msg_id: str, skipped_result: str, interrupted_result: str
+    ) -> None:
+        now = int(time.time())
+        self.cursor.execute(
+            "UPDATE approvals SET status = 'skipped', result = %s, resolved_at = %s "
+            "WHERE msg_id = %s AND status = 'pending'",
+            (skipped_result, now, msg_id),
+        )
+        self.cursor.execute(
+            "UPDATE approvals SET status = 'interrupted', result = %s "
+            "WHERE msg_id = %s AND status = 'running' AND result IS NULL",
+            (interrupted_result, msg_id),
+        )
+        self.conn.commit()
+
+    def get_approvals(self, msg_id: str, statuses: tuple = None) -> list:
+        query = "SELECT * FROM approvals WHERE msg_id = %s"
+        params = [msg_id]
+        if statuses:
+            query += " AND status = ANY(%s)"
+            params.append(list(statuses))
+        self.cursor.execute(query + " ORDER BY created_at, approval_id", params)
+        return [dict(row) for row in self.cursor.fetchall()]
+
     def get_context_messages(self, session_id: str) -> list:
         self.cursor.execute(
             "SELECT context_data FROM context_messages WHERE session_id = %s",
@@ -197,6 +296,9 @@ class PostgresDB(BaseDB):
 
     def delete_session(self, session_id: str) -> bool:
         failed_components = []
+        self.cursor.execute(
+            "DELETE FROM approvals WHERE session_id = %s", (session_id,)
+        )
         if not self.delete_conversation(session_id):
             failed_components.append("conversation")
         if not self.delete_context(session_id):
@@ -215,13 +317,13 @@ class PostgresDB(BaseDB):
             query = """
                 SELECT COUNT(table_name)
                 FROM information_schema.tables
-                WHERE table_name IN ('sessions', 'conversations', 'context_messages')
+                WHERE table_name IN ('sessions', 'conversations', 'context_messages', 'approvals')
                 AND table_schema = 'public';
             """
             self.cursor.execute(query)
             table_count = self.cursor.fetchone()["count"]
 
-            if table_count < 3:
+            if table_count < 4:
                 logger.info("Tables not found. Initializing PostgreSQL DB...")
                 initialize_postgres()
             return True
