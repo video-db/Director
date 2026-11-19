@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { marked } from "marked";
 import markedKatex from "marked-katex-extension";
 import Prism from "prismjs";
@@ -11,3 +12,7 @@ marked.setOptions({
 marked.use(markedKatex({ nonStandard: true }));
 
 export const renderMarkdown = (text: string) => marked.parse(text);
+
+// For markdown written by third parties, such as a skill's SKILL.md.
+export const renderUntrustedMarkdown = (text: string) =>
+  DOMPurify.sanitize(marked.parse(text));

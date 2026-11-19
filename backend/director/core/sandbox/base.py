@@ -48,6 +48,10 @@ class BaseSandboxExecutor(ABC, Generic[H]):
     # is stricter when it isn't.
     isolated: bool = False
 
+    # Where this sandbox reads skills: "host" is the local skills folder, which
+    # Director can install into; "image" is baked into a remote image.
+    skills_location: str = "host"
+
     def skills_path(self, local_path: str, skills_dir: str) -> str:
         """Where a file under the local skills_dir is visible inside this sandbox."""
         return local_path

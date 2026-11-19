@@ -15,7 +15,7 @@
       </div>
 
       <div
-        v-if="route.name !== 'not-found' && route.name !== 'setup'"
+        v-if="!['not-found', 'setup', 'skills'].includes(String(route.name))"
         class="shrink-0 px-16 pb-16 pt-8 md:px-24"
       >
         <ChatInput

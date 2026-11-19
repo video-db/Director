@@ -19,6 +19,16 @@
             <span>New chat</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            icon="extension"
+            :active="route.name === 'skills'"
+            :disabled="!ready"
+            @click="go({ name: 'skills' })"
+          >
+            <span>Skills</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
       </SidebarMenu>
     </SidebarHeader>
 

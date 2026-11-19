@@ -156,3 +156,36 @@ export interface ImageAttachment {
   image_id?: string;
   url?: string;
 }
+
+// ---- Skills ----
+
+export interface InstalledSkill {
+  name: string;
+  description: string;
+  source: string | null;
+  problem: string | null;
+  linked: boolean;
+  installed_at: number | null;
+}
+
+export interface SkillsOverview {
+  skills: InstalledSkill[];
+  missing_required: { source: string; skill: string }[];
+  manage: { enabled: boolean; reason: string | null };
+}
+
+export interface CatalogSkill {
+  source: string;
+  skill: string;
+  installs: string;
+  url: string;
+}
+
+export interface SkillJob {
+  id: string;
+  kind: "install" | "update";
+  skill: string;
+  status: "running" | "done" | "failed";
+  error: string | null;
+  result: { skill: InstalledSkill; security: Record<string, string> } | null;
+}

@@ -40,6 +40,7 @@ class ModalSandboxExecutor(BaseSandboxExecutor["modal.Sandbox"]):
     """
 
     isolated = True
+    skills_location = "image"
 
     def __init__(
         self,

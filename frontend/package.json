@@ -41,6 +41,7 @@
     "@vueuse/core": "^15.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.18",
     "katex": "^0.16.11",
     "marked": "^4.2.5",
     "marked-katex-extension": "^5.1.2",
