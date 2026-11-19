@@ -9,6 +9,7 @@ class MemoryDB(BaseDB):
         self.context = {}
         self.sessions = {}
         self.approvals = {}
+        self.rules = {}
 
     def create_session(self, session_id, video_id=None, collection_id=None, **kwargs):
         self.sessions.setdefault(
@@ -67,6 +68,17 @@ class MemoryDB(BaseDB):
             for r in self.approvals.values()
             if r["msg_id"] == msg_id and (not statuses or r["status"] in statuses)
         ]
+
+    def add_permission_rule(self, **rule):
+        key = (rule["agent"], rule["pattern"], rule["action"])
+        if all((r["agent"], r["pattern"], r["action"]) != key for r in self.rules.values()):
+            self.rules[rule["rule_id"]] = dict(rule)
+
+    def get_permission_rules(self, action=None):
+        return [dict(r) for r in self.rules.values() if not action or r["action"] == action]
+
+    def delete_permission_rule(self, rule_id):
+        return self.rules.pop(rule_id, None) is not None
 
     def get_sessions(self):
         return []

@@ -7,9 +7,12 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-288">
       <DropdownMenuLabel>Permission mode</DropdownMenuLabel>
+      <p v-if="config.permissions && !config.permissions.isolated" class="px-8 pb-6 text-xs text-text-neutral-tertiary">
+        Code runs on this machine without a sandbox, so Director asks first by default.
+      </p>
       <DropdownMenuRadioGroup :model-value="chat.mode" @update:model-value="(v) => chat.setMode(v as PermissionMode)">
         <DropdownMenuRadioItem
-          v-for="option in MODE_OPTIONS"
+          v-for="option in options"
           :key="option.value"
           :value="option.value"
           :text-value="option.label"
@@ -39,6 +42,7 @@ import {
   MenuButton,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "@/stores/chat";
+import { useConfigStore } from "@/stores/config";
 import type { PermissionMode } from "@/types";
 
 const MODE_OPTIONS: { value: PermissionMode; label: string; icon: string; hint: string }[] = [
@@ -49,5 +53,10 @@ const MODE_OPTIONS: { value: PermissionMode; label: string; icon: string; hint: 
 ];
 
 const chat = useChatStore();
-const current = computed(() => MODE_OPTIONS.find((o) => o.value === chat.mode) ?? MODE_OPTIONS[2]);
+const config = useConfigStore();
+// Only the modes this server allows, e.g. no Full access without a sandbox.
+const options = computed(() =>
+  MODE_OPTIONS.filter((o) => !chat.allowedModes || chat.allowedModes.includes(o.value)),
+);
+const current = computed(() => MODE_OPTIONS.find((o) => o.value === chat.mode) ?? MODE_OPTIONS[1]);
 </script>

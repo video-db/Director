@@ -12,6 +12,7 @@ export const useUiStore = defineStore("ui", () => {
   const pendingDelete = ref<PendingDelete | null>(null);
   const showUploadDialog = ref(false);
   const showCreateCollection = ref(false);
+  const showPermissionRules = ref(false);
 
-  return { pendingDelete, showUploadDialog, showCreateCollection };
+  return { pendingDelete, showUploadDialog, showCreateCollection, showPermissionRules };
 });

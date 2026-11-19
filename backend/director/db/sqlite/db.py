@@ -299,6 +299,35 @@ class SQLiteDB(BaseDB):
         approval["arguments"] = json.loads(approval["arguments"])
         return approval
 
+    def add_permission_rule(self, **rule) -> None:
+        self.cursor.execute(
+            "INSERT OR IGNORE INTO permission_rules (rule_id, agent, pattern, action, approval_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                rule["rule_id"],
+                rule["agent"],
+                rule["pattern"],
+                rule["action"],
+                rule.get("approval_id"),
+                rule.get("created_at") or int(time.time()),
+            ),
+        )
+        self.conn.commit()
+
+    def get_permission_rules(self, action: str = None) -> list:
+        query = "SELECT * FROM permission_rules"
+        params = []
+        if action:
+            query += " WHERE action = ?"
+            params.append(action)
+        self.cursor.execute(query + " ORDER BY created_at, rowid", params)
+        return [dict(row) for row in self.cursor.fetchall()]
+
+    def delete_permission_rule(self, rule_id: str) -> bool:
+        self.cursor.execute("DELETE FROM permission_rules WHERE rule_id = ?", (rule_id,))
+        self.conn.commit()
+        return self.cursor.rowcount > 0
+
     def get_context_messages(self, session_id: str) -> list:
         """Get context messages for a session.
 
@@ -398,11 +427,11 @@ class SQLiteDB(BaseDB):
                 SELECT COUNT(name)
                 FROM sqlite_master
                 WHERE type='table'
-                AND name IN ('sessions', 'conversations', 'context_messages', 'approvals');
+                AND name IN ('sessions', 'conversations', 'context_messages', 'approvals', 'permission_rules');
             """
             self.cursor.execute(query)
             table_count = self.cursor.fetchone()[0]
-            if table_count < 4:
+            if table_count < 5:
                 logger.info("Tables not found. Initializing SQLite DB...")
                 initialize_sqlite(self.db_path)
             return True

@@ -1,12 +1,20 @@
 import os
 import logging
+import time
+import uuid
 
 from director.agents.bash_executor import BashExecutorAgent
 from director.agents.code_executor import CodeExecutorAgent
 from director.agents.stream_content import StreamContentAgent
 
 from director.core.judge import ActionJudge, judge_llm
-from director.core.permissions import Decision, clamp
+from director.core.permissions import (
+    Decision,
+    allowed_modes,
+    can_always_allow,
+    clamp,
+    default_mode,
+)
 from director.core.session import (
     ApprovalContent,
     ContextMessage,
@@ -32,7 +40,12 @@ logger = logging.getLogger(__name__)
 
 SKIPPED = "The user sent a new message instead of answering, so this was not run."
 INTERRUPTED = "The tool was interrupted before it finished."
-DECISIONS = ("once", "chat", "deny")
+DECISIONS = ("once", "chat", "always", "deny")
+APPROVED_BY_USER = {
+    "once": "Approved by you",
+    "chat": "Approved by you for this chat",
+    "always": "Approved by you, always",
+}
 
 
 class ChatHandler:
@@ -63,10 +76,19 @@ class ChatHandler:
                 session.video_id
             )
 
+    @property
+    def isolated(self) -> bool:
+        return bool(self.sandbox and self.sandbox.isolated)
+
     def _engine(self, session) -> ReasoningEngine:
         session.sandbox = self.sandbox
         self.add_videodb_state(session)
-        isolated = bool(self.sandbox and self.sandbox.isolated)
+        isolated = self.isolated
+        # A saved mode is re-checked every turn, in case the sandbox or the ceiling changed.
+        session.permissions.mode = clamp(session.permissions.mode, isolated)
+        session.permissions.rules = [
+            rule["pattern"] for rule in self.db.get_permission_rules("allow")
+        ]
         return ReasoningEngine(
             session=session,
             llm=get_default_llm(),
@@ -80,7 +102,7 @@ class ChatHandler:
         session = Session(db=self.db, sink=self.sink, **message)
         session.create()
         if message.get("mode"):
-            session.permissions.mode = clamp(message["mode"])
+            session.permissions.mode = clamp(message["mode"], self.isolated)
             session.save_permissions()
         input_message = InputMessage(db=self.db, **message)
         input_message.publish()
@@ -151,12 +173,11 @@ class ChatHandler:
                 allowed = False
                 blocked = info.blocked if info else "That tool is no longer available."
 
+            if decision == "always" and not (info and can_always_allow(info)):
+                decision = "once"  # the card only offers it for narrow, safe keys
+
             if allowed:
-                approved_by = (
-                    "Approved by you for this chat"
-                    if decision == "chat"
-                    else "Approved by you"
-                )
+                approved_by = APPROVED_BY_USER[decision]
                 set_card(
                     output_message, approval_id, state="running", decided_by=approved_by
                 )
@@ -170,6 +191,16 @@ class ChatHandler:
                     and info.key not in session.permissions.allowed
                 ):
                     session.permissions.allowed.append(info.key)
+                if decision == "always":
+                    self.db.add_permission_rule(
+                        rule_id=str(uuid.uuid4()),
+                        agent=row["agent"],
+                        pattern=info.key,
+                        action="allow",
+                        approval_id=approval_id,
+                        created_at=int(time.time()),
+                    )
+                    session.permissions.rules.append(info.key)
                 session.permissions.record(Decision("allow", source="user"))
             elif blocked:
                 self.db.set_approval_result(approval_id, denial_text(blocked), "denied")
@@ -337,6 +368,25 @@ class VideoDBHandler:
 
 
 class ConfigHandler:
+    def __init__(self, db: BaseDB = None):
+        self.db = db
+
+    def permissions(self):
+        """What the mode picker offers: the default, the allowed modes, and whether code is isolated."""
+        sandbox = get_default_sandbox()
+        isolated = bool(sandbox and sandbox.isolated)
+        return {
+            "isolated": isolated,
+            "default_mode": default_mode(isolated).value,
+            "modes": [mode.value for mode in allowed_modes(isolated)],
+        }
+
+    def get_permission_rules(self):
+        return self.db.get_permission_rules()
+
+    def delete_permission_rule(self, rule_id):
+        return self.db.delete_permission_rule(rule_id)
+
     def check(self):
         """Check the configuration of the server."""
         videodb_configured = True if os.getenv("VIDEO_DB_API_KEY") else False

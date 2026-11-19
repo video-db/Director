@@ -188,6 +188,8 @@ class ApprovalContent(BaseContent):
     # How it was decided, e.g. "Approved by you for this chat".
     decided_by: Optional[str] = None
     note: Optional[str] = None
+    # What "Always allow" would save, shown on the button.
+    rule: Optional[str] = None
 
 
 class BaseMessage(BaseModel):

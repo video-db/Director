@@ -93,6 +93,11 @@
 
     <SidebarFooter class="px-12 pb-16">
       <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton icon="shield" :disabled="!ready" @click="ui.showPermissionRules = true">
+            <span>Always-allowed actions</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
         <SidebarMenuItem v-for="link in links" :key="link.href">
           <SidebarMenuButton as="a" :href="link.href" target="_blank" rel="noopener noreferrer" :icon="link.icon">
             <span>{{ link.text }}</span>

@@ -248,3 +248,26 @@ def upload_video(collection_id):
 def config_check():
     config_handler = ConfigHandler()
     return config_handler.check()
+
+
+def _config_handler() -> ConfigHandler:
+    return ConfigHandler(db=load_db(os.getenv("SERVER_DB_TYPE", app.config["DB_TYPE"])))
+
+
+@config_bp.route("/permissions", methods=["GET"])
+def get_permissions():
+    """The mode picker's options for this server's sandbox."""
+    return ConfigHandler().permissions()
+
+
+@config_bp.route("/permission-rules", methods=["GET"])
+def get_permission_rules():
+    """The "Always allow" rules every chat uses."""
+    return {"rules": _config_handler().get_permission_rules()}
+
+
+@config_bp.route("/permission-rules/<rule_id>", methods=["DELETE"])
+def delete_permission_rule(rule_id):
+    if not _config_handler().delete_permission_rule(rule_id):
+        return {"message": "Rule not found"}, 404
+    return {"message": "Rule removed"}

@@ -91,6 +91,21 @@ class BaseDB(ABC):
         pass
 
     @abstractmethod
+    def add_permission_rule(self, **rule) -> None:
+        """Save an "Always allow" rule: rule_id, agent, pattern, action, approval_id, created_at. A duplicate is ignored."""
+        pass
+
+    @abstractmethod
+    def get_permission_rules(self, action: str = None) -> list:
+        """All rules, oldest first, optionally only one action."""
+        pass
+
+    @abstractmethod
+    def delete_permission_rule(self, rule_id: str) -> bool:
+        """Remove a rule. True if it existed."""
+        pass
+
+    @abstractmethod
     def health_check(self) -> bool:
         """Check if the database is healthy."""
         pass

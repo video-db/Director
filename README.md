@@ -214,9 +214,15 @@ Director works by writing and running code. It has three tools: `code_executor` 
 
 **Sandbox.** `SANDBOX_PROVIDER` decides where the code runs:
 
-- `local` (default) runs it on your machine, using your installed tools and your skills folder directly. There is no isolation, so the code can do anything your user account can.
+- `local` (default) runs it on your machine, using your installed tools and your skills folder directly. Each run gets its own temp folder as its home, and on macOS (Seatbelt) and Linux (bubblewrap, `apt install bubblewrap`) it is sandboxed: it can write only to that folder, and it can't read your home folder except your skills and tools, your credentials (`~/.ssh`, `~/.aws`, the keychain) or Director's `.env`. Where neither is available, for example Windows or a container without user namespaces, the code runs as your user, so chats default to Ask mode and Full access is off unless `DIRECTOR_ALLOW_FULL_LOCAL=1`.
 - `modal` runs each call in a fresh [Modal](https://modal.com) container. Run `pip install modal`, then `modal setup`. Set `MODAL_IMAGE` to your own image that already contains your skills at `MODAL_SKILLS_DIR` (default `/root/.agents/skills`). Director does not copy skills into the image.
 - `none` turns off code, bash and skills.
+
+**Network.** Sandboxed code can reach any host by default. Set `SANDBOX_NETWORK=allowlist` to allow only the hosts in `SANDBOX_ALLOWED_HOSTS` (default `api.videodb.io,*.videodb.io`). Requests then go through Director's proxy, and a blocked host is reported in the run's output.
+
+**Permissions.** The mode picker next to Send decides what runs without asking: Read-only, Ask, Auto or Full access. Approval cards offer "Allow once", "Allow for this chat" and, for narrow commands, "Always allow". Always-allowed actions apply to every chat and are listed, and removable, under **Always-allowed actions** in the sidebar.
+
+**Server.** The API has no authentication, so it listens on `127.0.0.1` and accepts browser requests only from pages served on localhost. Set `SERVER_HOST` and `SERVER_ALLOWED_ORIGINS` to serve it elsewhere, and put it behind a proxy that authenticates users.
 
 On Windows, `bash_executor` needs `bash` on the `PATH` (for example from Git Bash). Without it, Director uses `code_executor` only.
 

@@ -12,7 +12,23 @@ export type MsgStatus =
 // How much Director may do without asking (backend/director/core/permissions.py).
 export type PermissionMode = "read_only" | "ask" | "auto" | "full";
 
-export type ApprovalDecision = "once" | "chat" | "deny";
+export type ApprovalDecision = "once" | "chat" | "always" | "deny";
+
+// What this server's sandbox allows the mode picker to offer.
+export interface PermissionsConfig {
+  isolated: boolean;
+  default_mode: PermissionMode;
+  modes: PermissionMode[];
+}
+
+// An "Always allow" rule, shared by every chat.
+export interface PermissionRule {
+  rule_id: string;
+  agent: string;
+  pattern: string;
+  action: string;
+  created_at: number;
+}
 
 export type MsgType = "input" | "output" | "system";
 
@@ -87,6 +103,7 @@ export interface ApprovalContent extends ContentBase {
     | "interrupted";
   decided_by?: string | null;
   note?: string | null;
+  rule?: string | null;
 }
 
 export interface Message {

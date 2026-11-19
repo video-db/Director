@@ -24,6 +24,15 @@
           <Button v-if="content.options.includes('chat')" hierarchy="secondary" size="sm" @click="answer('chat')">
             Allow for this chat
           </Button>
+          <Button
+            v-if="content.options.includes('always')"
+            hierarchy="secondary"
+            size="sm"
+            :title="alwaysHint"
+            @click="answer('always')"
+          >
+            Always allow
+          </Button>
           <Button hierarchy="tertiary" size="sm" destructive @click="denying = true">Deny</Button>
         </div>
 
@@ -103,6 +112,13 @@ const previewHtml = computed(() => {
     ? Prism.highlight(props.content.preview, grammar, lang)
     : escapeHtml(props.content.preview);
   return `<pre class="language-${lang}"><code class="language-${lang}">${code}</code></pre>`;
+});
+
+// The rule's key looks like "bash_executor:ffprobe -v"; the part after the colon is what matches.
+const alwaysHint = computed(() => {
+  const rule = props.content.rule;
+  const what = rule ? rule.slice(rule.indexOf(":") + 1) : "this";
+  return `Run ${what} in every chat without asking. Remove it under Always-allowed actions.`;
 });
 
 // Odd parts were inside `backticks`.

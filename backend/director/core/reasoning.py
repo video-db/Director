@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import List, Optional
 
@@ -15,6 +16,7 @@ from director.core.session import (
     TextContent,
     MsgStatus,
 )
+from director.core.sink import NullSink
 from director.llm.base import BaseLLM, LLMResponse
 
 
@@ -29,8 +31,20 @@ APPROVED_BY = {
     "read_only": "",
     "mode": "Full access",
     "chat": "Allowed for this chat",
+    "always": "Allowed by your rule",
+    "headless": "Approved for this script",
     "judge": "Approved by the safety check",
 }
+
+
+HEADLESS_DENIED = "No one is connected to approve this, so it was not run."
+
+
+def headless(decision: Decision) -> Decision:
+    """With no client to answer a card, an ask becomes a deny, unless DIRECTOR_HEADLESS_APPROVE=1 trusts the script."""
+    if os.getenv("DIRECTOR_HEADLESS_APPROVE") == "1":
+        return Decision("allow", source="headless")
+    return Decision("deny", f"{decision.reason} {HEADLESS_DENIED}".strip(), source="headless")
 
 
 def denial_text(reason: str) -> str:
@@ -153,6 +167,8 @@ class ReasoningEngine:
 
         info = self.inspect(agent, arguments)
         decision = decide(agent_name, info, self.session.permissions, self._judge(ctx))
+        if decision.action == "ask" and isinstance(self.session.sink, NullSink):
+            decision = headless(decision)
         self.session.permissions.record(decision)
         logger.info(
             f"{agent_name}: {decision.action} ({decision.source}) {decision.reason}"
@@ -213,7 +229,12 @@ class ReasoningEngine:
     def _ask(self, tool_call: dict, info: CallInfo, decision: Decision):
         """Save the approval and show its card. The tool result comes when the user answers."""
         agent_name = tool_call["tool"]["name"]
-        options = ["once", "chat", "deny"] if decision.offer_chat else ["once", "deny"]
+        options = ["once"]
+        if decision.offer_chat:
+            options.append("chat")
+        if decision.offer_always:
+            options.append("always")
+        options.append("deny")
         self.session.db.create_approval(
             approval_id=tool_call["id"],
             session_id=self.session.session_id,
@@ -232,6 +253,7 @@ class ReasoningEngine:
                 language=info.language,
                 reason=decision.reason,
                 options=options,
+                rule=info.key if decision.offer_always else None,
                 status=MsgStatus.success,
             )
         )

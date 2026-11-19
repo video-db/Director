@@ -65,6 +65,19 @@ CREATE TABLE IF NOT EXISTS approvals (
 CREATE INDEX IF NOT EXISTS approvals_msg ON approvals (msg_id, status);
 """
 
+# "Always allow" rules, shared by every chat. pattern is the call's normalized key.
+CREATE_PERMISSION_RULES_TABLE = """
+CREATE TABLE IF NOT EXISTS permission_rules (
+    rule_id TEXT PRIMARY KEY,
+    agent TEXT NOT NULL,
+    pattern TEXT NOT NULL,
+    action TEXT NOT NULL,
+    approval_id TEXT,
+    created_at BIGINT,
+    UNIQUE (agent, pattern, action)
+);
+"""
+
 
 def initialize_postgres():
     """Initialize the PostgreSQL database by creating the necessary tables."""
@@ -89,6 +102,7 @@ def initialize_postgres():
         cursor.execute(CREATE_CONVERSATIONS_TABLE)
         cursor.execute(CREATE_CONTEXT_MESSAGES_TABLE)
         cursor.execute(CREATE_APPROVALS_TABLE)
+        cursor.execute(CREATE_PERMISSION_RULES_TABLE)
         conn.commit()
         logger.info("PostgreSQL tables created successfully")
     except Exception as e:

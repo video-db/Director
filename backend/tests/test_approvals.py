@@ -9,10 +9,13 @@ from director.core.permissions import (
     Decision,
     Mode,
     Permissions,
+    allowed_modes,
+    can_always_allow,
     clamp,
     decide,
 )
-from director.core.sink import CollectingSink
+from director.core.reasoning import HEADLESS_DENIED
+from director.core.sink import CollectingSink, NullSink
 from director.db.sqlite.db import SQLiteDB
 from director.db.sqlite.initialize import initialize_sqlite
 from director.handler import INTERRUPTED, SKIPPED, ChatHandler
@@ -182,10 +185,12 @@ def test_auto_without_judge_asks_and_paused_judge_asks():
 
 
 def test_clamp_respects_the_ceiling(monkeypatch):
-    assert clamp("full") == Mode.full
-    assert clamp("nonsense") == Mode.auto
+    monkeypatch.delenv("DIRECTOR_MAX_MODE", raising=False)
+    monkeypatch.delenv("DIRECTOR_ALLOW_FULL_LOCAL", raising=False)
+    assert clamp("full", isolated=True) == Mode.full
+    assert clamp("nonsense", isolated=True) == Mode.auto
     monkeypatch.setenv("DIRECTOR_MAX_MODE", "ask")
-    assert clamp("full") == Mode.ask
+    assert clamp("full", isolated=True) == Mode.ask
 
 
 # ---- pause and resume ----
@@ -347,3 +352,113 @@ def test_sqlite_keeps_created_at_when_a_message_is_updated(setup):
     setup.db.add_or_update_msg_to_conv(**row, created_at=100)
     setup.db.add_or_update_msg_to_conv(**row, status="success")
     assert setup.db.get_message("m")["created_at"] == 100
+
+
+# ---- defaults without a sandbox ----
+
+
+def test_default_mode_and_ceiling_follow_isolation(monkeypatch):
+    monkeypatch.delenv("DIRECTOR_MAX_MODE", raising=False)
+    monkeypatch.delenv("DIRECTOR_ALLOW_FULL_LOCAL", raising=False)
+    assert clamp(None, isolated=True) == Mode.auto
+    assert clamp(None, isolated=False) == Mode.ask
+    assert clamp("full", isolated=False) == Mode.auto
+    assert allowed_modes(False) == [Mode.ask, Mode.read_only, Mode.auto]
+    monkeypatch.setenv("DIRECTOR_ALLOW_FULL_LOCAL", "1")
+    assert clamp("full", isolated=False) == Mode.full
+
+
+def test_unisolated_chat_without_a_mode_asks(setup, monkeypatch):
+    monkeypatch.setattr(ChatHandler, "isolated", property(lambda self: False))
+    setup.judge = FakeLLM([answer('{"decision": "allow", "reason": "fine"}')])
+    setup.llm = FakeLLM([calls(("call_1", "ping"))])
+    paused = chat(setup, mode=None)
+    assert paused is not None and RUNS == []
+
+
+def test_saved_full_access_is_capped_once_isolation_is_gone(setup, monkeypatch):
+    setup.db.update_session_metadata("s-1", {"permissions": {"mode": "full"}})
+    monkeypatch.setattr(ChatHandler, "isolated", property(lambda self: False))
+    setup.llm = FakeLLM([calls(("call_1", "ping"))])
+    assert chat(setup, mode=None) is not None  # Auto without a judge asks
+
+
+# ---- "Always allow" ----
+
+
+def test_always_allow_is_offered_only_for_narrow_safe_keys():
+    assert can_always_allow(CallInfo(preview="", key="bash_executor:ffprobe"))
+    assert not can_always_allow(CallInfo(preview="", key="code_executor:"))
+    assert not can_always_allow(CallInfo(preview="", key=None))
+    assert not can_always_allow(CallInfo(preview="", key="k:x", destructive="d"))
+    assert not can_always_allow(CallInfo(preview="", key="k:x", risks=["r"]))
+
+
+def test_always_allow_runs_in_every_chat(setup):
+    setup.llm = FakeLLM([calls(("call_1", "ping")), answer("one")])
+    paused = chat(setup)
+    assert card(paused, "call_1")["options"] == ["once", "chat", "always", "deny"]
+    assert card(paused, "call_1")["rule"] == "echo:ping"
+    done = approve(setup, paused, "call_1", decision="always")
+    assert card(done, "call_1")["decided_by"] == "Approved by you, always"
+    assert [r["pattern"] for r in setup.db.get_permission_rules()] == ["echo:ping"]
+
+    # A different chat runs the same call without a card.
+    setup.llm = FakeLLM([calls(("call_2", "ping")), answer("two")])
+    setup.handler().chat(
+        {
+            "session_id": "s-2",
+            "conv_id": "9",
+            "msg_id": "in-9",
+            "collection_id": "c-1",
+            "content": [{"type": "text", "text": "again"}],
+            "mode": "ask",
+        }
+    )
+    assert setup.db.get_awaiting_output("s-2") is None
+    assert RUNS == ["ping", "ping"]
+
+
+def test_removing_a_rule_asks_again(setup):
+    setup.db.add_permission_rule(
+        rule_id="r1", agent="echo", pattern="echo:ping", action="allow"
+    )
+    assert setup.db.delete_permission_rule("r1")
+    setup.llm = FakeLLM([calls(("call_1", "ping"))])
+    assert chat(setup) is not None
+
+
+def test_deletes_never_offer_always_allow(setup):
+    setup.llm = FakeLLM([calls(("call_1", "delete"))])
+    paused = chat(setup)
+    assert "always" not in card(paused, "call_1")["options"]
+    approve(setup, paused, "call_1", decision="always")  # a forged answer
+    assert setup.db.get_permission_rules() == []
+
+
+def test_duplicate_rules_are_ignored(setup):
+    for rule_id in ("r1", "r2"):
+        setup.db.add_permission_rule(
+            rule_id=rule_id, agent="echo", pattern="echo:ping", action="allow"
+        )
+    assert len(setup.db.get_permission_rules()) == 1
+
+
+# ---- no client connected ----
+
+
+def test_headless_asks_become_denials(setup, monkeypatch):
+    monkeypatch.delenv("DIRECTOR_HEADLESS_APPROVE", raising=False)
+    setup.sink = NullSink()
+    setup.llm = FakeLLM([calls(("call_1", "ping")), answer("Couldn't.")])
+    assert chat(setup) is None
+    assert RUNS == []
+    assert HEADLESS_DENIED in tool_messages(setup.llm.calls[-1])[0]["content"]
+
+
+def test_headless_approve_runs_trusted_scripts(setup, monkeypatch):
+    monkeypatch.setenv("DIRECTOR_HEADLESS_APPROVE", "1")
+    setup.sink = NullSink()
+    setup.llm = FakeLLM([calls(("call_1", "ping")), answer("Done.")])
+    assert chat(setup) is None
+    assert RUNS == ["ping"]

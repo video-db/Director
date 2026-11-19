@@ -9,8 +9,11 @@ services:
     envVars:
       - key: FLASK_APP
         value: director.entrypoint.api.server
-      - key: SERVER_DEBUG
-        value: 1
+      - key: SERVER_ENV
+        value: production
+      # URL of the deployed frontend, e.g. https://your-frontend.onrender.com
+      - key: SERVER_ALLOWED_ORIGINS
+        sync: false
     
   - type: web
     name: frontend

@@ -17,10 +17,12 @@ To run the backend using Docker:
 
 2. Run the container:
    ```bash
-   docker run -p 8000:8000 director-backend
+   docker run -p 127.0.0.1:8000:8000 director-backend
    ```
 
 The server will be available at `http://localhost:8000`.
+
+> The API and the chat socket have no authentication. Keep the port on loopback, or put the server behind a proxy that authenticates requests before exposing it. Set `SERVER_ALLOWED_ORIGINS` to the frontend URL when it is not served from localhost.
 
 ## 🏗️ Core Components
 

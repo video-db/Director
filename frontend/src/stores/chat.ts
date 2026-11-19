@@ -14,6 +14,7 @@ import type {
   ImageAttachment,
   Message,
   PermissionMode,
+  PermissionsConfig,
 } from "@/types";
 import { useCollectionsStore } from "./collections";
 import { useSessionsStore } from "./sessions";
@@ -29,7 +30,23 @@ export const useChatStore = defineStore("chat", () => {
   const sessionLoading = ref(false);
 
   // Sent with every message; a session reopens in the mode it was last used in.
-  const mode = ref<PermissionMode>(readModePreference());
+  // Without a saved choice, the server's default applies once it's known.
+  const preferredMode = readModePreference();
+  const mode = ref<PermissionMode>(preferredMode ?? "ask");
+  const allowedModes = ref<PermissionMode[] | null>(null);
+  let modeChosen = preferredMode !== null;
+
+  // A mode the server no longer allows falls back to the most permissive one it does.
+  function fitMode(value: PermissionMode): PermissionMode {
+    const allowed = allowedModes.value;
+    if (!allowed?.length || allowed.includes(value)) return value;
+    return allowed[allowed.length - 1];
+  }
+
+  function applyPermissions(permissions: PermissionsConfig) {
+    allowedModes.value = permissions.modes;
+    mode.value = fitMode(modeChosen ? mode.value : permissions.default_mode);
+  }
 
   const chatInput = ref("");
   const chatAttachments = reactive<ImageAttachment[]>([]);
@@ -72,7 +89,7 @@ export const useChatStore = defineStore("chat", () => {
       if (sessionId.value !== id) return;
       videoId.value = data.video_id || null;
       const savedMode = data.metadata?.permissions?.mode;
-      if (savedMode) mode.value = savedMode;
+      if (savedMode) mode.value = fitMode(savedMode);
       if (data.collection_id) collections.setActive(data.collection_id);
       for (const message of data.conversation ?? []) {
         const convId = String(message.conv_id);
@@ -111,7 +128,8 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   function setMode(value: PermissionMode) {
-    mode.value = value;
+    mode.value = fitMode(value);
+    modeChosen = true;
     try {
       localStorage.setItem(MODE_KEY, value);
     } catch {
@@ -231,7 +249,9 @@ export const useChatStore = defineStore("chat", () => {
     addMessage,
     connect,
     mode,
+    allowedModes,
     setMode,
+    applyPermissions,
     answerApproval,
   };
 });
@@ -239,12 +259,12 @@ export const useChatStore = defineStore("chat", () => {
 const MODE_KEY = "director.permissionMode";
 const MODES: PermissionMode[] = ["read_only", "ask", "auto", "full"];
 
-function readModePreference(): PermissionMode {
+function readModePreference(): PermissionMode | null {
   try {
     const saved = localStorage.getItem(MODE_KEY) as PermissionMode | null;
     if (saved && MODES.includes(saved)) return saved;
   } catch {
     // Storage blocked.
   }
-  return "auto";
+  return null;
 }

@@ -64,6 +64,8 @@
       </DialogContent>
     </Dialog>
 
+    <PermissionRulesDialog v-model:open="ui.showPermissionRules" />
+
     <UploadDialog
       v-model:open="ui.showUploadDialog"
       :collections="collections.collections"
@@ -84,6 +86,7 @@ import ChatInput from "@/components/chat/ChatInput.vue";
 import AppHeader from "@/components/layout/AppHeader.vue";
 import AppSidebar from "@/components/layout/AppSidebar.vue";
 import CreateCollectionDialog from "@/components/modals/CreateCollectionDialog.vue";
+import PermissionRulesDialog from "@/components/modals/PermissionRulesDialog.vue";
 import UploadDialog from "@/components/modals/UploadDialog.vue";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -126,8 +129,14 @@ watch(
     chat.connect();
     collections.load();
     sessions.load();
+    config.loadPermissions();
   },
   { immediate: true },
+);
+
+watch(
+  () => config.permissions,
+  (permissions) => permissions && chat.applyPermissions(permissions),
 );
 
 // The video the chat is about drives the header and composer context.
